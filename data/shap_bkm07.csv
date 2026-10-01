@@ -1,0 +1,15 @@
+feature,mean_abs_shap
+qber_zc,2.7783704
+h_ctrl,1.7516903
+ctrl_sift_ratio,1.318877
+qber_xc,0.053738143
+ret_monitor,0.026376681
+qber_zsr,0.018964786
+jump_energy,0.018044867
+xctrl_dispersion,0.0027574268
+qber_key,0.0
+qber_zs,0.0
+asymmetry,0.0
+spectral_entropy,0.0
+autocorr_lag1,0.0
+sifted_rate,0.0

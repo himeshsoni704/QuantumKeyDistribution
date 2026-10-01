@@ -1,0 +1,5 @@
+strength,auc_intercept_resend_only,auc_pns_only,auc_mixed,mixed_minus_best_single
+0.15,1.0,0.8185185185185185,1.0,0.0
+0.3,1.0,0.9407407407407408,1.0,0.0
+0.5,1.0,1.0,1.0,0.0
+0.75,1.0,1.0,1.0,0.0
