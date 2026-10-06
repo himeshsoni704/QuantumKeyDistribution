@@ -5698,6 +5698,8 @@ def evaluate_binary(model, loader, device):
         logits, _ = model.forward_binary(xb.to(device), list(pb), x_classical=xcb)
         all_prob.append(torch.sigmoid(logits).cpu().numpy())
         all_true.append(yb.numpy())
+    if not all_true:     # empty loader: report NaN AUC (train_binary then falls back to F1) instead of crashing
+        return {"f1": 0.0, "recall": 0.0, "auc": float("nan")}
     y_true, y_prob = np.concatenate(all_true), np.concatenate(all_prob)
     y_pred = (y_prob >= 0.5).astype(int)
     out = {"f1": f1_score(y_true, y_pred, zero_division=0),
