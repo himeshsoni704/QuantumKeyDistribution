@@ -35,41 +35,64 @@ Outputs go to ./data and ./plots. Physics is unchanged from the notebook; see Se
 # **Testing actually done:** every code cell parses; BB84 truncation to exactly K key bits and the per-link z-score feature, `generate_datasets` (tiny scale) and `session_split` were smoke-tested. **The full notebook was NOT re-executed** (the DL, SHAP, importance, bootstrap and E91/BKM07 changes are untested), and outputs of modified cells were cleared. Run *Restart & Run All* before trusting any number. Status letters mean *implemented in code*, not *validated*.
 #
 # ---
-# ### Audit pass (latest commit) -- what changed, what did not
+# ### Audit pass -- status of all 43 review items, bugs fixed, run profiles
 #
-# **Physics: unchanged.** Every simulator, channel model, attack model and feature definition is exactly as before. The audit (Section 25, new) verifies
-# them against independent calculations (closed forms, an exact branch-enumerating BKM07 calculator, Werner-state algebra) and lists the model simplifications
-# it found but deliberately left alone.
+# Every item of the review list is addressed in code (table below). **Switches** for the physics corrections (`BKM07_CTRL_FORWARD_NOISE`, `BB84_LOSS_CAP_ETA_BOB`, `PNS_MATCH_SIGNAL_GAIN_ONLY`, `HONEST_DRIFT_FRAC`) are in Section 0; the earlier numbers are reproduced by setting them to `False` / `0`.
 #
-# **Bugs fixed** (found by actually executing the notebook, which had never been re-run after the review edits):
-# * `nuisance_only_audit` called `make_boosted` before Section 8 defined it -> `NameError` on a fresh *Restart & Run All* (factory moved to the utilities cell).
-# * L-7 shuffled-label control returned `nan` when a shuffled test fold held a single class.
-# * Deep-SVDD zero-day evaluation crashed on an empty split (now a NaN AUC).
+# **Run profile.** One switch controls every sample size, seed count and epoch count: `QKD_PROFILE=quick|standard|large|xl` (default `large`). `quick` runs the whole notebook at tiny scale to prove that it executes; `standard` is the size of the earlier drafts; `large` has many more runs and seeds so that model differences are resolved; `xl` adds more deep-learning sessions, seeds and epochs.
 #
-# **ML features now feed the deep-learning models of Section 24.** Every architecture (MLP, 1D-CNN, BiLSTM+attention, Transformer) exists as *sequence only* and `+feat`
-# (the same network with the Section 3 engineered feature vector concatenated to its embedding, exactly what Section 18's `CrossProtocolDetector` already did through `x_classical`),
-# next to the boosted-tree baseline on the same sessions and split.
+# **Bugs found by actually executing the notebook:** `nuisance_only_audit` called `make_boosted` before it existed (NameError on a fresh run); the shuffled-label control returned NaN on single-class folds; the held-out-attack and validation evaluations crashed on empty splits; the E91 per-attack FNR loop silently skipped the renamed class.
 #
-# **More data, seeds and runs, for ML and DL, all three protocols** (all knobs are plain constants; dataset generation is now parallel with identical numbers):
+# **Saved outputs are cleared** (they came from different runs, item A1); the last cell lists any data/plot file this run did not regenerate.
 #
-# | What | before | now |
+# | Item | Status | Where / how |
 # |---|---|---|
-# | BB84 / BKM07 main datasets (runs per class) | 300 | 600 |
-# | E91 main dataset (runs per mode) | 300 | 600 |
-# | `N_REPEATS` (ablation / CI repeats) | 20 | 50 |
-# | Section 16 N x W grid (runs per class) | 100 | 200 |
-# | Section 18 DL sessions per class | 100 | 200 |
-# | Section 18 transfer seeds / grouped-CV seeds / zero-day seeds | 5 / 3 / 3 | 8 / 5 / 5 |
-# | Sections 19, 19b, 21 runs per class | 30 / 30 / 25-40 | 100 / 100 / 80-100 |
-# | CUSUM repeats | 20 | 50 |
-# | Section 24 sweep (honest + attacked runs per cell) | 100 + 40 | 300 + 150 |
-# | Section 24 noise robustness (train / test runs) | 30 / 40 | 60 / 100 |
-# | Section 24 temporal test (honest + attacked) | 100 + 60 | 300 + 150 |
-# | Section 24 DL sessions per protocol | 150 + 150 | 400 + 400 |
-# | Section 24 DL seeds | 1 | 5 (different session split and weight init each) |
+# | A1 | fixed | outputs cleared; every run stamps `RUN_START`, the last cell lists data/plot files the run did NOT regenerate; manifest records profile + flags |
+# | A2 | fixed | caches named by a content fingerprint of generator source + arguments + library versions |
+# | A3 | fixed | `_fallback_rng` replaces every unseeded `default_rng()`; python/numpy/torch seeded; deterministic torch kernels; xgboost `n_jobs=1` |
+# | A4 | fixed | `requirements.txt` (pinned to the tested versions) = the install cell = the manifest; kernel metadata made generic |
+# | A5 | fixed | `*_meta.csv` (nuisance parameters, profile, strength, drift, cap flags) next to every dataset; E91 rows carry V, profile, strength, drift |
+# | B1 | fixed | `pns_matched` (yield-matched PNS: undetectable by construction) and stealth-sized intercept-resend vs the Neyman-Pearson limit (Section 26.1) |
+# | B2 | fixed | PNS gives Bob n-1 photons through a lossless line with detector efficiency eta_bob; Eve matches the signal part of the gain (gain - Y0) |
+# | B3 | fixed | BKM07 matched on its CTRL monitoring baseline in Sections 19, 21, 24 (Section 24 was still using the key QBER) |
+# | B4 | fixed | same intercept-resend family on all three protocols in every cross-protocol comparison |
+# | B5 | fixed | E91 / DL class renamed `extra_depolarisation` everywhere (it is white noise) |
+# | B6 | fixed | `gain_vs_expected` feature; loss-manipulation boost capped at eta_bob |
+# | B7 | fixed | BKM07 forward-leg noise on CTRL rounds + separate p_meas/p_prep/p_ret; BB84 afterpulsing and dead time (`detector=` option, Section 26.2) |
+# | B8 | fixed | per-link commissioning z-scores; honest slow drift (`HONEST_DRIFT_FRAC`) in all three protocols; wider noise ranges |
+# | B9 | fixed | burst length drawn per run; the drifting profile is used in every dataset and in Section 26.3 |
+# | B10 | fixed | `SCOPE_NOTE` printed under every result cell + scope paragraph |
+# | C1 | fixed | attacks sized in sigma_K units, `check_saturation`, log-spaced sweeps down to 0.002 |
+# | C2 | fixed | per-attack one-vs-clean metrics; class-balanced weights in every model |
+# | C3 | fixed | truncation to exactly K, `bb84_k_capacity`, capped fraction reported |
+# | C4 | fixed | E4 rebuilt on equal-count bins with channel-grouped training; larger runs in the profile |
+# | C5 | fixed | 300 sessions per class (large profile); windows-per-session by class is checked |
+# | C6 | fixed | same strength distribution for every attack class |
+# | D1 | fixed | grouped-bootstrap CIs on headline metrics; AUC bands in the plots |
+# | D2 | fixed | base-rate precision uses a Clopper-Pearson upper bound on the FPR |
+# | D3 | fixed | all error rates at fixed 1 % / 5 % FPR, thresholds from out-of-fold training scores |
+# | D4 | fixed | z-test, best-single-feature, oracle and Neyman-Pearson baselines |
+# | D5 | fixed | N x W grid with repeated CV and paired bootstrap |
+# | D6 | fixed | 10-20 seeds, sign-flip tests, Bonferroni / Holm |
+# | D7 | fixed | permutation-p audits, nuisance-only model |
+# | D8 | fixed | Isolation Forest on engineered features added as a functioning held-out-attack baseline |
+# | D9 | fixed | raw permutation importance, held-out SHAP, ECE next to the Brier score |
+# | D10 | fixed | pre-registered plan + a ledger of every confirmatory test with Holm correction (Section 26) |
+# | E1 | fixed | per-protocol BatchNorm on the engineered features before the projection (Section 18); standardised in Section 24 |
+# | E2 | fixed | the transfer verdict is computed from paired seeds (sign-flip p, Bonferroni alpha), not asserted |
+# | E3 | fixed | `protocol_probe`: quantitative test of whether protocol identity survives the adversarial/contrastive training |
+# | E4 | fixed | bias-free SVDD + a working Isolation-Forest baseline next to it |
+# | E5 | fixed | transfer and scratch both use the last epoch (`select_best=False`); pretraining is checkpointed on SOURCE validation only |
+# | E6 | fixed | E91 jump energy / dispersion defined like BB84/BKM07 (key-error trace, binomial floor); CHSH-trace version kept separately |
+# | E7 | fixed | SVC(probability=True) replaced by sigmoid-calibrated SVC; Isolation Forest `max_samples='auto'` |
+# | E8 | fixed | grid search skipped when the default model already separates the data (CV-AUC >= 0.995) |
+# | F1 | fixed | Section 24.5 findings are generated from the run (Section 26.4); stale prose removed |
+# | F2 | fixed | symlog axes (nothing clipped), AUC bands, full y-range |
+# | F3 | fixed | PNS demo now mean +/- s.e. over 10 runs with z-values |
+# | F4 | fixed | `zero-day` -> `held-out-attack`, `Novel Security Experiments` -> `Additional detectability experiments`, `loss_manipulation` (E91) -> `extra_depolarisation` |
 #
-# **Not re-executed end to end.** The full notebook at this scale takes many hours (Section 18 dominates). A quick smoke configuration (`run_quick_test.py`) runs the same code at tiny scale to prove nothing crashes;
-# **saved outputs of older cells are stale -- run *Restart & Run All* (or `python changed.py`) before quoting any number.**
+#
+# **Not re-executed end to end at `large` scale in the delivery environment** -- see the README for what was run.
 #
 
 # %% [markdown]
@@ -193,7 +216,7 @@ Outputs go to ./data and ./plots. Physics is unchanged from the notebook; see Se
 # | 9 | L-8 zero-strength control | Was BB84-only; added for BKM07 and E91. Added a note on how to read the BKM07 audit flags. |
 # | 10 | DL session splits | `GroupShuffleSplit` was unstratified (375 single-class warnings; AUC checkpointing fell back to F1). `session_split` is now stratified by session label. |
 # | 11 | "Frozen" trunk (18.7) | `requires_grad=False` did not stop BatchNorm running stats/dropout from updating; frozen modules are now held in eval mode. |
-# | 12 | Zero-day significance (18.8b) | Bootstrapped 27 (config x seed) rows as independent; now bootstraps the 9 seed-averaged configurations. |
+# | 12 | Held-out-attack significance (18.8b) | Bootstrapped 27 (config x seed) rows as independent; now bootstraps the 9 seed-averaged configurations. |
 # | 13 | Statistics/plots | `mean_ci` uses Student-t (E4's CI exceeded 1.0); `qber_dispersion` uses `ddof=1`; E4 reports that only 5 cells are scorable. |
 # | 14 | Hygiene | `matplotlib.use('Agg')` left the notebook with zero inline figures (now inline under Jupyter); the "uncomment to install" pip cell is now behind `INSTALL_DEPS`; the PNS demo plotted `noise_prob` back at itself and now measures QBER with the simulator; corrected the E91 feature count, cross-references and the "runs in a few minutes" claim; toned down the claim that temporal features help intercept-resend (they did not in the saved run). |
 #
@@ -214,6 +237,8 @@ if INSTALL_DEPS:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'scikit-learn', 'xgboost', 'numpy',
                            'scipy', 'matplotlib', 'torch', 'pandas', 'shap', 'ipykernel'])
 
+import os as _os
+_os.environ.setdefault('CUBLAS_WORKSPACE_CONFIG', ':4096:8')   # A3: reproducible cuBLAS (must be set before torch is imported)
 import numpy as np
 import zlib
 import matplotlib
@@ -243,6 +268,7 @@ from sklearn.ensemble import (
 from sklearn.model_selection import (StratifiedKFold, GridSearchCV, GroupShuffleSplit,  # GroupShuffleSplit: Draft 2 item 2
                                      StratifiedGroupKFold, train_test_split)            # Draft 2.1: group-aware CV / splits
 from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, f1_score, average_precision_score
+from sklearn.calibration import CalibratedClassifierCV   # review E7: replaces the deprecated SVC(probability=True)
 from sklearn.inspection import permutation_importance
 
 try:
@@ -307,7 +333,60 @@ class SeedBook:
 
 
 SEEDS = SeedBook()
-N_REPEATS = 50  # was 20; >= 20 is the minimum for a usable 95% CI on AUC-type metrics
+
+SCOPE_NOTE = ("SCOPE: simulated individual (per-pulse) attacks on GYS-calibrated fibre links (E91: Werner-state model). No coherent/collective, adaptive-optimal, "
+              "detector-side or finite-key analysis. 'Detectable' here means 'a classifier separated THESE simulated attacks from THESE simulated honest links', not a security proof.")
+
+# ---- A3: every source of randomness is seeded; functions that take an optional rng no longer fall back to an UNSEEDED generator
+import random as _random, time as _time
+RUN_START = _time.time()                                  # A1: used by the provenance check at the end of the notebook
+_random.seed(MASTER_SEED); np.random.seed(MASTER_SEED % (2 ** 32))
+_FALLBACK_COUNTER = [0]
+def _fallback_rng():
+    """Deterministic stand-in for np.random.default_rng() when a caller passes no rng (a different stream for every call, same sequence every run)."""
+    _FALLBACK_COUNTER[0] += 1
+    return SEEDS.rng('unseeded_fallback', _FALLBACK_COUNTER[0])
+
+# ---- Physics switches (review items B1/B3/B6/B7/B8). The first three are CORRECTIONS of model inconsistencies found by the audit
+# (Section 25 documents each); set them False to reproduce the earlier numbers exactly.
+BKM07_CTRL_FORWARD_NOISE = True   # B7/B3: forward-leg misalignment also acts on reflected (CTRL) photons -> CTRL baseline has two noisy steps
+BB84_LOSS_CAP_ETA_BOB = True      # B6: Eve's transmittance boost cannot exceed Bob's detector efficiency
+PNS_MATCH_SIGNAL_GAIN_ONLY = True # B2: Eve matches (gain - Y0): dark counts are added by Bob's detector, not by Eve
+HONEST_DRIFT_FRAC = 0.5           # B8: fraction of links whose honest error rate drifts slowly during the run (same link drift for every class)
+HONEST_DRIFT_MAX = 0.5            #     relative amplitude of that drift (error rate varies by up to +/-50 %)
+
+# ── Run profile: ONE switch for every sample size, seed count and epoch count in the notebook ────────────────────────────
+#   quick    tiny; proves that every cell runs (minutes to ~1 h)
+#   standard the sizes of the earlier drafts (hours)
+#   large    default: many more runs and seeds, so that classifier / deep-learning differences are resolved (many hours; a GPU helps Sections 18 and 24)
+#   xl       as large, but with 1,000 + 1,000 Section-24 deep-learning sessions per protocol, 10 seeds and 30 epochs
+# Select with the environment variable QKD_PROFILE (e.g. QKD_PROFILE=standard python changed.py) or by editing RUN_PROFILE below.
+RUN_PROFILE = _os.environ.get('QKD_PROFILE', 'large')
+_P = lambda quick, standard, large, xl=None: dict(quick=quick, standard=standard, large=large, xl=large if xl is None else xl)[RUN_PROFILE]
+SC = dict(
+    n_repeats=_P(3, 30, 50), gd_samples=_P(8, 300, 600), e91_runs=_P(8, 300, 600), k_main=_P(400, 2000, 2000), commission_k=_P(200, 1000, 1000),
+    conv_bb84=_P((1_000, 50_000, 3, 3), (1_000, 5_000_000, 14, 20), (1_000, 5_000_000, 14, 20)),
+    conv_e91=_P((500, 20_000, 3, 3), (500, 300_000, 12, 20), (500, 300_000, 12, 20)),
+    conv_bkm=_P((2_000, 20_000, 2, 2), (2_000, 1_000_000, 9, 15), (2_000, 1_000_000, 9, 15)), n_check=_P(200_000, 3_000_000, 3_000_000),
+    nw_per_class=_P(6, 100, 200), nw_N=_P((100_000, 200_000), (200_000, 1_000_000, 2_000_000), (200_000, 1_000_000, 2_000_000)),
+    nw_W=_P((16, 32), (16, 32, 64), (16, 32, 64)), nw_seeds=_P(2, 20, 20),
+    dl_sessions=_P(10, 100, 300, 400), dl_events=_P(300, 2000, 2000), loo_seeds=_P((0,), (0, 1, 2, 3, 4), tuple(range(10)), tuple(range(20))),
+    loo_fractions=_P((0.5, 1.0), (0.05, 0.1, 0.25, 0.5, 1.0), (0.05, 0.1, 0.25, 0.5, 1.0)), ep_pre=_P(1, 20, 20, 30), ep_ft=_P(1, 15, 15, 20),
+    cv_seeds=_P((0,), (0, 1, 2), tuple(range(5)), tuple(range(10))), cv_epochs=_P(1, 10, 15, 20),
+    abl_seeds=_P((0,), (0, 1, 2), tuple(range(5)), tuple(range(10))),
+    s19_n=_P(6, 30, 100), s21_n=_P(6, 25, 80), s21b_n=_P(6, 40, 100), s21c_n=_P(6, 30, 100), cusum_rep=_P(3, 20, 50),
+    s24_n_h=_P(10, 100, 400), s24_n_att=_P(6, 40, 200), s24_K=_P((200, 500), (200, 500, 2000), (200, 500, 2000)),
+    s24_noise_tr=_P(4, 30, 80), s24_noise_te=_P(6, 40, 150), s24_tt_h=_P(10, 100, 400), s24_tt_a=_P(6, 60, 200),
+    s24_dl_clean=_P(14, 150, 600, 1000), s24_dl_att=_P(14, 150, 600, 1000), s24_dl_seeds=_P((0, 1), (0, 1, 2), tuple(range(5)), tuple(range(10))),
+    s24_dl_epochs=_P(1, 10, 20, 30),
+)
+# Any single value can be overridden without editing the notebook, e.g.  QKD_SC_OVERRIDE='{"s24_dl_clean": 300, "s24_dl_seeds": [0, 1, 2]}' python changed.py
+import json as _json
+for _k, _v in _json.loads(_os.environ.get('QKD_SC_OVERRIDE', '{}')).items():
+    SC[_k] = tuple(_v) if isinstance(_v, list) else _v
+print(f"RUN_PROFILE = {RUN_PROFILE!r}" + (f"  (overrides: {_os.environ['QKD_SC_OVERRIDE']})" if _os.environ.get('QKD_SC_OVERRIDE') else ""))
+
+N_REPEATS = SC['n_repeats']  # >= 20 is the minimum for a usable 95% CI on AUC-type metrics
 
 # Draft 2.1: ONE over-sampling margin shared by every equal-information sampler
 # (collect_bb84_features / collect_bkm07_features / extract_e91_features). Draft 2 used
@@ -319,7 +398,7 @@ K_MARGIN = 1.3
 # attack-strength ranges, burst lengths and equal-K margins below changed. Set False only to resume a
 # run of THIS notebook.
 FINAL_REGENERATE = False   # review fix A2: caches are now validated by a content fingerprint (see fingerprint()), not a switch
-COMMISSION_K = 1000         # review fix B8: key bits in the attack-free per-link commissioning run
+COMMISSION_K = SC['commission_k']         # review fix B8: key bits in the attack-free per-link commissioning run
 
 
 def fingerprint(*fns, **cfg):
@@ -444,6 +523,14 @@ def nuisance_only_audit(nuis, y, groups, name):
 
 
 # ── model factory used by the audits (moved here from Section 8 so it exists when Section 6 runs) ──
+if HAS_XGB:
+    class _BalancedXGB(XGBClassifier):
+        """XGBClassifier that re-weights the positive class by n_neg / n_pos at fit time (review C2: the classes are 1:2 imbalanced)."""
+        def fit(self, X, y, **kw):
+            y_ = np.asarray(y); self.set_params(scale_pos_weight=float((y_ == 0).sum() / max((y_ == 1).sum(), 1)))
+            return super().fit(X, y, **kw)
+
+
 def make_boosted(seed=0, **params):
     '''XGBoost if available, else HistGradientBoostingClassifier.
     Both use the same gradient-boosting algorithm and produce very
@@ -457,12 +544,43 @@ def make_boosted(seed=0, **params):
                         subsample=0.9, colsample_bytree=0.9,
                         eval_metric='logloss', random_state=seed, n_jobs=1)
         defaults.update(params)
-        return XGBClassifier(**defaults)
+        return _BalancedXGB(**defaults)
     else:
         defaults = dict(max_iter=300, max_depth=5, learning_rate=0.05,
-                        random_state=seed)
+                        random_state=seed, class_weight='balanced')
         defaults.update(params)
         return HistGradientBoostingClassifier(**defaults)
+
+
+# ── review fixes D10 / F2: multiple-comparison ledger and AUC standard error ─────────────────────────────────
+P_LEDGER = []            # every confirmatory comparison registers its p-value here; Section 26 applies Holm-Bonferroni to the whole family
+
+
+def ledger(name, p):
+    P_LEDGER.append((str(name), float(p)))
+
+
+def signflip_p(d, B=20000, seed=0):
+    """Two-sided sign-flip permutation p-value for H0: the paired differences d are symmetric about 0."""
+    d = np.asarray(d, float); d = d[np.isfinite(d)]
+    if len(d) < 2: return float('nan')
+    rng = np.random.default_rng(seed); obs = abs(d.mean())
+    null = np.abs((rng.choice([-1.0, 1.0], (B, len(d))) * d).mean(1))
+    return float((np.sum(null >= obs - 1e-15) + 1) / (B + 1))
+
+
+def holm(pvals):
+    """Holm-Bonferroni adjusted p-values (same order as the input)."""
+    p = np.asarray(pvals, float); o = np.argsort(p); m = len(p); adj = np.empty(m); run = 0.0
+    for r, i in enumerate(o):
+        run = max(run, (m - r) * p[i]); adj[i] = min(run, 1.0)
+    return adj
+
+
+def auc_se(auc, n_pos, n_neg):
+    """Hanley-McNeil standard error of an AUC (used for the bands in the detectability plots)."""
+    a = float(np.clip(auc, 1e-6, 1 - 1e-6)); q1 = a / (2 - a); q2 = 2 * a * a / (1 + a)
+    return float(np.sqrt((a * (1 - a) + (n_pos - 1) * (q1 - a * a) + (n_neg - 1) * (q2 - a * a)) / (n_pos * n_neg)))
 
 # %% [markdown]
 # ---
@@ -519,7 +637,7 @@ def measure_qubit(state, basis, noise_prob, rng=None):
     -------
     (measured_bit, collapsed_state)
     '''
-    rng = rng or np.random.default_rng()
+    rng = rng or _fallback_rng()
     #np.random.default_rng() is a fallback case
     # ── Noise: randomise the result ─────────────────────────────────────────
     if rng.random() < noise_prob:
@@ -796,7 +914,7 @@ def sample_e91_channel(rng):
 # such, not derived from a security proof).
 def attack_schedule(n_pulses, intensity, profile='iid', rng=None,
                      mean_burst=2000, drift_period=None):
-    rng = rng or np.random.default_rng()
+    rng = rng or _fallback_rng()
     if intensity <= 0:
         return np.zeros(n_pulses, dtype=bool)
     if profile == 'iid':
@@ -853,7 +971,11 @@ def make_pns_strategy(distance_km, mu_signal=MU_SIGNAL, n_split=2, **chan):
     eta_bob = chan.get('eta_bob') if chan.get('eta_bob') is not None else GYS['eta_bob']
     p_forwardable = sum(np.exp(-mu_signal) * mu_signal**k / factorial(k) * (1.0 - (1.0 - eta_bob) ** (k - 1))
                          for k in range(n_split, 15))
-    t_raw = float(ch['gain'] / max(p_forwardable, 1e-15))
+    if PNS_MATCH_SIGNAL_GAIN_ONLY:      # dark counts are added by Bob's detector regardless of Eve: she only has to reproduce (gain - Y0)/(1 - Y0)
+        _g = (ch['gain'] - ch['Y0']) / max(1.0 - ch['Y0'], 1e-15)
+    else:
+        _g = ch['gain']
+    t_raw = float(_g / max(p_forwardable, 1e-15))
     t_fwd = float(np.clip(t_raw, 0.0, 1.0))
     return dict(n_split=n_split, t_fwd=t_fwd, t_required=t_raw, can_hide=bool(t_raw <= 1.0),
                 mu_signal=mu_signal, distance_km=distance_km, eta_bob=float(eta_bob))
@@ -969,12 +1091,22 @@ def eve_loss_manipulation(rho, delta=0.3):
 def simulate_bb84_decoy(N, distance_km, eve_mode='none', eve_intensity=0.0,
                          profile='iid', pns_strategy=None, rng=None,
                          intensities=(MU_SIGNAL, MU_DECOY, MU_VACUUM),
-                         probs=DECOY_PROBS, mean_burst=2000, **chan):
+                         probs=DECOY_PROBS, mean_burst=2000, detector=None, **chan):
     """One BB84 run: weak coherent pulses, decoy intensities, real loss,
     dark counts, and a physically-implemented Eve.
-    eve_mode in {'none','intercept_resend','pns','blocking','loss_manipulation','mixed_pns_ir'}  (mixed_pns_ir: item 32)
+    eve_mode in {'none','intercept_resend','pns','pns_matched','blocking','loss_manipulation','mixed_pns_ir'}  (mixed_pns_ir: item 32)
+      'pns' blocks single-photon pulses (Y1 = 0): a non-adaptive attacker that the decoy states expose by construction.
+      'pns_matched' (review B1) is the adaptive counterpart: Eve throttles the multi-photon pulses she splits so that Bob's click probability
+      for EVERY photon number equals the honest channel's -- gain, QBER and all decoy statistics are unchanged, so nothing in the
+      observable data can reveal it (privacy amplification, not detection, is the defence).
+    detector (review B7/B8): optional dict of honest-hardware effects, all off by default --
+      afterpulse   probability that a click triggers a spurious click (error 0.5) in the next pulse slot,
+      dead_pulses  number of pulse slots a detector is blind after a click,
+      drift_amp    relative amplitude of a slow sinusoidal drift of the detector error rate during the run (B8),
+      drift_cycles number of drift periods per run.
     """
-    rng = rng or np.random.default_rng()
+    rng = rng or _fallback_rng()
+    det = dict(afterpulse=0.0, dead_pulses=0, drift_amp=0.0, drift_cycles=1.0); det.update(detector or {})
     mu_sig = intensities[0]
     ch = channel_model(distance_km, mu=mu_sig, **chan)
     eta, Y0, edet, e0 = ch['eta'], ch['Y0'], ch['e_detector'], ch['e_0']
@@ -989,6 +1121,9 @@ def simulate_bb84_decoy(N, distance_km, eve_mode='none', eve_intensity=0.0,
     active = attack_schedule(N, eve_intensity, profile, rng, mean_burst)   # P4
     eta_eff = np.full(N, float(eta))
     extra_err = np.zeros(N)
+    if det['drift_amp'] > 0:          # B8: slow drift of the misalignment error (temperature / polarisation drift), a property of the LINK
+        _ph = rng.random() * 2 * np.pi
+        edet = np.clip(edet * (1.0 + det['drift_amp'] * np.sin(2 * np.pi * det['drift_cycles'] * np.arange(N) / N + _ph)), 0.0, 0.5)
 
     # These two draws are made UNCONDITIONALLY (not just inside the
     # matching branch) so every eve_mode consumes the exact same amount of
@@ -1009,7 +1144,9 @@ def simulate_bb84_decoy(N, distance_km, eve_mode='none', eve_intensity=0.0,
         eta_eff = np.where(active, 0.0, eta)
     elif eve_mode == 'loss_manipulation':
         boost = 1.0 / max(1.0 - eve_intensity, 1e-6)
-        eta_eff = np.where(active, 0.0, min(eta * boost, 1.0))
+        # B6: even a lossless line cannot raise the click probability above Bob's detector efficiency eta_bob
+        _eb = chan.get('eta_bob') if chan.get('eta_bob') is not None else GYS['eta_bob']
+        eta_eff = np.where(active, 0.0, min(eta * boost, _eb if BB84_LOSS_CAP_ETA_BOB else 1.0))
     elif eve_mode == 'mixed_pns_ir':
         # Draft 2, item 32: PNS and intercept-resend run TOGETHER on the
         # same active/intensity schedule. They write to DISJOINT outputs
@@ -1024,9 +1161,23 @@ def simulate_bb84_decoy(N, distance_km, eve_mode='none', eve_intensity=0.0,
         eta_bob_ = chan.get('eta_bob') if chan.get('eta_bob') is not None else GYS['eta_bob']
         p_click_fwd = 1.0 - (1.0 - eta_bob_) ** np.maximum(n - 1, 0)
         p_sig = np.where(active, np.where(fwd, p_click_fwd, 0.0), p_sig)
+    if eve_mode == 'pns_matched':
+        _eb2 = chan.get('eta_bob') if chan.get('eta_bob') is not None else GYS['eta_bob']
+        _honest = 1.0 - (1.0 - eta_eff) ** n
+        _pns = 1.0 - (1.0 - _eb2) ** np.maximum(n - 1, 0)
+        _t = np.where(_pns > 0, np.minimum(1.0, _honest / np.maximum(_pns, 1e-300)), 0.0)
+        p_sig = np.where(active, np.where(n >= 2, _t * _pns, _honest), p_sig)      # == honest wherever Eve can throttle
     sig_cl = rng.random(N) < p_sig
     dark = rng.random(N) < Y0
     click = sig_cl | dark
+    if det['afterpulse'] > 0:         # B7: afterpulse = spurious click after a click, independent of the pulse intensity (hits the vacuum yield too)
+        _prev = np.concatenate([[False], click[:-1]])
+        click = click | (_prev & (rng.random(N) < det['afterpulse']))
+    if det['dead_pulses'] > 0:        # B7: dead time -- clicks inside the blind window after a click are lost
+        _idx = np.flatnonzero(click); _last = -10 ** 9; _dead = int(det['dead_pulses'])
+        for _i in _idx:
+            if _i - _last <= _dead: click[_i] = False; sig_cl[_i] = False
+            else: _last = _i
 
     p_err = np.where(sig_cl, np.clip(edet + extra_err * (1 - 2 * edet), 0, 1), e0)
     bit_B = np.where(rng.random(N) < p_err, 1 - bit_A, bit_A)
@@ -1071,42 +1222,37 @@ for intensity in [0.0, 0.1, 0.2, 0.5, 1.0]:
 def simulate_photon_number_batch(mu, n_pulses, rng):
     return rng.poisson(mu, size=n_pulses)
 
-def analyze_pns_vulnerability(mu_values, n_pulses=2_000_000, distance_km=25.0, rng=None):
-    rng = rng or np.random.default_rng(0)
+def analyze_pns_vulnerability(mu_values, n_pulses=2_000_000, distance_km=25.0, n_rep=10):
+    """Review F3: the old demo printed ONE run's QBER per mu (a number that wanders by +/- 0.005 from sampling noise alone) as evidence that
+    'QBER stays flat'. Now: mean +/- standard error over n_rep independent runs, for the HONEST link and for full-time PNS, side by side."""
     results = []
     for mu in mu_values:
-        counts = simulate_photon_number_batch(mu, n_pulses, rng)
-        vacuum_rate = (counts == 0).mean()
-        single_rate = (counts == 1).mean()
-        multi_rate  = (counts >= 2).mean()
-        # Draft 2.1: MEASURE the sifted-bit error rate under a full-time PNS attack with the real
-        # simulator. The old line `(rng.random(n) < noise_prob).mean()` just echoed noise_prob
-        # back, so "QBER stays flat" was true by construction, not a result.
-        _run = simulate_bb84_decoy(n_pulses, distance_km, 'pns', 1.0, rng=rng,
-                                   intensities=(mu, mu / 10.0, 0.0))
-        qber = _run['E'][mu]
-        results.append(dict(mu=mu, vacuum_rate=vacuum_rate,
-                             single_rate=single_rate,
-                             multi_rate=multi_rate, qber=qber))
+        counts = simulate_photon_number_batch(mu, n_pulses, SEEDS.rng('pns_demo_counts', int(mu * 1000)))
+        q_h, q_p = [], []
+        for r in range(n_rep):
+            for mode, store in (('none', q_h), ('pns', q_p)):
+                run = simulate_bb84_decoy(n_pulses, distance_km, mode, 1.0, rng=SEEDS.rng(f'pns_demo_{mode}_{mu}', r), intensities=(mu, mu / 10.0, 0.0))
+                store.append(run['E'][mu])
+        results.append(dict(mu=mu, vacuum_rate=(counts == 0).mean(), single_rate=(counts == 1).mean(), multi_rate=(counts >= 2).mean(),
+                            qber_honest=np.mean(q_h), qber_honest_se=np.std(q_h, ddof=1) / np.sqrt(n_rep),
+                            qber_pns=np.mean(q_p), qber_pns_se=np.std(q_p, ddof=1) / np.sqrt(n_rep)))
     return results
 
 mu_values = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5]
-pns_results = analyze_pns_vulnerability(mu_values, rng=np.random.default_rng(0))
+pns_results = analyze_pns_vulnerability(mu_values)
 for r in pns_results:
-    print(f"mu={r['mu']:.2f}  single={r['single_rate']:.3f}  "
-          f"multi={r['multi_rate']:.3f}  QBER={r['qber']:.4f}")
+    z = (r['qber_pns'] - r['qber_honest']) / np.hypot(r['qber_pns_se'], r['qber_honest_se'])
+    print(f"mu={r['mu']:.2f}  single={r['single_rate']:.3f}  multi={r['multi_rate']:.3f}  QBER honest={r['qber_honest']:.4f}+-{r['qber_honest_se']:.4f}  "
+          f"PNS={r['qber_pns']:.4f}+-{r['qber_pns_se']:.4f}  (z={z:+.1f})")
 
-mus     = [r['mu'] for r in pns_results]
-multis  = [r['multi_rate'] for r in pns_results]
-qbers   = [r['qber'] for r in pns_results]
-
-fig, ax1 = plt.subplots(figsize=(7,4))
-ax1.plot(mus, multis, 'o-', color='#DC2626', label='multi-photon rate')
-ax1.set_xlabel('mean photon number (mu)'); ax1.set_ylabel('multi-photon rate', color='#DC2626')
+mus = [r['mu'] for r in pns_results]
+fig, ax1 = plt.subplots(figsize=(7.5, 4.2))
+ax1.plot(mus, [r['multi_rate'] for r in pns_results], 'o-', color='#DC2626'); ax1.set_xlabel('mean photon number (mu)'); ax1.set_ylabel('multi-photon rate', color='#DC2626')
 ax2 = ax1.twinx()
-ax2.plot(mus, qbers, 's--', color='#2563EB', label='QBER')
-ax2.set_ylabel('QBER', color='#2563EB')
-plt.title('PNS vulnerability: multi-photon rate rises, QBER stays flat')
+ax2.errorbar(mus, [r['qber_honest'] for r in pns_results], yerr=[2 * r['qber_honest_se'] for r in pns_results], fmt='s--', color='#2563EB', label='honest')
+ax2.errorbar(mus, [r['qber_pns'] for r in pns_results], yerr=[2 * r['qber_pns_se'] for r in pns_results], fmt='^:', color='#16A34A', label='full-time PNS')
+ax2.set_ylabel('sifted QBER (mean +/- 2 s.e., 10 runs)', color='#2563EB'); ax2.legend(loc='center right', fontsize=8)
+plt.title('PNS vs honest: multi-photon rate rises, QBER difference is within sampling error (see z above)')
 plt.tight_layout(); plt.savefig('plots/pns_vulnerability.png', dpi=150)
 plt.show()
 
@@ -1248,11 +1394,11 @@ def summarize_qber_convergence(df, distance_km=25.0, effect_size=0.02, min_sifte
 print("bb84_qber_convergence() / summarize_qber_convergence() defined.")
 
 # %%
-n_values = np.unique(np.round(np.geomspace(1_000, 5_000_000, 14)).astype(int))
+n_values = np.unique(np.round(np.geomspace(SC['conv_bb84'][0], SC['conv_bb84'][1], SC['conv_bb84'][2])).astype(int))
 print(f"Running the convergence study: {len(n_values)} pulse counts from "
       f"{n_values[0]:,} to {n_values[-1]:,}, 20 independent repeats each "
       f"(honest channel, distance_km=25) ...")
-conv_df = bb84_qber_convergence(n_values, n_repeats=20, distance_km=25.0)
+conv_df = bb84_qber_convergence(n_values, n_repeats=SC['conv_bb84'][3], distance_km=25.0)
 
 EFFECT_SIZE = 0.05   # Section 4.2's own target_excess_qber -- the smallest
                      # attack-induced QBER shift this notebook is actually
@@ -1362,8 +1508,8 @@ print("Saved: plots/qber_convergence.png")
 #    as an auxiliary return-leg channel monitor (see collect_bkm07_features).
 #  * Round trip means the channel is traversed TWICE: t^2, not t.
 def simulate_bkm07_pulse(distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
-                          p_prep=None, **chan):
-    rng = rng or np.random.default_rng()
+                          p_prep=None, ctrl_fwd_noise=None, **chan):
+    rng = rng or _fallback_rng()
     ch = channel_model(distance_km, **chan)
     eta_1way = ch['eta']
     p_prep = ch['e_detector'] if p_prep is None else p_prep
@@ -1371,7 +1517,9 @@ def simulate_bkm07_pulse(distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
 
     bit_A = int(rng.integers(0, 2))
     basis_A = int(rng.integers(0, 2))
+    ctrl_fwd_noise = BKM07_CTRL_FORWARD_NOISE if ctrl_fwd_noise is None else ctrl_fwd_noise
     state = prepare_state(bit_A, basis_A)
+    basis_now = basis_A            # basis of the travelling carrier (changes if Eve re-prepares it)
 
     if rng.random() > eta_1way:
         return {'lost': True}
@@ -1379,18 +1527,23 @@ def simulate_bkm07_pulse(distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
     if eve_mode != 'none' and rng.random() < eve_fwd:
         basis_Ef = int(rng.integers(0, 2))
         _, state = measure_qubit(state, basis_Ef, noise_prob=0.0, rng=rng)
+        basis_now = basis_Ef
 
     bob_mode = 'SIFT' if rng.random() < 0.5 else 'CTRL'
     bit_B = None
+    if bob_mode == 'CTRL' and ctrl_fwd_noise and rng.random() < 2 * p_err_leg:
+        _, state = measure_qubit(state, basis_now, 1.0, rng=rng)    # forward-leg noise on the reflected carrier
     if bob_mode == 'SIFT':
         bit_B, _ = measure_qubit(state, 0, 2 * p_err_leg, rng=rng)
         if rng.random() < p_prep:
             bit_B = 1 - bit_B
         state = prepare_state(bit_B, 0)
+        basis_now = 0
 
     if eve_mode != 'none' and rng.random() < eve_ret:
         basis_Er = int(rng.integers(0, 2))
         _, state = measure_qubit(state, basis_Er, noise_prob=0.0, rng=rng)
+        basis_now = basis_Er
 
     if rng.random() > eta_1way:
         return {'lost': True}
@@ -1413,7 +1566,7 @@ def simulate_bkm07_pulse(distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
 
 # %%
 def simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
-                          p_prep=None, p_meas=None, p_ret=None, **chan):
+                          p_prep=None, p_meas=None, p_ret=None, detector=None, ctrl_fwd_noise=None, **chan):
     """Vectorised BKM07 simulator (Draft 2, item 7) -- see the callout above
     for why this is physically identical to simulate_bkm07_pulse. Draws
     more rng values per pulse than the scalar loop (it evaluates every
@@ -1421,7 +1574,7 @@ def simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
     version bit-for-bit at a shared seed -- only statistically, which is
     all downstream code needs (same convention as simulate_bb84_decoy vs.
     the retired per-pulse simulate_bb84_pulse)."""
-    rng = rng or np.random.default_rng()
+    rng = rng or _fallback_rng()
     ch = channel_model(distance_km, **chan)
     eta = ch['eta']
     p_prep = ch['e_detector'] if p_prep is None else p_prep
@@ -1429,6 +1582,11 @@ def simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
     # (all default to e_detector, which reproduces the previous model exactly).
     p_meas = ch['e_detector'] if p_meas is None else p_meas
     p_ret = ch['e_detector'] if p_ret is None else p_ret
+    ctrl_fwd_noise = BKM07_CTRL_FORWARD_NOISE if ctrl_fwd_noise is None else ctrl_fwd_noise
+    det = dict(drift_amp=0.0, drift_cycles=1.0); det.update(detector or {})
+    if det['drift_amp'] > 0:          # B8: slow drift of the honest error rate, common to all error sources of the link
+        _f = 1.0 + det['drift_amp'] * np.sin(2 * np.pi * det['drift_cycles'] * np.arange(N) / N + rng.random() * 2 * np.pi)
+        p_prep, p_meas, p_ret = (np.clip(np.asarray(v) * _f, 0.0, 0.5) for v in (p_prep, p_meas, p_ret))
 
     bit_A = rng.integers(0, 2, N)
     basis_A = rng.integers(0, 2, N)
@@ -1456,6 +1614,11 @@ def simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
     bit_B = np.where(bob_sift & flip_prep, 1 - bit_B, bit_B)   # Bob's re-preparation flip
     cur_bit = np.where(bob_sift, bit_B, cur_bit)     # SIFT: carrier becomes Bob's re-sent bit
     cur_basis = np.where(bob_sift, 0, cur_basis)     # ... re-prepared in Z
+    if ctrl_fwd_noise:
+        # B7/B3 physics fix: the forward-leg misalignment acts on the photon BEFORE Bob decides what to do with it. For SIFT rounds it is
+        # Bob's measurement noise (p_meas); CTRL rounds used to skip it, so their honest error was ONE noisy step instead of two.
+        noisy_fwd_ctrl = bob_ctrl & (rng.random(N) < (2 * p_meas))
+        cur_bit = np.where(noisy_fwd_ctrl, rng.integers(0, 2, N), cur_bit)
 
     if eve_mode != 'none':
         eve_ret_hit = alive & (rng.random(N) < eve_ret)
@@ -1499,16 +1662,13 @@ print("simulate_bkm07_batch() defined (Draft 2, item 7).")
 
 # %%
 def run_e91(n_pairs, V=0.95, eve_mode='none', eve_intensity=0.0, lam=0.3,
-            profile='iid', rng=None, mean_burst=2000):
-    """One E91 run. Outcomes are drawn from the exact Born-rule joint
-    distribution for each (setting pair, channel condition) -- there are
-    only 3x3 settings x 2 channel conditions, so 18 probability vectors are
-    computed per run and sampled from. Multinomial sampling from the Born
-    probabilities is identically distributed to shot-by-shot statevector
-    simulation; it is exact, not an approximation (measured: 200,000 pairs
-    in 0.07s -- see the P20 Qiskit cross-check in the appendix, if run)."""
-    rng = rng or np.random.default_rng()
-    rho0 = werner_state(V)
+            profile='iid', rng=None, mean_burst=2000, drift_amp=0.0, drift_cycles=1.0, n_drift_segments=32):
+    """One E91 run. Outcomes are drawn from the exact Born-rule joint distribution for each (setting pair, channel condition) --
+    multinomial sampling from the Born probabilities is identically distributed to shot-by-shot simulation.
+
+    drift_amp (review B8): the honest noise (1 - V) drifts slowly, (1 - V_t) = (1 - V)(1 + drift_amp sin(2 pi cycles t / n + phase)),
+    piecewise constant over n_drift_segments segments; 0 reproduces the earlier single-visibility behaviour exactly."""
+    rng = rng or _fallback_rng()
     attacked = attack_schedule(n_pairs, eve_intensity, profile, rng, mean_burst)
 
     a_keys = list(ALICE_ANGLES.keys())
@@ -1518,27 +1678,37 @@ def run_e91(n_pairs, V=0.95, eve_mode='none', eve_intensity=0.0, lam=0.3,
     ra = np.zeros(n_pairs, dtype=int)
     rb = np.zeros(n_pairs, dtype=int)
 
-    if eve_mode == 'intercept_resend':
-        rho_att = eve_ir_channel(rho0)
-    elif eve_mode == 'ancilla':
-        rho_att = eve_ancilla_bob(rho0, lam)
-    elif eve_mode in ('extra_depolarisation', 'loss_manipulation'):   # review fix B5: renamed -- it is white noise, not a loss attack
-        rho_att = eve_loss_manipulation(rho0, delta=min(0.35, 0.5 * eve_intensity))
+    if drift_amp > 0:
+        edges = np.linspace(0, n_pairs, n_drift_segments + 1, dtype=int); _ph = rng.random() * 2 * np.pi
+        mids = 0.5 * (edges[:-1] + edges[1:]) / max(n_pairs, 1)
+        Vs = np.clip(1.0 - (1.0 - V) * (1.0 + drift_amp * np.sin(2 * np.pi * drift_cycles * mids + _ph)), 0.0, 1.0)
     else:
-        rho_att = rho0
+        edges, Vs = np.array([0, n_pairs]), np.array([V])
 
-    for a_name, a_deg in ALICE_ANGLES.items():
-        for b_name, b_deg in BOB_ANGLES.items():
-            for att in (False, True):
-                m = (ak == a_name) & (bk == b_name) & (attacked == att)
-                cnt = int(m.sum())
-                if cnt == 0:
-                    continue
-                p = joint_probs(rho_att if att else rho0, a_deg, b_deg)
-                keys = list(p)
-                idx = rng.choice(len(keys), size=cnt, p=[p[kk] for kk in keys])
-                outs = np.array(keys)[idx]
-                ra[m], rb[m] = outs[:, 0], outs[:, 1]
+    for lo, hi, V_seg in zip(edges[:-1], edges[1:], Vs):
+        rho0 = werner_state(float(V_seg))
+        if eve_mode == 'intercept_resend':
+            rho_att = eve_ir_channel(rho0)
+        elif eve_mode == 'ancilla':
+            rho_att = eve_ancilla_bob(rho0, lam)
+        elif eve_mode in ('extra_depolarisation', 'loss_manipulation'):   # review fix B5: renamed -- it is white noise, not a loss attack
+            rho_att = eve_loss_manipulation(rho0, delta=min(0.35, 0.5 * eve_intensity))
+        else:
+            rho_att = rho0
+        seg = slice(lo, hi)
+        for a_name, a_deg in ALICE_ANGLES.items():
+            for b_name, b_deg in BOB_ANGLES.items():
+                for att in (False, True):
+                    m = np.zeros(n_pairs, dtype=bool)
+                    m[seg] = (ak[seg] == a_name) & (bk[seg] == b_name) & (attacked[seg] == att)
+                    cnt = int(m.sum())
+                    if cnt == 0:
+                        continue
+                    p = joint_probs(rho_att if att else rho0, a_deg, b_deg)
+                    keys = list(p)
+                    idx = rng.choice(len(keys), size=cnt, p=[p[kk] for kk in keys])
+                    outs = np.array(keys)[idx]
+                    ra[m], rb[m] = outs[:, 0], outs[:, 1]
 
     return ak, bk, ra, rb
 
@@ -1700,10 +1870,10 @@ def summarize_e91_qber_convergence(df, V=0.95, effect_size=0.05, min_sifted=100)
 print("e91_qber_convergence() / summarize_e91_qber_convergence() defined.")
 
 # %%
-n_values_e91 = np.unique(np.round(np.geomspace(500, 300_000, 12)).astype(int))
+n_values_e91 = np.unique(np.round(np.geomspace(SC['conv_e91'][0], SC['conv_e91'][1], SC['conv_e91'][2])).astype(int))
 print(f"Running the E91 convergence study: {len(n_values_e91)} pair-counts from "
       f"{n_values_e91[0]:,} to {n_values_e91[-1]:,}, 20 repeats each (honest channel, V=0.95) ...")
-e91_conv_df = e91_qber_convergence(n_values_e91, n_repeats=20, V=0.95)
+e91_conv_df = e91_qber_convergence(n_values_e91, n_repeats=SC['conv_e91'][3], V=0.95)
 e91_conv_summ, e91_conv_theory, e91_conv_ideal_N = summarize_e91_qber_convergence(
     e91_conv_df, V=0.95, effect_size=EFFECT_SIZE)
 print()
@@ -1777,13 +1947,13 @@ def summarize_bkm07_qber_convergence(df, e_detector, effect_size=0.05, min_sifte
 print("bkm07_qber_convergence() / summarize_bkm07_qber_convergence() defined.")
 
 # %%
-n_values_bkm = np.unique(np.round(np.geomspace(2_000, 1_000_000, 9)).astype(int))
+n_values_bkm = np.unique(np.round(np.geomspace(SC['conv_bkm'][0], SC['conv_bkm'][1], SC['conv_bkm'][2])).astype(int))
 print(f"Running the BKM07 convergence study: {len(n_values_bkm)} pulse counts from "
       f"{n_values_bkm[0]:,} to {n_values_bkm[-1]:,}, 15 repeats each (honest channel, "
       f"distance_km=0, e_detector=0.033) ...")
 print("(BKM07's simulator is a per-pulse Python loop with severe round-trip loss --")
 print(" this is the slow part of this study. Expect a couple of minutes.)")
-bkm_conv_df = bkm07_qber_convergence(n_values_bkm, n_repeats=15, distance_km=0.0, e_detector=0.033)
+bkm_conv_df = bkm07_qber_convergence(n_values_bkm, n_repeats=SC['conv_bkm'][3], distance_km=0.0, e_detector=0.033)
 bkm_conv_summ, bkm_conv_theory, bkm_conv_ideal_N = summarize_bkm07_qber_convergence(
     bkm_conv_df, e_detector=0.033, effect_size=EFFECT_SIZE)
 print()
@@ -2189,7 +2359,7 @@ def _truncate_bkm07(b, K):
 def collect_bb84_features(N=None, distance_km=0.0, eve_mode='none', eve_intensity=0.0,
                            profile='iid', pns_strategy=None, n_windows=64,
                            rng=None, target_k_signal_bits=None, k_margin=K_MARGIN,
-                           max_pulses=20_000_000, mean_burst=None, baseline=None, truncate=True, **chan):
+                           max_pulses=20_000_000, mean_burst=None, baseline=None, truncate=True, detector=None, **chan):
     '''Run N BB84 pulses through the physical channel (P1/P2) and compress
     into the BB84_FEATURE_NAMES feature vector, via the vectorised
     decoy-state simulator (P5).
@@ -2207,7 +2377,7 @@ def collect_bb84_features(N=None, distance_km=0.0, eve_mode='none', eve_intensit
     (BB84_FEATURE_NAMES doesn't list them) but feed the leakage audit's
     real N_per_run and the AUC-vs-key-rounds plot (item 6).
     '''
-    rng = rng or np.random.default_rng()
+    rng = rng or _fallback_rng()
     N_capped = False
     if target_k_signal_bits is not None:
         _ch_est = channel_model(distance_km, **chan)
@@ -2220,10 +2390,11 @@ def collect_bb84_features(N=None, distance_km=0.0, eve_mode='none', eve_intensit
     # Final draft: burst length scales with the run (~1/16 of it). The fixed 2,000-pulse default was
     # shorter than one analysis window by orders of magnitude at N ~ 1e6-2e7, so 'bursty' attacks were
     # statistically iid and the temporal features had nothing to detect.
-    _mb = mean_burst if mean_burst is not None else max(2000, int(N) // 16)
+    # B9: the burst length is no longer one fixed fraction of the run -- it is drawn per run from {N/8, N/16, N/32, N/64}
+    _mb = mean_burst if mean_burst is not None else max(2000, int(N) // int(rng.choice([8, 16, 32, 64])))
     run = simulate_bb84_decoy(N, distance_km, eve_mode, eve_intensity,
                                profile=profile, pns_strategy=pns_strategy,
-                               rng=rng, mean_burst=_mb, **chan)
+                               rng=rng, mean_burst=_mb, detector=detector, **chan)
 
     N_gen = int(N)
     if truncate and target_k_signal_bits is not None:
@@ -2294,7 +2465,7 @@ def collect_bb84_features(N=None, distance_km=0.0, eve_mode='none', eve_intensit
 
 def collect_bkm07_features(N=None, distance_km=0.0, eve_mode='none', eve_fwd=0.0, eve_ret=0.0,
                             n_windows=64, rng=None, target_k_key_rounds=None, k_margin=K_MARGIN,
-                            max_pulses=15_000_000, baseline=None, truncate=True, **chan):
+                            max_pulses=15_000_000, baseline=None, truncate=True, detector=None, **chan):
     '''Run N BKM07 round trips and compress into a feature vector.
 
     Alice measures SIFT returns in her OWN preparation basis
@@ -2317,7 +2488,7 @@ def collect_bkm07_features(N=None, distance_km=0.0, eve_mode='none', eve_fwd=0.0
     item-7 vectorisation above. Returns '_k_achieved' / '_N_used' the same
     way collect_bb84_features does (see its docstring).
     '''
-    rng = rng or np.random.default_rng()
+    rng = rng or _fallback_rng()
     N_capped = False
     if target_k_key_rounds is not None:
         _ch_est = channel_model(distance_km, **chan)
@@ -2327,7 +2498,7 @@ def collect_bkm07_features(N=None, distance_km=0.0, eve_mode='none', eve_fwd=0.0
     elif N is None:
         raise ValueError("collect_bkm07_features needs either N or target_k_key_rounds")
 
-    b = simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=rng, **chan)
+    b = simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=rng, detector=detector, **chan)
     N_gen = int(N)
     if truncate and target_k_key_rounds is not None:
         b, N = _truncate_bkm07(b, target_k_key_rounds)
@@ -2513,7 +2684,7 @@ print(f"E91 device-independent SKR: r=0 below V~={_V_critical:.4f} (honest QBER 
 # ---------------------------------------------------------------------
 def extract_e91_features(n_pulses=2000, eve_mode="none", n_windows=20, rng=None,
                           eve_intensity=0.0, lam=0.3, profile='iid', V=None,
-                          target_k_key_pairs=None, k_margin=K_MARGIN, baseline=None, truncate=True):
+                          target_k_key_pairs=None, k_margin=K_MARGIN, baseline=None, truncate=True, detector=None):
     """Draft 2, item 8: pass `target_k_key_pairs=K` instead of `n_pulses` to
     size n_pulses so the run nets approximately K key pairs (settings
     a2-b1/a3-b2, which occur with probability 2/9 under the uniform random
@@ -2521,14 +2692,16 @@ def extract_e91_features(n_pulses=2000, eve_mode="none", n_windows=20, rng=None,
     collect_bb84_features / collect_bkm07_features. n_pulses is still
     accepted directly for every other caller. Returns '_k_achieved' /
     '_N_used' the same way."""
-    rng = rng or np.random.default_rng()
+    rng = rng or _fallback_rng()
     if target_k_key_pairs is not None:
         n_pulses = max(int(np.ceil(target_k_key_pairs / (2.0 / 9.0) * k_margin)), 500)
     V = sample_e91_channel(rng) if V is None else V
 
     a_choice, b_choice, r_a, r_b = run_e91(n_pulses, V=V, eve_mode=eve_mode,
                                             eve_intensity=eve_intensity, lam=lam,
-                                            profile=profile, rng=rng)
+                                            profile=profile, rng=rng,
+                                            drift_amp=float((detector or {}).get('drift_amp', 0.0)), drift_cycles=float((detector or {}).get('drift_cycles', 1.0)),
+                                            mean_burst=max(2000, int(n_pulses) // int(rng.choice([8, 16, 32, 64]))))
     _n_gen = int(n_pulses)
     if truncate and target_k_key_pairs is not None:      # review fix C3: exactly K key pairs
         _km = np.isin(np.char.add(a_choice, b_choice), [_a + _b for _a, _b in KEY_PAIRS]); _cs = np.cumsum(_km)
@@ -2536,6 +2709,11 @@ def extract_e91_features(n_pulses=2000, eve_mode="none", n_windows=20, rng=None,
             _cut = int(np.searchsorted(_cs, target_k_key_pairs)) + 1
             a_choice, b_choice, r_a, r_b = a_choice[:_cut], b_choice[:_cut], r_a[:_cut], r_b[:_cut]; n_pulses = _cut
     qber_trace, chsh_trace = windowed_traces(a_choice, b_choice, r_a, r_b, n_windows)
+    # review E6: the SAME temporal statistics as BB84/BKM07 -- dispersion index and normalised jump energy of the key-error trace, computed from
+    # per-window (errors, key pairs) counts so the binomial floor is known; the CHSH-trace jump energy is kept as a separate feature.
+    _edges = np.linspace(0, n_pulses, n_windows + 1, dtype=int); _kp = np.isin(np.char.add(a_choice, b_choice), [_a + _b for _a, _b in KEY_PAIRS])
+    _err = _kp & (r_a != -r_b)
+    _wc = np.array([int(_kp[lo:hi].sum()) for lo, hi in zip(_edges[:-1], _edges[1:])]); _we = np.array([int(_err[lo:hi].sum()) for lo, hi in zip(_edges[:-1], _edges[1:])])
 
     qber_key = window_qber(a_choice, b_choice, r_a, r_b, 0, n_pulses)
     chsh_s = window_chsh(a_choice, b_choice, r_a, r_b, 0, n_pulses)
@@ -2568,7 +2746,9 @@ def extract_e91_features(n_pulses=2000, eve_mode="none", n_windows=20, rng=None,
         "s_deviation": abs(TSIRELSON_BOUND - abs(chsh_s)) if not np.isnan(chsh_s) else np.nan,
         "s_qber_residual": s_qber_residual,
         "per_pair_corr_spread": per_pair_corr_spread,
-        "jump_energy": float(_jump_energy_rel(chsh_trace)),   # review fix E6: normalised
+        "jump_energy": float(_jump_energy_norm(_we, _wc)),   # review E6: same definition as BB84/BKM07 (key-error trace)
+        "chsh_jump_energy": float(_jump_energy_rel(chsh_trace)),
+        "qber_dispersion": float(_dispersion_index(_we, _wc)),
         "spectral_entropy": float(spectral_entropy(qber_trace)),
         "autocorr_lag1": float(autocorr_lag1(qber_trace)),
         "h_qber_key": float(binary_entropy(qber_key)) if not np.isnan(qber_key) else np.nan,
@@ -2626,7 +2806,7 @@ def extract_e91_features(n_pulses=2000, eve_mode="none", n_windows=20, rng=None,
 E91_FEATURE_NAMES = ['qber_key', 'chsh_S', 's_deviation', 's_qber_residual',
                       'per_pair_corr_spread', 'jump_energy', 'spectral_entropy',
                       'autocorr_lag1', 'h_qber_key', 'sifted_rate',
-                      'r_secure_di', 'z_qber_key']  # review fix B8: + per-link baseline z-score
+                      'r_secure_di', 'z_qber_key', 'qber_dispersion', 'chsh_jump_energy']  # review fix B8: + per-link baseline z-score
 E91_CHSH_ONLY_NAMES = ['chsh_S']
 
 print("E91 feature-extraction functions defined.")
@@ -2654,16 +2834,17 @@ def generate_e91_dataset(n_runs_per_mode=100, n_pulses=2000, n_windows=20,
         for i in range(n_runs_per_mode):
             rng = SEEDS.rng(seed_role, i) if mode == "none" else SEEDS.rng(seed_role + '_' + mode, i)
             intensity = log_uniform(rng, 0.02, 0.9) if mode != "none" else 0.0
-            profile = 'bursty' if (mode == 'intercept_resend' and rng.random() < 0.5) else 'iid'
+            profile = str(rng.choice(['iid', 'bursty', 'drifting'])) if mode == 'intercept_resend' else 'iid'      # B9: all three timing profiles
             V = sample_e91_channel(rng)       # the link's visibility: shared by this row and its commissioning run
+            _drift = dict(drift_amp=float(rng.uniform(0, HONEST_DRIFT_MAX)) if rng.random() < HONEST_DRIFT_FRAC else 0.0)   # B8: honest link drift (also in its commissioning run)
             _c = extract_e91_features(n_pulses=n_pulses, eve_mode='none', n_windows=n_windows, rng=SEEDS.rng(f'e91_commission_{mode}', i), V=V,
-                                      target_k_key_pairs=COMMISSION_K if target_k_key_pairs else None)       # review fix B8
+                                      target_k_key_pairs=COMMISSION_K if target_k_key_pairs else None, detector=_drift)       # review fix B8
             feats = extract_e91_features(n_pulses=n_pulses, eve_mode=mode,
                                           n_windows=n_windows, rng=rng, V=V,
                                           eve_intensity=intensity, profile=profile,
                                           target_k_key_pairs=target_k_key_pairs,
-                                          baseline=dict(q0=_c['qber_key'], K0=_c['_k_achieved']))
-            feats["label"] = mode; feats["profile"] = profile; feats["run_index"] = i; feats["group_id"] = i   # review fix A5
+                                          baseline=dict(q0=_c['qber_key'], K0=_c['_k_achieved']), detector=_drift)
+            feats["label"] = mode; feats["profile"] = profile; feats["run_index"] = i; feats["group_id"] = i; feats["drift_amp"] = _drift['drift_amp']; feats["strength"] = intensity   # review fix A5
             rows.append(feats)
     return pd.DataFrame(rows)
 
@@ -2676,7 +2857,7 @@ def generate_e91_dataset(n_runs_per_mode=100, n_pulses=2000, n_windows=20,
 # %%
 print("\nSingle-run feature vectors, one per attack mode:\n")
 _demo_feats = {}
-for mode in ["none", "intercept_resend", "ancilla", "loss_manipulation"]:
+for mode in ["none", "intercept_resend", "ancilla", "extra_depolarisation"]:
     f = extract_e91_features(n_pulses=200_000, eve_mode=mode, n_windows=20,
                               rng=np.random.default_rng(42), eve_intensity=0.5, V=0.95)
     _demo_feats[mode] = f
@@ -2688,7 +2869,7 @@ for mode in ["none", "intercept_resend", "ancilla", "loss_manipulation"]:
 print(f"chsh_S -- none={_demo_feats['none']['chsh_S']:.4f}  "
       f"intercept_resend={_demo_feats['intercept_resend']['chsh_S']:.4f}  "
       f"ancilla={_demo_feats['ancilla']['chsh_S']:.4f}  "
-      f"loss_manipulation={_demo_feats['loss_manipulation']['chsh_S']:.4f}  "
+      f"extra_depolarisation={_demo_feats['extra_depolarisation']['chsh_S']:.4f}  "
       f"(Tsirelson bound = {TSIRELSON_BOUND:.4f}, classical bound = 2)")
 print(f"s_qber_residual -- none={_demo_feats['none']['s_qber_residual']:.4f}  "
       f"intercept_resend={_demo_feats['intercept_resend']['s_qber_residual']:.4f}  "
@@ -2840,7 +3021,7 @@ print("\nEmpirical check -- collect_bkm07_features() at the calibrated e_detecto
 # collect_bkm07_features()'s own 'sifted_rate' field, which is a fraction
 # of SURVIVORS, not of N_CHECK (multiplying that by N_CHECK overstates
 # n_eff by ~1/eta**2 and was the source of an earlier spurious "mismatch").
-N_CHECK = 3_000_000
+N_CHECK = SC['n_check']
 for q in [0.05, 0.10]:
     ed = calibrate_bkm07(q)
     eta = channel_model(0.0, e_detector=ed)['eta']
@@ -2964,6 +3145,8 @@ def bkm07_sym_strength(target_excess, q_base):
 def calibrate_bkm07_monitor(target_qber):
     """Review fix B3: match BKM07 on what it MONITORS. Detection uses the CTRL rounds, which see ONE noisy step, so the CTRL baseline error
     equals e_detector. calibrate_bkm07() matched the three-step KEY QBER instead (e_detector ~ 0.012, a 3x quieter monitor than BB84/E91)."""
+    if BKM07_CTRL_FORWARD_NOISE:     # a CTRL round now sees TWO noisy steps: baseline = 0.5*(1-(1-2e)^2); invert it
+        return float(np.clip((1.0 - np.sqrt(max(1.0 - 2.0 * target_qber, 0.0))) / 2.0, 1e-4, 0.45))
     return float(np.clip(target_qber, 1e-4, 0.45))
 
 
@@ -3092,32 +3275,34 @@ def _bb84_block(i, N, n_windows, target_k_signal_bits):
     distance_km = float(nuis_rng.uniform(*CHANNEL_DISTANCE_RANGE_KM))
     e_det = float(np.clip(nuis_rng.normal(0.033, 0.005), 0.01, 0.05))
     Y0 = float(10 ** nuis_rng.uniform(-6, -5))
+    drift_amp = float(nuis_rng.uniform(0, HONEST_DRIFT_MAX)) if nuis_rng.random() < HONEST_DRIFT_FRAC else 0.0   # B8: honest link drift, shared by every class of this run index
+    DET = dict(drift_amp=drift_amp)
     strat = make_pns_strategy(distance_km, e_detector=e_det, Y0=Y0)
     # review fix B8: attack-free commissioning run of this link -> per-link baseline for the z-score features
     _c = collect_bb84_features(N, distance_km, 'none', 0.0, n_windows=n_windows, rng=SEEDS.rng('bb84_commission', i),
-                               e_detector=e_det, Y0=Y0, target_k_signal_bits=COMMISSION_K if target_k_signal_bits else None)
+                               e_detector=e_det, Y0=Y0, detector=DET, target_k_signal_bits=COMMISSION_K if target_k_signal_bits else None)
     base = dict(q0=_c['qber_total'], K0=_c['_k_achieved'])
 
     rng = SEEDS.rng('bb84_none', i)
-    f = collect_bb84_features(N, distance_km, 'none', 0.0, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0,
+    f = collect_bb84_features(N, distance_km, 'none', 0.0, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0, detector=DET,
                               target_k_signal_bits=target_k_signal_bits, baseline=base)
     rows.append([f[k] for k in BB84_FEATURE_NAMES] + [distance_km, 0.0, f['_k_achieved'], f['_N_used'], 0])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, **dict(label=0, profile='iid', strength=0.0)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, drift_amp=drift_amp, **dict(label=0, profile='iid', strength=0.0)))
 
     rng = SEEDS.rng('bb84_ir', i)
     di = log_uniform(rng, 0.005, 1.0)
-    profile = str(rng.choice(['iid', 'bursty']))
-    f = collect_bb84_features(N, distance_km, 'intercept_resend', di, profile=profile, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0,
+    profile = str(rng.choice(['iid', 'bursty', 'drifting']))     # B9: the drifting profile is now used
+    f = collect_bb84_features(N, distance_km, 'intercept_resend', di, profile=profile, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0, detector=DET,
                               target_k_signal_bits=target_k_signal_bits, baseline=base)
     rows.append([f[k] for k in BB84_FEATURE_NAMES] + [distance_km, di, f['_k_achieved'], f['_N_used'], 1])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, **dict(label=1, profile=profile, strength=di)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, drift_amp=drift_amp, **dict(label=1, profile=profile, strength=di)))
 
     rng = SEEDS.rng('bb84_pns', i)
     pi = log_uniform(rng, 0.005, 1.0)   # review fix C6: same strength distribution for every attack class
-    f = collect_bb84_features(N, distance_km, 'pns', pi, pns_strategy=strat, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0,
+    f = collect_bb84_features(N, distance_km, 'pns', pi, pns_strategy=strat, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0, detector=DET,
                               target_k_signal_bits=target_k_signal_bits, baseline=base)
     rows.append([f[k] for k in BB84_FEATURE_NAMES] + [distance_km, pi, f['_k_achieved'], f['_N_used'], 2])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, **dict(label=2, profile='iid', strength=pi)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, drift_amp=drift_amp, **dict(label=2, profile='iid', strength=pi)))
     return rows, metas
 
 
@@ -3127,31 +3312,33 @@ def _bkm_block(i, N_bkm, n_windows, target_k_key_rounds):
     nuis_rng = SEEDS.rng('bkm_nuisance', i)
     distance_km = float(nuis_rng.uniform(*DISTANCE_RANGE_BKM))
     e_det = float(np.clip(nuis_rng.normal(0.033, 0.005), 0.01, 0.05))
+    drift_amp = float(nuis_rng.uniform(0, HONEST_DRIFT_MAX)) if nuis_rng.random() < HONEST_DRIFT_FRAC else 0.0   # B8
+    DET = dict(drift_amp=drift_amp)
     _c = collect_bkm07_features(N_bkm, distance_km, 'none', 0.0, 0.0, n_windows=n_windows, rng=SEEDS.rng('bkm_commission', i),
-                                e_detector=e_det, target_k_key_rounds=COMMISSION_K if target_k_key_rounds else None)
+                                e_detector=e_det, detector=DET, target_k_key_rounds=COMMISSION_K if target_k_key_rounds else None)
     base = dict(q0=_c['_qber_ctrl_avg'], K0=_c['_n_ctrl'])
 
     rng = SEEDS.rng('bkm_none', i)
-    f = collect_bkm07_features(N_bkm, distance_km, 'none', 0.0, 0.0, n_windows=n_windows, rng=rng, e_detector=e_det,
+    f = collect_bkm07_features(N_bkm, distance_km, 'none', 0.0, 0.0, n_windows=n_windows, rng=rng, e_detector=e_det, detector=DET,
                                target_k_key_rounds=target_k_key_rounds, baseline=base)
     rows.append([f[k] for k in BKM_FEATURE_NAMES] + [distance_km, 0.0, 0.0, f['_k_achieved'], f['_N_used'], 0])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], **dict(label=0, profile='iid', strength=0.0)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], drift_amp=drift_amp, **dict(label=0, profile='iid', strength=0.0)))
 
     rng = SEEDS.rng('bkm_sym', i)
     di = log_uniform(rng, 0.005, 0.5)
-    f = collect_bkm07_features(N_bkm, distance_km, 'symmetric', di, di, n_windows=n_windows, rng=rng, e_detector=e_det,
+    f = collect_bkm07_features(N_bkm, distance_km, 'symmetric', di, di, n_windows=n_windows, rng=rng, e_detector=e_det, detector=DET,
                                target_k_key_rounds=target_k_key_rounds, baseline=base)
     rows.append([f[k] for k in BKM_FEATURE_NAMES] + [distance_km, di, di, f['_k_achieved'], f['_N_used'], 1])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], **dict(label=1, profile='iid', strength=di)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], drift_amp=drift_amp, **dict(label=1, profile='iid', strength=di)))
 
     rng = SEEDS.rng('bkm_asym', i)
     s_asym = log_uniform(rng, 0.005, 0.5)                 # review fix C6: same strength distribution as the symmetric class
     di_fwd = s_asym * float(rng.uniform(0.1, 0.4))        # weak forward leg ...
     di_ret = s_asym * float(rng.uniform(0.6, 1.0))        # ... strong return leg
-    f = collect_bkm07_features(N_bkm, distance_km, 'asymmetric', di_fwd, di_ret, n_windows=n_windows, rng=rng, e_detector=e_det,
+    f = collect_bkm07_features(N_bkm, distance_km, 'asymmetric', di_fwd, di_ret, n_windows=n_windows, rng=rng, e_detector=e_det, detector=DET,
                                target_k_key_rounds=target_k_key_rounds, baseline=base)
     rows.append([f[k] for k in BKM_FEATURE_NAMES] + [distance_km, di_fwd, di_ret, f['_k_achieved'], f['_N_used'], 2])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], **dict(label=2, profile='iid', strength=s_asym)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], drift_amp=drift_amp, **dict(label=2, profile='iid', strength=s_asym)))
     return rows, metas
 
 
@@ -3187,8 +3374,8 @@ def generate_datasets(samples_per_class=60, N=2_000_000, N_bkm=20_000, n_windows
             bb84_header, bkm_header)
 
 
-K_MAIN_DATASET = 2_000   # Draft 2, item 8: shared equal-information target for BB84/BKM07/E91
-_GD_SAMPLES_PER_CLASS = 600   # was 300 runs per class (x3 classes per protocol)
+K_MAIN_DATASET = SC['k_main']   # Draft 2, item 8: shared equal-information target for BB84/BKM07/E91
+_GD_SAMPLES_PER_CLASS = SC['gd_samples']   # was 300 runs per class (x3 classes per protocol)
 _GD_EXPECTED_ROWS = _GD_SAMPLES_PER_CLASS * 3
 _GD_BB84_COLS = BB84_FEATURE_NAMES + ['distance_km', 'eve_intensity', 'k_achieved', 'N_used', 'label']
 _GD_BKM_COLS = BKM_FEATURE_NAMES + ['distance_km', 'eve_fwd', 'eve_ret', 'k_achieved', 'N_used', 'label']
@@ -3236,6 +3423,11 @@ print(f"BKM07 dataset shape: {bkm_arr.shape}   "
       f"(label counts: {dict(zip(*np.unique(bkm_arr[:,-1].astype(int), return_counts=True)))})")
 print("CSVs saved to data/")
 
+# review C3: equal-information sampling cannot deliver K on the longest BB84 links (max_pulses cap) -- say how often
+_k84 = bb84_arr[:, len(BB84_FEATURE_NAMES) + 2]; _kbk = bkm_arr[:, len(BKM_FEATURE_NAMES) + 3]
+print(f"BB84 runs that did NOT reach K={K_MAIN_DATASET} key bits (pulse cap): {np.mean(_k84 < K_MAIN_DATASET):.1%} (median achieved K {np.median(_k84):.0f}); "
+      f"BKM07: {np.mean(_kbk < K_MAIN_DATASET):.1%}.  Rows are flagged in data/*_meta.csv (n_capped).")
+
 # %% [markdown]
 # **E91 dataset.** Same `generate_e91_dataset` defined in Section 3.4,
 # 4 classes: `none` / `intercept_resend` / `ancilla` / `loss_manipulation`.
@@ -3248,7 +3440,7 @@ print("CSVs saved to data/")
 # %%
 print(f"  (equal-information sampling, item 8: target_k_key_pairs={K_MAIN_DATASET}, matching "
       f"BB84/BKM07 above)")
-_E91_N_RUNS_PER_MODE = 600   # was 300 runs per mode (x4 modes)
+_E91_N_RUNS_PER_MODE = SC['e91_runs']   # was 300 runs per mode (x4 modes)
 _E91_N_MODES = 4
 _E91_EXPECTED_ROWS = _E91_N_RUNS_PER_MODE * _E91_N_MODES
 _E91_REQUIRED_COLS = set(E91_FEATURE_NAMES) | {'label', 'attack_duty_cycle'}
@@ -3477,7 +3669,7 @@ def zero_strength_control_bkm07(n_per_class=40, distance_km=7.5, e_det=0.033, ta
 def zero_strength_control_e91(n_per_class=60, V=0.95, target_k=500, n_windows=32):
     """L-8 for E91 (Draft 2.1: previously BB84-only). Class LABELS kept, eve_intensity = 0."""
     rows, labs = [], []
-    for cls in ['none', 'intercept_resend', 'ancilla', 'loss_manipulation']:
+    for cls in ['none', 'intercept_resend', 'ancilla', 'extra_depolarisation']:
         for i in range(n_per_class):
             rng = SEEDS.rng('l8_e91_' + cls, i)
             f = extract_e91_features(eve_mode=cls, n_windows=n_windows, rng=rng, eve_intensity=0.0,
@@ -3738,12 +3930,12 @@ def make_knn(k=7):
 
 def make_logreg():
     return Pipeline([('scaler', StandardScaler()),
-                     ('clf', LogisticRegression(max_iter=2000))])
+                     ('clf', LogisticRegression(max_iter=2000, class_weight='balanced'))])
 
 # make_boosted() now lives in the utilities cell (Section 0): nuisance_only_audit() needs it in Section 6,
 # long before this cell runs (a fresh Restart & Run All raised NameError there).
 
-def make_isolation_forest(max_samples=256, n_estimators=200, seed=1):
+def make_isolation_forest(max_samples='auto', n_estimators=200, seed=1):
     '''Isolation Forest: anomaly detection without labels.
     Trains only on 'normal' (secure) data. At inference time it gives
     each sample an anomaly score based on how quickly it gets isolated
@@ -3766,16 +3958,32 @@ def _inner_cv(X, y, seed, n_splits, groups):
                 .split(X, y, groups))
 
 
+def _separable_default(model, X, y, cv, thr=0.995):
+    """Review E8: a hyper-parameter search on data the DEFAULT model already separates perfectly (CV-AUC >= thr) only tunes noise and
+    reports a meaningless 'best' score. Return (fitted default, {'search': 'skipped'}, cv_auc) in that case, else None."""
+    from sklearn.model_selection import cross_val_score
+    try:
+        a = float(np.mean(cross_val_score(clone(model), X, y, cv=cv, scoring='roc_auc')))
+    except Exception:
+        return None
+    if a >= thr:
+        print(f"  [E8] default model already reaches CV-AUC {a:.4f} >= {thr}: data are separable, grid search skipped")
+        return clone(model).fit(X, y), {'search': 'skipped (separable data)'}, a
+    return None
+
+
 def tune_boosted(X, y, seed=0, n_splits=5, groups=None):
     cv = _inner_cv(X, y, seed, n_splits, groups)
+    sep = _separable_default(make_boosted(seed=seed), X, y, cv)
+    if sep is not None: return sep
     if HAS_XGB:
-        base = XGBClassifier(eval_metric='logloss', random_state=seed, n_jobs=1)   # see make_boosted
+        base = _BalancedXGB(eval_metric='logloss', random_state=seed, n_jobs=1)   # see make_boosted
         grid = {'n_estimators':  [200, 300, 400],
                 'max_depth':     [3, 5, 7],
                 'learning_rate': [0.03, 0.05, 0.1],
                 'subsample':     [0.8, 1.0]}
     else:
-        base = HistGradientBoostingClassifier(random_state=seed)
+        base = HistGradientBoostingClassifier(random_state=seed, class_weight='balanced')
         grid = {'max_iter':      [200, 300, 400],
                 'max_depth':     [3, 5, 7],
                 'learning_rate': [0.03, 0.05, 0.1]}
@@ -3786,16 +3994,20 @@ def tune_boosted(X, y, seed=0, n_splits=5, groups=None):
 def tune_svm_rbf_cv(X, y, seed=0, n_splits=5, groups=None):
     cv = _inner_cv(X, y, seed, n_splits, groups)
     pipe = Pipeline([('scaler', StandardScaler()),
-                     ('clf', SVC(kernel='rbf', probability=True, class_weight='balanced', random_state=seed))])  # review fix E7
-    grid = {'clf__C':     [0.1, 1, 10, 100],
-            'clf__gamma': ['scale', 0.01, 0.1, 1]}
+                     ('clf', CalibratedClassifierCV(SVC(kernel='rbf', class_weight='balanced'), method='sigmoid', cv=3))])   # review E7: SVC(probability=True) is deprecated
+    grid = {'clf__estimator__C':     [0.1, 1, 10, 100],
+            'clf__estimator__gamma': ['scale', 0.01, 0.1, 1]}
+    sep = _separable_default(pipe, X, y, cv)
+    if sep is not None: return sep
     search = GridSearchCV(pipe, grid, scoring='roc_auc', cv=cv, n_jobs=-1)
     search.fit(X, y)
     return search.best_estimator_, search.best_params_, search.best_score_
 
 def tune_rf(X, y, seed=0, n_splits=5, groups=None):
     cv = _inner_cv(X, y, seed, n_splits, groups)
-    base = RandomForestClassifier(random_state=seed, n_jobs=1)   # GridSearchCV(n_jobs=-1) already parallelises
+    sep = _separable_default(RandomForestClassifier(random_state=seed, n_jobs=1, class_weight='balanced'), X, y, cv)
+    if sep is not None: return sep
+    base = RandomForestClassifier(random_state=seed, n_jobs=1, class_weight='balanced')   # GridSearchCV(n_jobs=-1) already parallelises
     grid = {'n_estimators':     [200, 300, 500],
             'max_depth':        [None, 8, 12],
             'min_samples_leaf': [1, 2, 4]}
@@ -4433,8 +4645,8 @@ print("any single column.")
 # > `sifted_rate` and carries no such error.
 
 # %%
-def n_window_sensitivity(N_values=(200_000, 1_000_000, 2_000_000),
-                          W_values=(16, 32, 64),
+def n_window_sensitivity(N_values=SC['nw_N'],
+                          W_values=SC['nw_W'],
                           n_per_class=8, distance_km=25.0,
                           eve_intensity=0.15, profile='bursty'):
     """P17: how many pulses N and how many windows W do the temporal
@@ -4479,7 +4691,7 @@ def n_window_sensitivity(N_values=(200_000, 1_000_000, 2_000_000),
             per_seed = {}
             for tag, feats in [('A', A_FEATS), ('B', B_FEATS)]:
                 cols = [idx[f] for f in feats]; per_seed[tag] = []
-                for sd in range(20):
+                for sd in range(SC['nw_seeds']):
                     aucs_ = []
                     for tr_, te_ in StratifiedKFold(5, shuffle=True, random_state=sd).split(X, y):
                         m = make_boosted(seed=sd); m.fit(X[tr_][:, cols], y[tr_])
@@ -4487,7 +4699,7 @@ def n_window_sensitivity(N_values=(200_000, 1_000_000, 2_000_000),
                     per_seed[tag].append(float(np.mean(aucs_)))
             d_ = np.array(per_seed['B']) - np.array(per_seed['A'])
             boot_ = np.random.default_rng(0).choice(d_, (1000, len(d_))).mean(1); lo_, hi_ = np.percentile(boot_, [2.5, 97.5])
-            dauc = float(d_.mean())
+            dauc = float(d_.mean()); ledger(f'temporal gain dAUC at N={N:,}, W={W}', signflip_p(d_))
             out.append(dict(N=N, W=W, n_w=float(np.mean(nws)), AUC_A=float(np.mean(per_seed['A'])), AUC_B=float(np.mean(per_seed['B'])),
                              dAUC=dauc, dAUC_lo=float(lo_), dAUC_hi=float(hi_)))
             print(f"  N={N:>9,} W={W:>4} n_w={np.mean(nws):8.1f} AUC_A={np.mean(per_seed['A']):.4f} AUC_B={np.mean(per_seed['B']):.4f} "
@@ -4496,7 +4708,7 @@ def n_window_sensitivity(N_values=(200_000, 1_000_000, 2_000_000),
 
 
 print("Running the N x window sensitivity grid (100 runs per class, eve_intensity=0.02 so QBER alone does not saturate; 20x repeated 5-fold CV)...")
-nw_df = n_window_sensitivity(n_per_class=200, eve_intensity=0.02)   # review fix D5: 100 runs/class, weaker attack so QBER alone is not saturated
+nw_df = n_window_sensitivity(n_per_class=SC['nw_per_class'], eve_intensity=0.02)   # review fix D5: 100 runs/class, weaker attack so QBER alone is not saturated
 print()
 print(nw_df.round(4).to_string(index=False))
 
@@ -4627,14 +4839,16 @@ print("  here than in the pre-patch version -- that gap was mostly the leak.")
 
 # Break the FNR down by attack type -- the direct evidence for the
 # per-attack claim above.
-print("\n  FNR by attack type (full-feature model vs chsh-only):")
-for mode in ("intercept_resend", "ancilla", "loss_manipulation"):
+print("\n  FNR by attack type at a FIXED 5% false-positive rate (review D3; thresholds from out-of-fold TRAINING scores, never test data):")
+_thr_full = float(np.quantile(oof_scores(boosted91_model, Xe91tr, ye91tr)[ye91tr == 0], 0.95))
+_thr_chsh = float(np.quantile(oof_scores(boosted91_chsh_only, Xe91tr_chsh, ye91tr)[ye91tr == 0], 0.95))
+for mode in ("intercept_resend", "ancilla", "extra_depolarisation"):
     m = label91_te == mode
     if m.sum() == 0:
         continue
-    fnr_full_mode = float(np.mean(p91_xgb[m] < 0.5))
-    fnr_chsh_mode = float(np.mean(p91_chsh_only[m] < 0.5))
-    print(f"    {mode:<18} n={m.sum():<4} FNR(full)={fnr_full_mode:.3f}   FNR(chsh_only)={fnr_chsh_mode:.3f}")
+    fnr_full_mode = float(np.mean(p91_xgb[m] <= _thr_full))
+    fnr_chsh_mode = float(np.mean(p91_chsh_only[m] <= _thr_chsh))
+    print(f"    {mode:<20} n={m.sum():<4} FNR(full)={fnr_full_mode:.3f}   FNR(chsh_only)={fnr_chsh_mode:.3f}")
 
 # ── Adversarial generalisation (same style as Section 13) ─────────────
 # Only intercept_resend has a continuous attack-strength knob (duty cycle);
@@ -4801,7 +5015,7 @@ print("Saved: plots/roc_e91.png")
 #
 #    If the pretrained model performs better, it suggests that the shared network has learned attack patterns that transfer across BB84, BKM07, and E91, rather than simply learning patterns specific to one protocol.
 #
-# 2. **Effect of supervised pretraining on zero-day detection (Section 18.8)**
+# 2. **Effect of supervised pretraining on held-out-attack detection (Section 18.8)**
 #    We test whether learning attack classes during supervised training helps or hurts the detection of a completely unseen attack.
 #
 #    We compare two Deep SVDD anomaly detectors:
@@ -4832,6 +5046,11 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import GroupShuffleSplit, GroupKFold, train_test_split
 from sklearn.metrics import f1_score, recall_score, roc_auc_score, confusion_matrix
 
+# A3: deterministic kernels where PyTorch has them (warn, not fail, for the few that do not); CUBLAS needs this env var for reproducible matmuls on GPU
+torch.manual_seed(MASTER_SEED); torch.cuda.manual_seed_all(MASTER_SEED)
+torch.backends.cudnn.deterministic = True; torch.backends.cudnn.benchmark = False
+try: torch.use_deterministic_algorithms(True, warn_only=True)
+except Exception: pass
 DL_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Deep-learning device: {DL_DEVICE}")
 
@@ -4848,7 +5067,7 @@ DL_PROTOCOLS = ["bb84", "e91", "bkm07"]
 
 DL_ATTACKS = {
     "bb84":  ["clean", "intercept_resend", "pns", "blocking", "loss_manipulation"],
-    "e91":   ["clean", "intercept_resend", "ancilla", "loss_manipulation"],
+    "e91":   ["clean", "intercept_resend", "ancilla", "extra_depolarisation"],   # review B5/F4: it is white noise, not a loss attack
     # simulate_bkm07_pulse has one interception mechanism; symmetric vs
     # asymmetric is a DATASET-level distinction (eve_fwd == eve_ret or not),
     # the same convention Section 5's generate_datasets() uses.
@@ -4856,7 +5075,7 @@ DL_ATTACKS = {
 }
 DL_ATTACK_COUNTS = {p: len(v) for p, v in DL_ATTACKS.items()}
 
-# Held out entirely from training for the zero-day test (Section 18.8) --
+# Held out entirely from training for the held-out-attack test (Section 18.8) --
 # chosen to be physically distinct from the rest of that protocol's list.
 DL_ZERO_DAY_ATTACK_BY_TARGET = {
     "bb84":  "pns",                # near-zero QBER signature, distinct from intercept/loss attacks
@@ -5463,6 +5682,9 @@ class CrossProtocolDetector(nn.Module):
         # raw per-event feature LAYOUT itself differs across protocols.
         self.n_classical = n_classical
         self.classical_proj = nn.Linear(n_classical, classical_latent)
+        # review E1: the engineered features differ by orders of magnitude (QBER ~1e-2, jump energy ~1, key rates ~1e-3 ...) and the three protocols
+        # fill different columns. Scale them PER PROTOCOL (running mean/var learned on that protocol's training windows) before the projection.
+        self.cls_norm = nn.ModuleDict({p: nn.BatchNorm1d(n_classical, momentum=0.05) for p in protocols})
         fused_dim = 2 * hidden + classical_latent
         self.binary_head = nn.Linear(fused_dim, 1)                                    # shared
         self.fine_heads = nn.ModuleDict({p: nn.Linear(fused_dim, attack_counts[p]) for p in protocols})  # not shared
@@ -5480,7 +5702,18 @@ class CrossProtocolDetector(nn.Module):
         h, _ = self.lstm(h)
         return self.pool(h)
 
-    def _fuse(self, pooled, x_classical):
+    def _norm_classical(self, x_classical, proto_list):
+        out = torch.zeros_like(x_classical)
+        for p in set(proto_list):
+            ix = torch.tensor([i for i, q in enumerate(proto_list) if q == p], device=x_classical.device)
+            bn = self.cls_norm[p]
+            if bn.training and len(ix) < 2:      # BatchNorm cannot take a single-sample batch in train mode
+                bn.eval(); out[ix] = bn(x_classical[ix]); bn.train()
+            else:
+                out[ix] = bn(x_classical[ix])
+        return out.clamp(-6.0, 6.0)
+
+    def _fuse(self, pooled, x_classical, proto_list=None):
         """x_classical is None for callers that never built/passed it (e.g. item 36's
         representation-ablation baseline, which must stay capacity-matched to
         BiasFreeSVDDEncoder and so never receives real classical features): falls back to
@@ -5488,17 +5721,19 @@ class CrossProtocolDetector(nn.Module):
         keeps working against one fixed head shape regardless of whether it opts in."""
         if x_classical is None:
             x_classical = pooled.new_zeros(pooled.shape[0], self.n_classical)
+        if proto_list is not None:
+            x_classical = self._norm_classical(x_classical, proto_list)
         return torch.cat([pooled, self.classical_proj(x_classical)], dim=1)
 
     def forward_binary(self, x, proto_list, x_classical=None):
         pooled, attn = self.encode(x, proto_list)
-        fused = self._fuse(pooled, x_classical)
+        fused = self._fuse(pooled, x_classical, proto_list)
         return self.binary_head(fused).squeeze(-1), attn
 
     def forward_fine(self, x, proto_list, x_classical=None):
         assert len(set(proto_list)) == 1, "forward_fine expects a single-protocol batch"
         pooled, attn = self.encode(x, proto_list)
-        fused = self._fuse(pooled, x_classical)
+        fused = self._fuse(pooled, x_classical, proto_list)
         return self.fine_heads[proto_list[0]](fused), attn
 
     def forward_protocol_adv(self, x, proto_list, lambd=1.0, x_classical=None):
@@ -5512,7 +5747,7 @@ class CrossProtocolDetector(nn.Module):
         decision, not the adversarial/contrastive objectives."""
         pooled, attn = self.encode(x, proto_list)
         adv_logits = self.protocol_head(grad_reverse(pooled, lambd))
-        fused = self._fuse(pooled, x_classical)
+        fused = self._fuse(pooled, x_classical, proto_list)
         return self.binary_head(fused).squeeze(-1), adv_logits, pooled, attn
 
     def freeze_trunk(self):
@@ -5602,7 +5837,7 @@ def _class_weights(loader, n_classes, device):
 
 def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, verbose=True,
                   use_adversarial=False, use_contrastive=False, lambda_con=0.1, dann_gamma=10.0,
-                  log_adversarial=False):
+                  log_adversarial=False, select_best=True):
     """Draft 2, items 19-21.
 
     use_adversarial / use_contrastive turn on the DANN protocol-adversarial
@@ -5667,6 +5902,8 @@ def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, ve
             nn.utils.clip_grad_norm_(params, 1.0)
             opt.step()
         sched.step()
+        if not select_best and not verbose and not (use_adversarial and log_adversarial):
+            continue          # review E5: no per-epoch evaluation / checkpointing when the last epoch is used
         metrics = evaluate_binary(model, val_loader, device)
         if verbose or (use_adversarial and log_adversarial):
             line = f"  epoch {ep+1:3d}"
@@ -5681,7 +5918,7 @@ def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, ve
                         f"  discriminator_loss {adv_loss_sum / adv_total:.4f}")
             print(line)
         score = metrics["auc"] if np.isfinite(metrics["auc"]) else metrics["f1"]
-        if score > best_score:
+        if select_best and score > best_score:
             best_score, best_state = score, _copy.deepcopy(model.state_dict())
     if best_state is not None:
         model.load_state_dict(best_state)
@@ -5900,12 +6137,12 @@ def transfer_vs_scratch(data, device, source_protocols, target_protocol,
             for sp in source_protocols:
                 transfer_model.freeze_adapter(sp)
             transfer_model = train_binary(transfer_model, frac_train_loader, tgt_val_loader,
-                                          device, epochs=epochs_finetune, verbose=False)
+                                          device, epochs=epochs_finetune, verbose=False, select_best=False)   # review E5: last epoch, no target-label checkpointing
             transfer_metrics = evaluate_binary(transfer_model, tgt_test_loader, device)
 
             scratch_model = CrossProtocolDetector()
             scratch_model = train_binary(scratch_model, frac_train_loader, tgt_val_loader,
-                                         device, epochs=epochs_finetune, verbose=False)
+                                         device, epochs=epochs_finetune, verbose=False, select_best=False)   # same rule for both arms
             scratch_metrics = evaluate_binary(scratch_model, tgt_test_loader, device)
 
             results.append({
@@ -6102,7 +6339,7 @@ def classical_baseline_auc(target_protocol, n_per_class, seed=0, test_frac=0.3):
 print("paired_bootstrap_ci() / classical_baseline_auc() defined.")
 
 # %% [markdown]
-# ### 18.8 -- Deep SVDD anomaly branch: does supervised pretraining help zero-day detection?
+# ### 18.8 -- Deep SVDD anomaly branch: does supervised pretraining help held-out-attack detection?
 #
 # Deep SVDD, in one paragraph: pick a fixed center `c` in embedding space,
 # train the network so normal (clean) sessions' embeddings land close to
@@ -6118,7 +6355,7 @@ print("paired_bootstrap_ci() / classical_baseline_auc() defined.")
 #  **Branch B**
 # (normal-only representation): a fresh model, trunk trained purely with the
 # SVDD loss on clean sessions -- classification labels never used. Both
-# scored by ROC-AUC on a **zero-day holdout**: an attack type excluded
+# scored by ROC-AUC on a **held-out-attack holdout**: an attack type excluded
 # entirely from all training (Section 18.1's `DL_ZERO_DAY_ATTACK_BY_TARGET`),
 # across all three leave-one-out directions.
 
@@ -6300,7 +6537,7 @@ def run_representation_ablation(data, device, target_protocol, source_protocols,
         tgt_test_idx = tgt_idx_all[tgt_test_rel]
 
         if held_out_attack:
-            # The zero-day attack must be excluded from TRAINING and VALIDATION
+            # The held-out-attack attack must be excluded from TRAINING and VALIDATION
             # entirely, not just relabeled at test time. train_svdd already only
             # trains on yb==0 (clean), so this was a no-op for Branch B -- but
             # train_binary (Branch A's target-adapter fine-tune below) trains
@@ -6331,7 +6568,7 @@ def run_representation_ablation(data, device, target_protocol, source_protocols,
             model_a.freeze_trunk()
             for sp in source_protocols:
                 model_a.freeze_adapter(sp)
-            model_a = train_binary(model_a, frac_train_loader, tgt_val_loader, device, epochs=10, verbose=False)
+            model_a = train_binary(model_a, frac_train_loader, tgt_val_loader, device, epochs=10, verbose=False, select_best=False)   # review E5
             for p in model_a.parameters():
                 p.requires_grad = False
             center_a = compute_center(model_a, frac_train_loader, device)
@@ -6342,9 +6579,19 @@ def run_representation_ablation(data, device, target_protocol, source_protocols,
                                            epochs=epochs_svdd, verbose=False)
             metrics_b = evaluate_anomaly(model_b, center_b, tgt_test_loader, device)
 
+            # review D8/E4: the normal-only Deep-SVDD branch is often degenerate (AUC ~ 0.5), so 'supervised beats normal-only' compares against a
+            # non-functioning baseline. Add a baseline that works: Isolation Forest on the ENGINEERED features of this protocol's clean training windows.
+            iso_auc = float('nan')
+            if held_out_attack:
+                _hi = DL_ATTACKS[target_protocol].index(held_out_attack); _ci = DL_ATTACKS[target_protocol].index("clean")
+                _keep = np.isin(data["attack_fine"][tgt_test_idx], [_ci, _hi]); _sub = tgt_test_idx[_keep]
+                _clean_tr = frac_idx[data["attack_fine"][frac_idx] == _ci]
+                if len(_clean_tr) >= 5 and len(np.unique(data["attack_fine"][_sub])) == 2:
+                    _iso = IsolationForest(n_estimators=200, random_state=seed).fit(np.nan_to_num(data["X_classical"][_clean_tr]))
+                    iso_auc = float(roc_auc_score((data["attack_fine"][_sub] == _hi).astype(int), -_iso.score_samples(np.nan_to_num(data["X_classical"][_sub]))))
             rows.append({"target_protocol": target_protocol, "seed": seed, "fraction": frac,
                         "held_out_attack": held_out_attack,
-                        "supervised_repr_auc": metrics_a["auc"], "normal_only_repr_auc": metrics_b["auc"]})
+                        "supervised_repr_auc": metrics_a["auc"], "normal_only_repr_auc": metrics_b["auc"], "iforest_features_auc": iso_auc})
             print(f"[{target_protocol}] frac={frac} seed={seed} "
                  f"supervised-repr AUC={metrics_a['auc']:.3f}  normal-only-repr AUC={metrics_b['auc']:.3f}")
     return rows
@@ -6367,7 +6614,7 @@ def run_representation_ablation_all_directions(data, device, fractions=(0.25, 1.
     for target in DL_PROTOCOLS:
         sources = [p for p in DL_PROTOCOLS if p != target]
         held_out = held_out_by_target[target]
-        print(f"\n--- Ablation direction: {'+'.join(sources)} -> {target} (zero-day attack: {held_out}) ---")
+        print(f"\n--- Ablation direction: {'+'.join(sources)} -> {target} (held-out-attack attack: {held_out}) ---")
         all_rows.extend(run_representation_ablation(
             data, device, target_protocol=target, source_protocols=sources,
             fractions=fractions, seeds=seeds, held_out_attack=held_out,
@@ -6380,7 +6627,7 @@ def summarize_ablation_all(all_rows):
     for r in all_rows:
         by_target.setdefault(r["target_protocol"], []).append(r)
     for target, rows in by_target.items():
-        print(f"\n### Direction: -> {target}  (zero-day attack: {rows[0]['held_out_attack']}) ###")
+        print(f"\n### Direction: -> {target}  (held-out-attack attack: {rows[0]['held_out_attack']}) ###")
         summarize_ablation(rows)
     sup_wins = sum(1 for r in all_rows if r["supervised_repr_auc"] > r["normal_only_repr_auc"])
     norm_wins = sum(1 for r in all_rows if r["normal_only_repr_auc"] > r["supervised_repr_auc"])
@@ -6391,9 +6638,9 @@ def summarize_ablation_all(all_rows):
     print(f"supervised-representation wins: {sup_wins}   normal-only-representation wins: {norm_wins}   ties: {ties}")
     print(f"mean AUC -- supervised: {avg_sup:.3f}   normal-only: {avg_norm:.3f}")
     if avg_sup > avg_norm:
-        print("On average, cross-protocol attack-labeled pretraining HELPS zero-day detection.")
+        print("On average, cross-protocol attack-labeled pretraining HELPS held-out-attack detection.")
     else:
-        print("On average, cross-protocol attack-labeled pretraining HURTS zero-day detection")
+        print("On average, cross-protocol attack-labeled pretraining HURTS held-out-attack detection")
         print("relative to a representation learned from normal behavior alone.")
 
 
@@ -6405,7 +6652,7 @@ print("Deep SVDD anomaly branch defined.")
 # 18.8 held out one hand-picked attack per protocol. This generalises
 # that to every non-clean attack type in turn, reusing
 # `run_representation_ablation` (and its train/val exclusion fix)
-# completely unchanged -- turning three anecdotal zero-day numbers into
+# completely unchanged -- turning three anecdotal held-out-attack numbers into
 # a real distribution, and incidentally giving `paired_bootstrap_ci`
 # enough paired points to say something even at a single seed.
 
@@ -6415,7 +6662,7 @@ def run_representation_ablation_all_attacks(data, device, fractions=(1.0,), seed
     """Generalises 18.8's single hand-picked held-out attack to EVERY
     non-clean attack type for each target protocol, reusing
     run_representation_ablation() unchanged for each (target, held_out_attack)
-    pair. Turns three anecdotal zero-day numbers into a distribution."""
+    pair. Turns three anecdotal held-out-attack numbers into a distribution."""
     all_rows = []
     for target in DL_PROTOCOLS:
         sources = [p for p in DL_PROTOCOLS if p != target]
@@ -6436,7 +6683,7 @@ def summarize_ablation_all_attacks(all_rows):
     by_target = {}
     for r in all_rows:
         by_target.setdefault(r["target_protocol"], []).append(r)
-    print(f"\n{'protocol':<8} {'attack_type':<20} {'supervised_AUC':>15} {'normal_only_AUC':>17}")
+    print(f"\n{'protocol':<8} {'attack_type':<20} {'supervised_AUC':>15} {'normal_only_AUC':>17} {'IsoForest(features)':>20}")
     rows_out = []
     for target, rows in by_target.items():
         by_attack = {}
@@ -6445,9 +6692,10 @@ def summarize_ablation_all_attacks(all_rows):
         for attack, rs in by_attack.items():
             sup = float(np.nanmean([r["supervised_repr_auc"] for r in rs]))
             norm = float(np.nanmean([r["normal_only_repr_auc"] for r in rs]))
-            print(f"{target:<8} {attack:<20} {sup:>15.3f} {norm:>17.3f}")
+            iso = float(np.nanmean([r.get("iforest_features_auc", np.nan) for r in rs]))
+            print(f"{target:<8} {attack:<20} {sup:>15.3f} {norm:>17.3f} {iso:>20.3f}")
             rows_out.append(dict(protocol=target, attack_type=attack,
-                                  supervised_auc=sup, normal_only_auc=norm))
+                                  supervised_auc=sup, normal_only_auc=norm, iforest_features_auc=iso))
     sup_all = np.array([r["supervised_repr_auc"] for r in all_rows])
     norm_all = np.array([r["normal_only_repr_auc"] for r in all_rows])
     print(f"\nAcross all {len(all_rows)} (protocol x attack-type x seed) runs: "
@@ -6463,14 +6711,16 @@ def plot_ablation_all_attacks(df, save_path="plots/dl_representation_ablation_al
     for ax, p in zip(axes, protocols):
         sub = df[df["protocol"] == p].reset_index(drop=True)
         x = np.arange(len(sub)); width = 0.35
-        ax.bar(x - width / 2, sub["supervised_auc"], width, color="#2166ac", label="Supervised representation")
-        ax.bar(x + width / 2, sub["normal_only_auc"], width, color="#b2182b", label="Normal-only representation")
+        width = 0.27
+        ax.bar(x - width, sub["supervised_auc"], width, color="#2166ac", label="Supervised representation")
+        ax.bar(x, sub["normal_only_auc"], width, color="#b2182b", label="Normal-only Deep SVDD")
+        ax.bar(x + width, sub["iforest_features_auc"], width, color="#16a34a", label="Isolation Forest on engineered features")
         ax.axhline(0.5, color="gray", linestyle=":", linewidth=1)
         ax.set_xticks(x); ax.set_xticklabels(sub["attack_type"], rotation=30, ha="right", fontsize=8)
         ax.set_title(f"-> {p}"); ax.set_ylim(0.0, 1.0)
-    axes[0].set_ylabel("Zero-day detection ROC-AUC")
+    axes[0].set_ylabel("Held-out-attack detection ROC-AUC")
     axes[-1].legend(loc="lower right", fontsize=8)
-    fig.suptitle("Zero-day detection AUC, every held-out attack type per protocol")
+    fig.suptitle("Held-out-attack detection AUC, every held-out attack type per protocol")
     fig.tight_layout()
     fig.savefig(save_path, dpi=150)
     plt.show()
@@ -6540,7 +6790,29 @@ def plot_embedding_diagnostic(model, data, device, save_path="plots/embedding_di
     return fig
 
 
-print("plot_embedding_diagnostic() defined.")
+def protocol_probe(model, data, device, n_per_protocol=400, seed=0):
+    """Review E3: does the shared embedding still encode WHICH PROTOCOL a window came from? A cross-validated logistic-regression probe on the
+    pooled embedding predicts the protocol; chance is 1/3. Accuracy well above chance means the adversarial / contrastive training did NOT remove
+    protocol identity (the 2-D PCA plot alone cannot show this)."""
+    from sklearn.model_selection import cross_val_score
+    X, proto, y = data["X"], data["protocol"], data["is_attacked"]; rng = np.random.default_rng(seed); idx = []
+    for p in DL_PROTOCOLS:
+        ip = np.flatnonzero(proto == p); idx.append(rng.choice(ip, size=min(n_per_protocol, len(ip)), replace=False))
+    idx = np.concatenate(idx); loader = make_dl_loader(X, proto, y, idx, batch_size=128, shuffle=False)
+    model.eval(); E, P, Y = [], [], []
+    with torch.no_grad():
+        for xb, pb, yb in loader:
+            E.append(model.encode(xb.to(device), list(pb))[0].cpu().numpy()); P += list(pb); Y.append(yb.numpy())
+    E, P, Y = np.concatenate(E), np.array(P), np.concatenate(Y)
+    clf = Pipeline([('s', StandardScaler()), ('c', LogisticRegression(max_iter=2000))])
+    acc_p = float(np.mean(cross_val_score(clf, E, P, cv=5)))
+    acc_y = float(np.mean(cross_val_score(clf, E, Y.astype(int), cv=5)))
+    print(f"  protocol probe accuracy {acc_p:.3f} (chance {1/len(DL_PROTOCOLS):.3f}); attacked-vs-clean probe accuracy {acc_y:.3f} (chance {max(Y.mean(), 1-Y.mean()):.3f})")
+    print("  -> protocol identity " + ("is still strongly encoded: the adversarial/contrastive objective did not remove it" if acc_p > 1/len(DL_PROTOCOLS) + 0.15 else "is close to chance"))
+    return acc_p, acc_y
+
+
+print("plot_embedding_diagnostic() / protocol_probe() defined.")
 
 # %% [markdown]
 # > 🔧 **CHANGED (Draft 2, item 23): DL experiments actually run at real scale (compute budget measured, not guessed)**
@@ -6608,9 +6880,9 @@ import os
 import pickle
 
 _dl_data_cache_path = "data/dl_data_cache.pkl"
-DL_SESSIONS_PER_CLASS = 200   # was 100 (was 25 in Draft 2)   # review fix C5: was 25 (75-124 sessions per protocol)
+DL_SESSIONS_PER_CLASS = SC['dl_sessions']   # was 100 (was 25 in Draft 2)   # review fix C5: was 25 (75-124 sessions per protocol)
 _dl_data_fp = fingerprint(_bb84_dl_session, _bkm07_dl_session, _e91_dl_session, simulate_session, build_dl_dataset, _classical_vector,
-                          seed=MASTER_SEED, n=DL_SESSIONS_PER_CLASS, window=96, stride=48, target_events=2000)   # review fix A2
+                          seed=MASTER_SEED, n=DL_SESSIONS_PER_CLASS, window=96, stride=48, target_events=SC['dl_events'])   # review fix A2
 _DL_FP = _dl_data_fp
 dl_data = None
 if os.path.exists(_dl_data_cache_path) and not FINAL_REGENERATE:
@@ -6630,7 +6902,7 @@ if os.path.exists(_dl_data_cache_path) and not FINAL_REGENERATE:
 if dl_data is None:
     print("Building the DL dataset from this notebook's own physics simulators "
           "(event-based encoding, item 8's shared K=2,000)...")
-    dl_data = build_dl_dataset(n_sessions_per_class=DL_SESSIONS_PER_CLASS, window=96, stride=48, target_events=2000)
+    dl_data = build_dl_dataset(n_sessions_per_class=DL_SESSIONS_PER_CLASS, window=96, stride=48, target_events=SC['dl_events'])
     try:
         os.makedirs(os.path.dirname(_dl_data_cache_path), exist_ok=True)
         with open(_dl_data_cache_path, "wb") as _f:
@@ -6640,6 +6912,10 @@ if dl_data is None:
         print(f"  [cache] could not save {_dl_data_cache_path} ({type(_e).__name__}: {_e}) -- continuing uncached")
 
 print(f"total windows: {len(dl_data['X'])}   feature dim: {dl_data['X'].shape[-1]}")
+# review C5: session length must not depend on the class (else length itself is a label leak) -- windows per session by (protocol, attack)
+_g, _first = np.unique(dl_data['group'], return_index=True); _wps = np.bincount(np.searchsorted(_g, dl_data['group']))
+_tab = pd.DataFrame(dict(protocol=dl_data['protocol'][_first], attack=dl_data['attack_fine'][_first], windows=_wps)).groupby(['protocol', 'attack']).windows.agg(['mean', 'min', 'max'])
+print(_tab.to_string()); print("-> windows per session identical across classes" if (_tab['max'].max() - _tab['min'].min()) <= 1 else "-> WARNING: session length differs between classes (some sessions fell short of target_events); length could leak the label")
 for p in DL_PROTOCOLS:
     n = (dl_data["protocol"] == p).sum()
     print(f"  {p:6s}: {n} windows across {len(DL_ATTACKS[p])} classes {DL_ATTACKS[p]}")
@@ -6708,9 +6984,9 @@ print("trunk-freeze patch applied: LSTM in train mode, conv/pool frozen in eval 
 # %%
 print("\n=== HEADLINE EXPERIMENT: leave-one-protocol-out transfer, all 3 directions ===")
 dl_loo_results = run_leave_one_protocol_out(dl_data, DL_DEVICE,
-                                            fractions=(0.05, 0.1, 0.25, 0.5, 1.0),
-                                            seeds=(0, 1, 2, 3, 4, 5, 6, 7),
-                                            epochs_pretrain=20, epochs_finetune=15)
+                                            fractions=SC['loo_fractions'],
+                                            seeds=SC['loo_seeds'],
+                                            epochs_pretrain=SC['ep_pre'], epochs_finetune=SC['ep_ft'])
 for target, results in dl_loo_results.items():
     sources = results[0]["source_protocols"]
     summarize_dl_results(results, title=f"{'+'.join(sources)} -> {target}")
@@ -6739,6 +7015,13 @@ for target, results in dl_loo_results.items():
                                   gap_mean=sig["mean_diff"], gap_ci_lo=sig["ci_lo"], gap_ci_hi=sig["ci_hi"],
                                   gap_note=sig["note"]))
 dl_significance_df = pd.DataFrame(sig_summary_rows)
+# review E2/D6/D10: the verdict is COMPUTED from the paired results (sign-flip test over seeds, Holm-corrected in Section 26), not asserted
+for target, results in dl_loo_results.items():
+    _f1 = [r for r in results if r['fraction'] == 1.0]
+    _d = np.array([r['transfer_auc'] - r['scratch_auc'] for r in _f1], float)
+    _p = signflip_p(_d); ledger(f'transfer vs scratch AUC -> {target} (frac=1.0, {len(_d)} seeds)', _p)
+    _v = 'transfer BETTER' if (np.nanmean(_d) > 0 and _p < BONFERRONI_ALPHA) else ('scratch BETTER' if (np.nanmean(_d) < 0 and _p < BONFERRONI_ALPHA) else 'NO significant difference')
+    print(f"  VERDICT [{target}]: mean AUC gap (transfer - scratch) = {np.nanmean(_d):+.3f}, sign-flip p = {_p:.4f} (Bonferroni alpha {BONFERRONI_ALPHA:.4f}) -> {_v}")
 print()
 print(dl_significance_df.round(3).to_string(index=False))
 print("\nRead: 'classical-features' trains a boosted-tree model on this protocol's OWN")
@@ -6753,7 +7036,7 @@ print("Systematic version: every non-clean attack type per protocol is held out 
 print("(not just one hand-picked attack), giving a distribution instead of 3 anecdotes.")
 
 dl_ablation_all_attacks = run_representation_ablation_all_attacks(
-    dl_data, DL_DEVICE, fractions=(1.0,), seeds=(0, 1, 2, 3, 4), epochs_pretrain=20, epochs_svdd=20)
+    dl_data, DL_DEVICE, fractions=(1.0,), seeds=SC['abl_seeds'], epochs_pretrain=SC['ep_pre'], epochs_svdd=SC['ep_pre'])
 dl_ablation_all_df, _sup_all, _norm_all = summarize_ablation_all_attacks(dl_ablation_all_attacks)
 plot_ablation_all_attacks(dl_ablation_all_df)
 
@@ -6764,6 +7047,8 @@ _sig_all = paired_bootstrap_ci(dl_ablation_all_df['supervised_auc'].to_numpy(),
                                dl_ablation_all_df['normal_only_auc'].to_numpy(), seed=0)
 print(f"\nsupervised-vs-normal-only gap across {len(dl_ablation_all_df)} "
       f"(protocol x attack-type) configurations (seed-averaged): {_sig_all['mean_diff']:+.3f} ({_sig_all['note']})")
+ledger('held-out attack: supervised vs normal-only Deep SVDD', signflip_p(dl_ablation_all_df['supervised_auc'] - dl_ablation_all_df['normal_only_auc']))
+ledger('held-out attack: supervised vs Isolation Forest on features', signflip_p(dl_ablation_all_df['supervised_auc'] - dl_ablation_all_df['iforest_features_auc']))
 print("Caution: a normal-only AUC near 0.5 means that branch learned nothing -- a gap against it says the")
 print("supervised branch beats a non-functioning baseline, not that supervised pretraining helps in general.")
 
@@ -6794,6 +7079,7 @@ _diag_model = train_binary(_diag_model,
     DL_DEVICE, epochs=15, verbose=False,
     use_adversarial=True, use_contrastive=True, lambda_con=0.1, log_adversarial=True)
 plot_embedding_diagnostic(_diag_model, dl_data, DL_DEVICE)
+protocol_probe(_diag_model, dl_data, DL_DEVICE)   # review E3
 
 # %% [markdown]
 # > ✨ **NEW (Draft 2, item 22): Session-grouped k-fold CV cross-check (true fold coverage, not repeated holdout)**
@@ -6908,7 +7194,7 @@ print("run_grouped_cv_benchmark() defined.")
 
 # %%
 print("\n=== RIGOR CHECK: session-grouped 5-fold CV, pooled across all protocols ===")
-cv_df = run_grouped_cv_benchmark(dl_data, DL_DEVICE, n_folds=5, seeds=(0, 1, 2, 3, 4), epochs=10, checkpoint_path=f"data/dl_grouped_cv_checkpoint_{_DL_FP}.pkl")
+cv_df = run_grouped_cv_benchmark(dl_data, DL_DEVICE, n_folds=5, seeds=SC['cv_seeds'], epochs=SC['cv_epochs'], checkpoint_path=f"data/dl_grouped_cv_checkpoint_{_DL_FP}.pkl")
 cv_df.to_csv('data/dl_grouped_cv_benchmark.csv', index=False)
 print()
 print(cv_df.round(3).to_string(index=False))
@@ -7035,7 +7321,7 @@ def _paired_auc(make_h, make_a, n):
 
 
 def run_calibrated_benchmark(target_qbers=(0.034, 0.035, 0.036, 0.037), excess_sigma=2.0, target_excess_qber=None,
-                              n_per_class=100, target_k=K_MAIN_DATASET, n_windows=8, seed_role='calib_bench'):
+                              n_per_class=SC['s19_n'], target_k=K_MAIN_DATASET, n_windows=8, seed_role='calib_bench'):
     '''Calibrated cross-protocol benchmark.
 
     Review fixes:
@@ -7043,7 +7329,7 @@ def run_calibrated_benchmark(target_qbers=(0.034, 0.035, 0.036, 0.037), excess_s
           sits where detection is genuinely uncertain (Draft 2 used a fixed +0.05, ~14 sigma, and every AUC was 1.000);
       B4  the PRIMARY comparison uses the SAME attack family (intercept-resend) on all three protocols; E91's ancilla probe is reported as a
           separate secondary row (attack='ancilla', primary=False);
-      B3  BKM07 is matched on the quantity it monitors: the CTRL-round baseline error equals the target QBER (key QBER is then ~0.098),
+      B3  BKM07 is matched on the quantity it monitors: the CTRL-round baseline error equals the target QBER (two noisy steps; the key QBER is then lower, ~0.05),
           and its excess is the excess in the CTRL error rate;
       K   one key budget per row that BB84 can deliver (bb84_k_capacity), exactly K key events per run (truncation, fix C3).
     '''
@@ -7065,12 +7351,12 @@ def run_calibrated_benchmark(target_qbers=(0.034, 0.035, 0.036, 0.037), excess_s
                          k_target=k_row, excess_target=tx, primary=True, beyond_validated_range=bool(d84 > CHANNEL_DISTANCE_RANGE_KM[1])))
         print(f"  BB84  : distance_km={d84:7.2f}  eve_intensity={ei84:.3f}   k_achieved={k:7.1f}   CV-AUC={a:.4f}")
         # ---- BKM07, symmetric interception, monitoring-matched
-        ed_bk = calibrate_bkm07_monitor(tq); ei_bk = bkm07_sym_strength(tx, ed_bk)
+        ed_bk = calibrate_bkm07_monitor(tq); ei_bk = bkm07_sym_strength(tx, tq)   # baseline = the matched CTRL error rate
         mk = lambda mode, ei, role: (lambda i: _bkm_row(ed_bk, mode, ei, SEEDS.rng(f'{seed_role}_bkm_{role}', i), k_row, n_windows))
         a, k = _paired_auc(mk('none', 0.0, 'h'), mk('symmetric', ei_bk, 'a'), n_per_class)
         rows.append(dict(protocol='BKM07', target_qber=tq, honest_param=ed_bk, attack_param=ei_bk, auc=a, k_achieved_mean=k, attack='symmetric',
                          k_target=k_row, excess_target=tx, primary=True, beyond_validated_range=False))
-        print(f"  BKM07 : e_detector={ed_bk:.4f} (CTRL baseline)  eve_fwd=eve_ret={ei_bk:.3f}   k_achieved={k:7.1f}   CV-AUC={a:.4f}")
+        print(f"  BKM07 : e_detector={ed_bk:.4f} (CTRL baseline {tq:.3f})  eve_fwd=eve_ret={ei_bk:.3f}   k_achieved={k:7.1f}   CV-AUC={a:.4f}")
         # ---- E91: intercept-resend (primary) and ancilla (secondary)
         V91 = calibrate_e91(tq)
         ei91 = calibrate_e91_ir_attack(tx, V91)
@@ -7150,7 +7436,7 @@ print("cannot rank the protocols -- lower target_excess_qber before reading anyt
 # %%
 def run_key_rounds_sweep(target_qber=0.035, excess_sigma=2.0, target_excess_qber=None,
                           target_ks=(125, 250, 500, 1000, 2000, 4000, 8000),
-                          n_per_class=100, n_windows=8, seed_role='k_sweep'):
+                          n_per_class=SC['s19_n'], n_windows=8, seed_role='k_sweep'):
     '''How many key rounds does a passive detector need? Same design as run_calibrated_benchmark (review fixes C1/B3/B4): the attack at each
     K is sized as excess_sigma * sigma_K (so it stays equally hard to see as K grows), intercept-resend on all three protocols,
     BKM07 matched on its monitoring baseline, exactly K key events per run.'''
@@ -7163,7 +7449,7 @@ def run_key_rounds_sweep(target_qber=0.035, excess_sigma=2.0, target_excess_qber
     rows = []
     for tk in _usable:
         tx = target_excess_qber if target_excess_qber is not None else excess_sigma * sigma_K(target_qber, tk)
-        ei84, ei_bk, ei91 = bb84_ir_intensity(tx), bkm07_sym_strength(tx, ed_bk), calibrate_e91_ir_attack(tx, V91)
+        ei84, ei_bk, ei91 = bb84_ir_intensity(tx), bkm07_sym_strength(tx, target_qber), calibrate_e91_ir_attack(tx, V91)
         print(f"\n--- target_k = {tk}   excess = {tx:.4f} ---")
         for proto, hfun, afun in (
             ('BB84', lambda i: _bb84_row(d84, 'none', 0.0, SEEDS.rng(f'{seed_role}_bb84_h_{tk}', i), tk, n_windows),
@@ -7354,7 +7640,7 @@ def calibration_analysis(X, y, protocol_name, target_fprs=(0.01, 0.05, 0.10),
     # 3/n_negatives, otherwise precision is 1.0 at every base rate by construction.
     n_neg = max(int((yte == 0).sum()), 1)
     tpr0 = fpr_rows[0]['recall_at_fpr']
-    fpr0 = max(fpr_rows[0]['achieved_fpr'], 3.0 / n_neg)
+    fpr0 = max(fpr_rows[0]['achieved_fpr'], cp_upper(int(round(fpr_rows[0]['achieved_fpr'] * n_neg)), n_neg))   # review D2: exact (Clopper-Pearson) upper bound, not the observed FPR
     precision_rows = []
     for pi_dep in pi_deploy_grid:
         denom = tpr0 * pi_dep + fpr0 * (1 - pi_dep)
@@ -7363,6 +7649,7 @@ def calibration_analysis(X, y, protocol_name, target_fprs=(0.01, 0.05, 0.10),
 
     return dict(protocol=protocol_name, pi_train=pi_train,
                 brier_calibrated=brier_cal, brier_raw=brier_raw,
+                ece_calibrated=expected_calibration_error(yte, p_test), ece_raw=expected_calibration_error(yte, p_raw),   # review D9
                 reliability=(mean_pred, frac_pos), reliability_raw=(mean_pred_raw, frac_pos_raw),
                 fpr_table=pd.DataFrame(fpr_rows), precision_table=pd.DataFrame(precision_rows))
 
@@ -7414,7 +7701,7 @@ cal_results['E91'] = calibration_analysis(X91, y91, 'E91')
 print("Brier score, raw vs. calibrated (lower is better; 0=perfect, 0.25=random-")
 print("guess-at-p0.5; pi_train = fraction attacked in THIS protocol's training split):")
 for p, r in cal_results.items():
-    print(f"  {p:6s}: raw={r['brier_raw']:.4f}   calibrated={r['brier_calibrated']:.4f}   "
+    print(f"  {p:6s}: raw={r['brier_raw']:.4f}   calibrated={r['brier_calibrated']:.4f}   ECE raw={r['ece_raw']:.3f} cal={r['ece_calibrated']:.3f}   "
           f"(pi_train={r['pi_train']:.3f})")
 
 print("\nRecall achieved at fixed target false-positive rates (calibrated model's ROC):")
@@ -7476,7 +7763,7 @@ print("accuracy, both of which silently assume the training set's ~50-75% attack
 print("are the right way to choose an operating point for a rare-event security detector.")
 
 # %% [markdown]
-# ## Section 21 — Novel Security Experiments
+# ## Section 21 — Additional detectability experiments
 #
 # Sections 8-19 all ask variants of "can a classifier separate attacked from clean
 # sessions." This section asks two different, more operational questions: how WEAK can
@@ -7500,7 +7787,7 @@ print("are the right way to choose an operating point for a rare-event security 
 # %%
 def run_min_detectable_strength(target_qber=0.035,
                                  strengths=(0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0),   # final draft: extended to the weak end
-                                 n_per_class=80, target_k=K_MAIN_DATASET,
+                                 n_per_class=SC['s21_n'], target_k=K_MAIN_DATASET,
                                  auc_threshold=0.80, n_windows=8, seed_role='min_detect'):
     '''Item 28: at one fixed, calibrated honest operating point per
     protocol, sweep the RAW attack-strength knob (eve_intensity for BB84,
@@ -7690,7 +7977,7 @@ _CUSUM_DISPLAY_NAME = {'bb84': 'BB84', 'bkm07': 'BKM07', 'e91': 'E91'}  # DL_PRO
 
 
 def run_cusum_experiment(target_qber=0.035, strengths=(0.1, 0.2, 0.4, 0.7),
-                          n_before_keys=300, n_after_keys=600, n_repeats=50,
+                          n_before_keys=300, n_after_keys=600, n_repeats=SC['cusum_rep'],
                           detect_delta=0.05, threshold=5.0, seed_role='cusum'):
     '''Item 29: sequential change-point detection via CUSUM, measured in
     KEY ROUNDS (not raw pulses or wall-clock), for each protocol, at
@@ -7886,7 +8173,7 @@ print("matters than either method alone.")
 
 # %%
 def run_bursty_honest_robustness(target_qber=0.035, noise_multipliers=(1.0, 1.5, 2.0, 3.0, 5.0),
-                                  n_per_condition=100, target_k=K_MAIN_DATASET, n_windows=8,
+                                  n_per_condition=SC['s21b_n'], target_k=K_MAIN_DATASET, n_windows=8,
                                   seed_role='bursty_honest'):
     '''Item 31: false-positive rate of the Section-5-trained classifiers on
     fully honest sessions at increasingly elevated noise (see scope note
@@ -8000,7 +8287,7 @@ print("model, this kind of honest non-stationarity before trusting the alarm.")
 
 # %%
 def run_mixed_attack_experiment(target_qber=0.035, strengths=(0.15, 0.3, 0.5, 0.75),
-                                 n_per_class=100, target_k=K_MAIN_DATASET, n_windows=8,
+                                 n_per_class=SC['s21c_n'], target_k=K_MAIN_DATASET, n_windows=8,
                                  seed_role='mixed_attack'):
     '''Item 32: at the SAME raw strength, compare clean vs.
     intercept-resend-only vs. PNS-only vs. both together (mixed_pns_ir),
@@ -8091,8 +8378,8 @@ from sklearn.metrics import roc_auc_score
 warnings.filterwarnings('ignore')
 N_JOBS = 4
 OP_QBER = 0.035                                   # shared calibrated honest operating point
-OP = dict(bb84=calibrate_bb84(OP_QBER), bkm07=calibrate_bkm07(OP_QBER), e91=calibrate_e91(OP_QBER))
-print(f"operating point (honest key QBER {OP_QBER}): BB84 {OP['bb84']:.1f} km | BKM07 e_detector {OP['bkm07']:.4f} | E91 V {OP['e91']:.3f}")
+OP = dict(bb84=calibrate_bb84(OP_QBER), bkm07=calibrate_bkm07_monitor(OP_QBER), e91=calibrate_e91(OP_QBER))
+print(f"operating point (honest key QBER {OP_QBER}): BB84 {OP['bb84']:.1f} km | BKM07 e_detector {OP['bkm07']:.4f} (CTRL baseline {OP_QBER}) | E91 V {OP['e91']:.3f}")
 FEATS = dict(bb84=BB84_FEATURE_NAMES, bkm07=BKM_FEATURE_NAMES, e91=E91_FEATURE_NAMES)
 QBER_COL = dict(bb84='qber_total', bkm07='qber_key', e91='qber_key')
 # attack families: same intercept-resend mechanism on all three, plus protocol-specific ones reported separately
@@ -8139,9 +8426,9 @@ print("setup done")
 
 # %%
 # ── 24.1 detectability sweep: AUC vs realised excess QBER, for K = 200 / 500 / 2000 ──────────
-SWEEP_K = (200, 500, 2000)
+SWEEP_K = SC['s24_K']
 SWEEP_STRENGTHS = (0.005, 0.01, 0.02, 0.04, 0.08, 0.16, 0.32)     # raw knob, log-spaced
-N_HONEST, N_ATT = 300, 150      # was 100 honest + 40 attacked runs per cell
+N_HONEST, N_ATT = SC['s24_n_h'], SC['s24_n_att']      # was 100 honest + 40 attacked runs per cell
 
 def detectability_sweep(families=('IR', 'PNS', 'ANC'), ks=SWEEP_K, strengths=SWEEP_STRENGTHS, n_h=N_HONEST, n_a=N_ATT):
     rows = []
@@ -8158,7 +8445,7 @@ def detectability_sweep(families=('IR', 'PNS', 'ANC'), ks=SWEEP_K, strengths=SWE
                     auc = cv_auc_feats(Xh, Xa)
                     auc_q = float(roc_auc_score(np.r_[np.zeros(len(qh)), np.ones(len(qa))], np.r_[qh, qa]))   # QBER-only threshold detector
                     rows.append(dict(protocol=proto, family=fam, K=K, strength=s, excess_qber=excess, excess_se=se,
-                                     auc_features=auc, auc_qber_only=auc_q))
+                                     auc_features=auc, auc_qber_only=auc_q, auc_features_se=auc_se(auc, len(Xa), len(Xh)), auc_qber_only_se=auc_se(auc_q, len(qa), len(qh))))
             print(f"  {proto:5s} K={K:5d} done in {time.time()-t0:5.0f}s", flush=True)
     return pd.DataFrame(rows)
 
@@ -8190,17 +8477,18 @@ cols = {'bb84': '#DC2626', 'bkm07': '#F59E0B', 'e91': '#6366F1'}
 for ax, K in zip(axes, SWEEP_K):
     for p in cols:
         g = sweep_df[(sweep_df.protocol == p) & (sweep_df.family == 'IR') & (sweep_df.K == K)].sort_values('excess_qber')
-        ax.plot(g.excess_qber.clip(lower=1e-4), g.auc_features, 'o-', color=cols[p], label=f'{p} features')
-        ax.plot(g.excess_qber.clip(lower=1e-4), g.auc_qber_only, 's:', color=cols[p], alpha=.55, label=f'{p} QBER only')
+        ax.plot(g.excess_qber, g.auc_features, 'o-', color=cols[p], label=f'{p} features')
+        ax.fill_between(g.excess_qber, g.auc_features - 1.96 * g.auc_features_se, g.auc_features + 1.96 * g.auc_features_se, color=cols[p], alpha=.12)
+        ax.plot(g.excess_qber, g.auc_qber_only, 's:', color=cols[p], alpha=.55, label=f'{p} QBER only')
     ax.axhline(0.8, color='gray', ls=':'); ax.axvline(3 * np.sqrt(OP_QBER * (1 - OP_QBER) / K), color='k', ls='--', lw=.8)
-    ax.set_xscale('log'); ax.set_title(f'K = {K} key bits  (dashed: 3 standard errors)'); ax.set_xlabel('realised excess QBER'); ax.grid(alpha=.3, which='both')
-axes[0].set_ylabel('AUC (intercept-resend family)'); axes[0].set_ylim(0.4, 1.02); axes[0].legend(fontsize=7, ncol=2)
+    ax.set_xscale('symlog', linthresh=2e-3); ax.set_title(f'K = {K} key bits  (dashed: 3 standard errors; bands: 95% AUC s.e.)'); ax.set_xlabel('realised excess QBER'); ax.grid(alpha=.3, which='both')
+axes[0].set_ylabel('AUC (intercept-resend family)'); axes[0].set_ylim(0.3, 1.02); axes[0].legend(fontsize=7, ncol=2)
 plt.tight_layout(); plt.savefig('plots/final_detectability_sweep.png', dpi=150); plt.show()
 
 # %%
 # ── 24.2 honest-noise robustness: naive vs noise-aware training ──────────────────────────
 NOISE_TRAIN, NOISE_TEST = (1.0, 1.5, 2.0, 3.0), (1.0, 1.25, 2.5, 4.0)    # multipliers of the honest error floor; 1.25 and 2.5 and 4.0 are unseen in training
-def noise_robustness(K=500, strengths=(0.08, 0.32), n_tr=60, n_te=100):   # was 30 / 40
+def noise_robustness(K=500, strengths=(0.08, 0.32), n_tr=SC['s24_noise_tr'], n_te=SC['s24_noise_te']):   # was 30 / 40
     rows = []
     for proto, strength in [(p, s) for p in ('bb84', 'bkm07', 'e91') for s in strengths]:
         Xn_h, _ = many_runs(proto, 'IR', 0, K, 'nr_naive_h', n_tr * len(NOISE_TRAIN))
@@ -8237,7 +8525,7 @@ plt.tight_layout(); plt.savefig('plots/final_noise_robustness.png', dpi=150); pl
 
 # %%
 # ── 24.3 temporal features: iid vs bursty attack at the SAME mean strength ───────────────
-def temporal_test(K=500, strengths=(0.04, 0.08, 0.16), n_h=300, n_a=150):   # was 100 / 60
+def temporal_test(K=500, strengths=(0.04, 0.08, 0.16), n_h=SC['s24_tt_h'], n_a=SC['s24_tt_a']):   # was 100 / 60
     Xh, qh = many_runs('bb84', 'IR', 0, K, 'tt_h', n_h)
     idx = {n: i for i, n in enumerate(BB84_FEATURE_NAMES)}
     groups = {'A+ aggregate': FEATURE_GROUPS_BB84['A+ aggregate'], 'B + temporal': FEATURE_GROUPS_BB84['B + temporal']}
@@ -8368,12 +8656,12 @@ print("DL models defined:", list(MODELS))
 # ── 24.4b sessions for every protocol (clean vs. attacked, log-uniform strength 0.01-1) ──
 def _dl_job(proto, attack, strength, sid):
     rng = SEEDS.rng(f'dlfinal_sess_{proto}', sid)
-    kept, error, ba, bb, tf, gap, aux, chsh, nbas, xc = _DL_SESSION_BUILDERS[proto](attack, strength, rng, 2000)
+    kept, error, ba, bb, tf, gap, aux, chsh, nbas, xc = _DL_SESSION_BUILDERS[proto](attack, strength, rng, SC['dl_events'])
     return encode_session(kept, error, ba, bb, tf, gap, aux, chsh_running=chsh, n_bases=nbas), xc
 
-DL_N_CLEAN, DL_N_ATT = 400, 400        # sessions per protocol (was 150 + 150)
-DL_SEEDS = (0, 1, 2, 3, 4)            # independent session splits + weight inits (was a single seed)
-DL_EPOCHS = 10
+DL_N_CLEAN, DL_N_ATT = SC['s24_dl_clean'], SC['s24_dl_att']        # sessions per protocol (was 150 + 150)
+DL_SEEDS = SC['s24_dl_seeds']            # independent session splits + weight inits (was a single seed)
+DL_EPOCHS = SC['s24_dl_epochs']
 
 def build_sessions(proto, n_clean=DL_N_CLEAN, n_att=DL_N_ATT):
     meta, jobs = [], []
@@ -8477,42 +8765,14 @@ axes[2].set_xticks(range(len(BINS))); axes[2].set_xticklabels([f'{a}-{b_}' for a
 plt.tight_layout(); plt.savefig('plots/final_dl_all_protocols.png', dpi=150); plt.show()
 
 # %% [markdown]
-# > **Note (audit pass):** the numbers in this cell come from the earlier, smaller run (100 + 40 runs per cell, one DL seed, DL models without the engineered features). Section 24 now runs at 300 + 150 runs per cell and 5 DL seeds with `+feat` variants; re-run and refresh this text from `data/final_*.csv` before quoting it.
+# ### 24.5 Findings of the final-draft sweeps
 #
-# ### 24.5 Findings of the final-draft sweeps (all numbers from the Section 24 run above)
+# The numbers and conclusions that used to be typed here came from an earlier, much smaller run, with BKM07 calibrated to the key QBER, a single deep-learning seed and no engineered features in the deep-learning models.
+# **They are not repeated.** Section 26.4 prints the findings as sentences computed from this run's tables (minimum detectable excess QBER with and without the engineered features, deep-learning versus engineered features with paired per-seed tests), and Section 26.5 Holm-corrects every confirmatory test as one family.
 #
-# **Detectability (24.1, K = key bits).** Plotting AUC against the *realised excess QBER* removes the saturation: curves now rise from chance to 1.0 over 0.003-0.08 excess QBER.
-# Smallest excess QBER reaching AUC 0.8 with the engineered features (QBER-only threshold detector in brackets):
-#
-# | protocol / attack | K=200 | K=500 | K=2000 |
-# |---|---|---|---|
-# | BB84 intercept-resend | 0.023 (0.017) | 0.012 (0.009) | 0.0048 (0.0040) |
-# | BKM07 intercept (symmetric) | 0.0084 (0.015) | 0.0037 (0.0097) | 0.0029 (0.0045) |
-# | E91 intercept-resend | 0.018 (0.016) | 0.012 (0.0085) | 0.0048 (0.0042) |
-# | E91 ancilla | 0.017 (0.016) | 0.0089 (0.0089) | 0.0057 (0.0043) |
-#
-# * The statistical floor (3 standard errors of QBER) is 0.039 / 0.025 / 0.012 for K = 200 / 500 / 2000; detection needs roughly 1-3x that. 
-# * **BKM07 is the only protocol where the engineered features clearly beat a plain QBER threshold** (about 2.5x lower detectable excess at K=500) - the reflected-photon (CTRL) check carries extra information. For BB84 and E91 intercept-resend the features do *not* beat QBER alone.
-# * **PNS changes no QBER** (QBER-only AUC <= 0.5 at every strength; excess QBER ~ 0, so its excess-QBER axis is meaningless - use the strength column). The decoy features reach AUC 0.76 at strength 0.16 and 0.88 at 0.32 for K = 500.
-#
-# **Honest-noise robustness (24.2).** A detector trained on honest links at one noise level raises false alarms on noisier honest links (FPR 0.82-1.00 at 2.5x the honest error floor, all protocols). Training on honest links of varied noise cuts this to 0.02-0.12 at 2.5x, but costs recall on weak attacks (e.g. BB84, strength 0.08: TPR 0.48 -> 0.15) because a weak attack and extra honest noise genuinely overlap. At 4x noise (far outside training) it still fails.
-#
-# **Temporal features (24.3).** Gain AUC(B)-AUC(A+) is ~0 for iid attacks (-0.027 to +0.009) but positive for bursty attacks at the same mean strength (+0.178 at strength 0.04, +0.015 and +0.033 at 0.08 and 0.16; 60 attacked runs per cell, so the first value is noisy). Draft 2's 'temporal features add nothing' was largely an artefact of bursts of ~2,000 pulses inside runs of millions (effectively iid); the burst length now scales with the run.
-#
-# **Deep learning for every protocol (24.4).** 300 sessions per protocol, attack strength log-uniform 0.01-1, 60 test sessions, session score = mean window logit, 95% bootstrap CI over test sessions, one seed. Session-level AUC with 96-event windows:
-#
-# | protocol | MLP | CNN1D | BiLSTM+attn | Transformer | classical features (same sessions) |
-# |---|---|---|---|---|---|
-# | BB84 | 0.54 | 0.64 | 0.53 | 0.49 | 0.74 |
-# | BKM07 | 0.94 | 0.95 | 0.94 | 0.94 | 1.00 |
-# | E91 | 0.59 | 0.57 | 0.60 | 0.57 | 0.60 |
-#
-# * No architecture beats the classical features on BB84 or BKM07; on E91 they tie. All CIs are wide (about +-0.15), so differences between architectures are not significant.
-# * Longer windows (192, 384 events) do **not** rescue BB84 (session AUC 0.53-0.61).
-# * Session-level scoring improved over window-level AUC everywhere (e.g. BKM07 0.78 -> 0.94), as expected.
-# * The weak end of the strength range (0.01-0.1) dominates this log-uniform task, which is why BB84 and E91 sit near 0.6.
-#
-# **Not redone in this file:** leave-one-protocol-out transfer, Deep SVDD / autoencoder zero-day tests and the grouped-CV benchmark keep their Draft 2 code and (older) outputs; they were not re-run on the new data.
+# Two statements that do not depend on the numbers:
+# * PNS changes (almost) no QBER, so its excess-QBER axis is meaningless -- use the strength column; the decoy features are what see it, and the yield-matched PNS of Section 26.1 is invisible by construction.
+# * A detector trained on honest links of one noise level raises false alarms on noisier honest links; training on varied noise reduces that at the price of recall on weak attacks (Section 24.2).
 #
 
 # %% [markdown]
@@ -8551,27 +8811,13 @@ plt.tight_layout(); plt.savefig('plots/final_dl_all_protocols.png', dpi=150); pl
 #
 # ---
 #
-# ### Key Findings
+# ### How to read the results
 #
-# The following findings should be interpreted using the numerical results printed by the corresponding sections for the current run.
+# The notebook no longer states numeric conclusions in prose. Every comparison that used to be narrated is now either (i) printed together with its interval or paired test, or (ii) generated from the run's own tables (Section 26.4), and all confirmatory tests are corrected as one family (Section 26.5). In particular:
 #
-# * **Detection performance depends strongly on the information available to the model.**
-#   Strong attacks can be detected relatively easily when the relevant feature group is present. Performance becomes more challenging when features are removed or when the model is tested under distribution shifts. Therefore, the ablation and generalisation results provide more useful evidence about what the detector has actually learned than an in-distribution test-set AUC alone.
-#
-# * **Decoy-state features are important for detecting PNS attacks.**
-#   PNS is difficult to identify using QBER-based information alone. The decoy-state estimators `y1_lower`, `e1_upper`, and `gain_ratio_nu_mu` provide additional information that makes this attack detectable. This indicates why a conventional QBER-threshold detector can miss PNS behaviour.
-#
-# * **Large pulse counts are mainly important for reliable temporal features.**
-#   Section 2.4 shows that the pooled `qber_total` estimator becomes sufficiently precise relative to the target effect size before `N = 2,000,000`. The larger pulse count is therefore mainly justified by the windowed temporal features studied in Section 16, rather than by `qber_total` alone.
-#
-# * **E91 requires more than the CHSH statistic alone.**
-#   The `chsh_S`-only baseline is expected to provide limited information for the `ancilla` attack. This is the motivation for including `s_qber_residual`, which captures additional structure in the correlations. A small performance gap between CHSH-only and the full feature set in an honest-channel setting is therefore not necessarily a problem; the important question is whether the additional feature provides useful attack-specific information.
-#
-# * **Isolation Forest provides an unsupervised detection baseline.**
-#   Isolation Forest, trained only on secure data, achieves above-chance AUC on the tested protocols. This shows that some attack-related deviations can be detected without labelled attack examples, although its performance is generally weaker than that of the supervised models.
-#
-# * **Cross-protocol transfer and calibrated comparison should be interpreted from their live results.**
-#   Section 18's leave-one-protocol-out transfer experiment and Section 19's calibrated cross-protocol benchmark print their results at the end of their respective sections. Those values should be used for the current conclusions rather than replacing them with fixed numbers in this summary.
+# * Strong attacks are easy and weak attacks are hard in a way that is set by the number of key bits K (the statistical floor 3 sigma_K); read AUC against the realised excess QBER, not against a raw strength knob.
+# * Decoy-state features are the only ones that can see a blocking PNS attack; a yield-matched PNS cannot be seen by any observable (Section 26.1).
+# * Whether the deep-learning models add anything over the engineered features, whether protocol transfer helps, and whether adversarial training removes protocol identity are answered by the printed verdicts (Sections 18, 24, 26), not by this text.
 #
 # ---
 #
@@ -8622,7 +8868,7 @@ plt.tight_layout(); plt.savefig('plots/final_dl_all_protocols.png', dpi=150); pl
 # ### D10 — pre-registered analysis plan
 # Primary metric: ROC-AUC vs realised excess QBER (per protocol, grouped bootstrap CI over sessions). Primary hypothesis: the minimum detectable
 # excess QBER equals ~3 sigma_K of the commissioning baseline. Success criteria and test sets were fixed *before* regenerating data; any deviation
-# must be listed in the manifest cell below. Secondary analyses (DL, zero-day) are exploratory.
+# must be listed in the manifest cell below. Secondary analyses (DL, held-out-attack) are exploratory.
 #
 
 # %%
@@ -8630,7 +8876,9 @@ plt.tight_layout(); plt.savefig('plots/final_dl_all_protocols.png', dpi=150); pl
 import json, platform, sys, time, numpy as np, sklearn, scipy
 manifest = dict(timestamp=time.strftime('%Y-%m-%dT%H:%M:%S'), python=sys.version.split()[0], platform=platform.platform(),
                 numpy=np.__version__, scipy=scipy.__version__, sklearn=sklearn.__version__,
-                master_seed=MASTER_SEED, commission_k=COMMISSION_K)
+                master_seed=MASTER_SEED, commission_k=COMMISSION_K, run_profile=RUN_PROFILE, scale=SC,
+                switches=dict(BKM07_CTRL_FORWARD_NOISE=BKM07_CTRL_FORWARD_NOISE, BB84_LOSS_CAP_ETA_BOB=BB84_LOSS_CAP_ETA_BOB, PNS_MATCH_SIGNAL_GAIN_ONLY=PNS_MATCH_SIGNAL_GAIN_ONLY,
+                              HONEST_DRIFT_FRAC=HONEST_DRIFT_FRAC, HONEST_DRIFT_MAX=HONEST_DRIFT_MAX), run_start=_time.strftime('%Y-%m-%dT%H:%M:%S', _time.localtime(RUN_START)))
 try:
     import torch; manifest['torch'] = torch.__version__
 except Exception:
@@ -8703,6 +8951,14 @@ for d in (60, 80, 100):
 print("   PNS feasibility threshold (Eve can match the honest gain only when t_required<=1):")
 dd = np.arange(0, 130, 1.0); ok = [make_pns_strategy(x)['can_hide'] for x in dd]; print(f"   smallest distance where Eve can hide: {dd[np.argmax(ok)]:.0f} km")
 
+print("T4  loss-manipulation: Eve's boost of the transmittance is limited by Bob's detector efficiency (eta_bob), not by 1  (switch BB84_LOSS_CAP_ETA_BOB)")
+if BB84_LOSS_CAP_ETA_BOB:
+    for d in (20, 40):
+        for s_ in (0.5, 0.9):
+            N = 6_000_000; r = simulate_bb84_decoy(N, d, 'loss_manipulation', s_, rng=np.random.default_rng(5)); g = r['Q'][r['intensities'][0]]
+            ceil = (1 - s_) * (1 - np.exp(-MU_SIGNAL * GYS['eta_bob'])) + GYS['Y0']
+            check(f"d={d} km, blocked fraction {s_}", g <= ceil * 1.05, f"gain {g:.3e} <= lossless-line ceiling {ceil:.3e}")
+
 print("T7  decoy-state bounds hold on honest links (within 3 sigma of the finite sample): Y1_lower <= Y1_true, e1_upper >= e1_true")
 for d in (10, 40, 70, 100):
     ch = channel_model(d); N = 20_000_000; r = simulate_bb84_decoy(N, d, rng=np.random.default_rng(10 + d)); ms, md, mv = r['intensities']
@@ -8715,6 +8971,21 @@ for d in (10, 40, 70, 100):
     y1, q1, e1 = decoy_estimate(r['Q'][ms], r['E'][ms], r['Q'][md], r['E'][md], r['Q'][mv])
     ok = (ch['Y1'] >= np.quantile(Y, 0.0015)) and (ch['e1'] <= np.quantile(Eu, 0.9985))
     check(f"d={d:3d} km", ok, f"Y1_lower {y1:.3e} (99.7% band {np.quantile(Y,0.0015):.2e}..{np.quantile(Y,0.9985):.2e}) vs true Y1 {ch['Y1']:.3e};  e1_upper {e1:.3f} (band to {np.quantile(Eu,0.9985):.3f}) vs true e1 {ch['e1']:.3f}")
+
+print("T12 adaptive / imperfect-hardware options (review B1, B7, B8)")
+d = 60; N = 20_000_000
+r0 = simulate_bb84_decoy(N, d, rng=np.random.default_rng(1)); r1 = simulate_bb84_decoy(N, d, 'pns_matched', 1.0, rng=np.random.default_rng(2))
+zs = []
+for m_ in r0['intensities'][:2]:
+    g0, g1, n_ = r0['Q'][m_], r1['Q'][m_], r0['counts'][m_]; zs.append(ztest(g1, g0, np.sqrt(g0 * (1 - g0) / n_ * 2)))
+check("pns_matched leaves signal and decoy gains at their honest values (undetectable by construction)", max(abs(z) for z in zs) < 4, f"z = {[round(z, 2) for z in zs]}")
+r2 = simulate_bb84_decoy(N, d, rng=np.random.default_rng(3), detector=dict(afterpulse=0.01))
+check("afterpulsing raises the vacuum yield (background that no longer scales with intensity)", r2['Q'][0.0] > 1.5 * r0['Q'][0.0], f"{r0['Q'][0.0]:.2e} -> {r2['Q'][0.0]:.2e}")
+g3 = simulate_bb84_decoy(2_000_000, 0, rng=np.random.default_rng(4)); g4 = simulate_bb84_decoy(2_000_000, 0, rng=np.random.default_rng(4), detector=dict(dead_pulses=50))
+check("dead time lowers the gain of a short link", g4['Q'][0.48] < 0.8 * g3['Q'][0.48], f"{g3['Q'][0.48]:.4f} -> {g4['Q'][0.48]:.4f}")
+f0 = collect_bb84_features(distance_km=20, n_windows=64, rng=np.random.default_rng(5), target_k_signal_bits=20000)
+f1 = collect_bb84_features(distance_km=20, n_windows=64, rng=np.random.default_rng(5), target_k_signal_bits=20000, detector=dict(drift_amp=0.5))
+check("honest drift raises the dispersion index of an honest run (B8)", f1['qber_dispersion'] > 1.3 * f0['qber_dispersion'], f"{f0['qber_dispersion']:.2f} -> {f1['qber_dispersion']:.2f}")
 
 print("T8  E91 device-independent key rate: sanity limits")
 check("r(Q=0,S=2*sqrt2) = 1", abs(e91_di_secure_key_rate(0.0, 2 * np.sqrt(2)) - 1) < 1e-6)
@@ -8808,7 +9079,7 @@ for (pf, pr) in ((0.0, 0.0), (0.3, 0.3), (0.0, 0.6), (0.5, 0.1)):
     zs = ztest(sim['survival'], eta ** 2, np.sqrt(eta ** 2 * (1 - eta ** 2) / N))
     ok = abs(zs) < 4; msg = [f"survival z={zs:+.2f}"]
     for t, mode, ab in (('SIFT_KEY', 'SIFT', 0), ('SIFT_MONITOR', 'SIFT', 1), ('CTRL_Z', 'CTRL', 0), ('CTRL_X', 'CTRL', 1)):
-        ex = bkm_exact(pf, pr, e, e, e, ab, mode, ctrl_fwd_noise=False)
+        ex = bkm_exact(pf, pr, e, e, e, ab, mode, ctrl_fwd_noise=BKM07_CTRL_FORWARD_NOISE)
         n = sim[t]['n']; se = np.sqrt(ex['err_vs_alice'] * (1 - ex['err_vs_alice']) / n) if n else 1
         z = ztest(sim[t]['err_AA'], ex['err_vs_alice'], se); ok &= abs(z) < 4; msg.append(f"{t}: {sim[t]['err_AA']:.4f} vs {ex['err_vs_alice']:.4f} (z={z:+.1f}, n={n})")
         if mode == 'SIFT':
@@ -8847,16 +9118,149 @@ print(f"\n{sum(r[1] for r in RESULTS)}/{len(RESULTS)} checks passed (all of Sect
 assert all(r[1] for r in RESULTS), [r[0] for r in RESULTS if not r[1]]
 
 # %% [markdown]
-# ### What the audit found but deliberately did NOT change (model simplifications to state in the write-up)
+# ### Model simplifications found by the audit and their status
 #
-# The brief for this pass was *keep the physics as it is*, so these are documented, not altered:
+# Fixed (behind switches in Section 0, so the earlier numbers can be reproduced by setting them to `False`):
+# 1. **BKM07 CTRL rounds carried only one noisy step** -- the forward-leg misalignment was applied in SIFT rounds (as Bob's measurement noise) but not in CTRL rounds. Now `BKM07_CTRL_FORWARD_NOISE`; the CTRL baseline is 0.5(1-(1-2e)^2) and `calibrate_bkm07_monitor` inverts it. T5 compares the simulator with an exact calculation of this.
+# 2. **BB84 `loss_manipulation` boosted the transmittance up to 1.0** instead of Bob's detector efficiency -- now `BB84_LOSS_CAP_ETA_BOB` (T4).
+# 3. **PNS gain matching included the dark-count yield** -- now `PNS_MATCH_SIGNAL_GAIN_ONLY`.
+# 4. **Section 24 calibrated BKM07 to the three-step key QBER** while Section 19 matched its CTRL monitor -- Section 24 now uses `calibrate_bkm07_monitor`.
 #
-# 1. **BKM07 CTRL rounds carry only one noisy step.** The forward-leg misalignment is applied in SIFT rounds (it is Bob's measurement noise) but not in CTRL rounds, so the honest CTRL error equals `e_detector` rather than the two-leg value 0.5(1-(1-2e)^2). This is what makes CTRL a quieter monitor than the key QBER; Section 19/24's BKM07 numbers inherit it (and the exact calculator in T5 reproduces it).
-# 2. **BKM07 survival is eta^2 for every round type**, including CTRL rounds in which Bob never has to detect anything (so CTRL would survive with eta_bob once, not twice). Dark counts and multi-photon pulses are ignored in BKM07 (single-photon model).
-# 3. **BB84 `loss_manipulation` boosts the transmittance up to 1.0** rather than up to Bob's detector efficiency `eta_bob`, i.e. Eve is allowed to hide any blocked fraction. Treat that class as a gain-deficit/blocking attack, not a realistic hiding strategy.
-# 4. **PNS gain matching includes the dark-count yield** (`gain` instead of `gain - Y0`), so Bob's total gain under PNS sits ~Y0 above the honest value (negligible: Y0 ~ 1e-6).
-# 5. **Section 24 calibrates BKM07 to a three-step *key* QBER** (`calibrate_bkm07`) whereas Section 19 matches it on its CTRL monitoring baseline (`calibrate_bkm07_monitor`, review fix B3). The BKM07 operating points of the two sections are therefore not the same quantity.
-# 6. `e1_upper`/`y1_lower` are the **asymptotic** decoy bounds used as features (no finite-size correction); at 100 km each run has only ~60 sifted decoy bits, so they are noisy there (T7 allows for it).
+# Still true, and to be stated next to any security-flavoured claim (also printed as `SCOPE_NOTE` under the result cells):
+# 5. BKM07 survival is eta^2 for every round type (a CTRL round needs no detection at Bob), and BKM07 ignores dark counts and multi-photon pulses.
+# 6. `e1_upper` / `y1_lower` are the asymptotic decoy bounds used as features (no finite-size correction); at 100 km each run has only ~60 sifted decoy bits (T7 allows for it).
 # 7. E91 has no photon loss or detector inefficiency, and its honest visibility range V ~ U(0.85, 0.99) includes links (V < 0.857) on which no device-independent key exists even without an attacker.
-# 8. Only individual (per-pulse) attacks are simulated: no coherent/collective attacks, no detector side channels.
+# 8. Only individual (per-pulse) attacks plus the yield-matched PNS and stealth-sized intercept-resend of Section 26.1: no coherent / collective attacks, no detector side channels, no finite-key analysis.
 #
+
+# %% [markdown]
+# ---
+# ## Section 26 -- Adaptive attackers, imperfect hardware, honest drift, generated findings, multiple-comparison ledger
+#
+# * **26.1 (review B1)** Two adaptive attackers. *Yield-matched PNS* (`pns_matched`) throttles the multi-photon pulses it splits so that Bob's click probability for every photon number equals the honest channel's: nothing observable changes, so detection AUC must sit at 0.5 -- the defence is privacy amplification (the key-rate feature `r_secure` already treats all multi-photon pulses as insecure), not detection. *Stealth-sized intercept-resend* is sized to z standard errors of the QBER; the Neyman-Pearson limit AUC = Phi(z/sqrt2) for a pure QBER test is drawn next to the measured curves (the benchmark any learned detector should be judged against).
+# * **26.2 (review B7)** A detector trained on ideal honest links is tested on honest links with afterpulsing and dead time.
+# * **26.3 (review B8/B9)** Honest slow drift versus the three attack timing profiles: how much of the temporal-feature gain survives when honest links also drift.
+# * **26.4 (review F1/D10)** Findings are generated from this run's tables, and every confirmatory test is entered in a ledger with Holm correction.
+#
+
+# %%
+# ── 26.1 adaptive attackers (B1): yield-matched PNS and stealth-sized intercept-resend vs the Neyman-Pearson limit ──────────
+NP_Z = (0.5, 1.0, 1.5, 2.0, 3.0)
+rows261 = []
+for K in SC['s24_K']:
+    Xh, qh = many_runs('bb84', 'IR', 0, K, 's26_h', SC['s24_n_h'])
+    # (a) PNS (non-adaptive, blocks single photons) vs yield-matched PNS, full duty cycle
+    for mode in ('pns', 'pns_matched'):
+        Xa = np.array(Parallel(n_jobs=N_JOBS)(delayed(lambda i: [collect_bb84_features(distance_km=OP['bb84'], eve_mode=mode, eve_intensity=1.0, n_windows=8, rng=SEEDS.rng(f's26_{mode}_{K}', i),
+                                                       target_k_signal_bits=K)[k] for k in BB84_FEATURE_NAMES])(i) for i in range(SC['s24_n_att'])), float)
+        a = cv_auc_feats(Xh, Xa); rows261.append(dict(attacker=mode, K=K, z=np.nan, auc_features=a, auc_se=auc_se(a, len(Xa), len(Xh)), auc_NP_theory=np.nan, auc_qber_only=np.nan))
+    # (b) stealth-sized intercept-resend on all three protocols: excess = z * sigma_K
+    for proto in ('bb84', 'bkm07', 'e91'):
+        for z in NP_Z:
+            tx = z * sigma_K(OP_QBER, K)
+            strength = bb84_ir_intensity(tx) if proto == 'bb84' else (bkm07_sym_strength(tx, OP_QBER) if proto == 'bkm07' else calibrate_e91_ir_attack(tx, OP['e91']))
+            Xh_p, qh_p = (Xh, qh) if proto == 'bb84' else many_runs(proto, 'IR', 0, K, 's26_h', SC['s24_n_h'])
+            Xa, qa = many_runs(proto, 'IR', strength, K, 's26_stealth', SC['s24_n_att'])
+            a = cv_auc_feats(Xh_p, Xa); aq = float(roc_auc_score(np.r_[np.zeros(len(qh_p)), np.ones(len(qa))], np.r_[qh_p, qa]))
+            rows261.append(dict(attacker=f'stealth IR [{proto}]', K=K, z=z, auc_features=a, auc_se=auc_se(a, len(Xa), len(Xh_p)), auc_NP_theory=float(stats.norm.cdf(z / np.sqrt(2))), auc_qber_only=aq))
+    print(f"  K={K} done", flush=True)
+adv_df = pd.DataFrame(rows261); adv_df.to_csv('data/adaptive_attackers.csv', index=False)
+print(adv_df.round(3).to_string(index=False))
+fig, axes = plt.subplots(1, len(SC['s24_K']), figsize=(5.2 * len(SC['s24_K']), 4.4), sharey=True, squeeze=False)
+for ax, K in zip(axes[0], SC['s24_K']):
+    for proto, c in (('bb84', '#DC2626'), ('bkm07', '#F59E0B'), ('e91', '#6366F1')):
+        g = adv_df[(adv_df.K == K) & (adv_df.attacker == f'stealth IR [{proto}]')].sort_values('z')
+        ax.errorbar(g.z, g.auc_features, yerr=1.96 * g.auc_se, fmt='o-', color=c, label=f'{proto} features', capsize=2)
+        ax.plot(g.z, g.auc_qber_only, 's:', color=c, alpha=.5, label=f'{proto} QBER only')
+    zz = np.linspace(0, max(NP_Z), 50); ax.plot(zz, stats.norm.cdf(zz / np.sqrt(2)), 'k--', label='Neyman-Pearson limit, pure QBER test')
+    pm = adv_df[(adv_df.K == K) & (adv_df.attacker == 'pns_matched')].auc_features.iloc[0]; pn = adv_df[(adv_df.K == K) & (adv_df.attacker == 'pns')].auc_features.iloc[0]
+    ax.axhline(pm, color='green', ls='-.', label=f'yield-matched PNS (AUC {pm:.2f})'); ax.axhline(pn, color='purple', ls='-.', alpha=.6, label=f'blocking PNS (AUC {pn:.2f})')
+    ax.axhline(.5, color='gray', lw=.8); ax.set_title(f'K = {K} key bits'); ax.set_xlabel('attack size z (excess QBER in standard errors)'); ax.grid(alpha=.3)
+axes[0][0].set_ylabel('AUC'); axes[0][0].set_ylim(.3, 1.02); axes[0][0].legend(fontsize=6)
+plt.tight_layout(); plt.savefig('plots/adaptive_attackers.png', dpi=150); plt.show()
+print("A learned detector cannot beat the Neyman-Pearson curve for a QBER-only test unless its extra features carry information QBER does not; yield-matched PNS is invisible by construction.")
+print(SCOPE_NOTE)
+
+# %%
+# ── 26.2 honest-detector imperfections (B7): afterpulsing and dead time ──────────────────────────────────────────────────
+def det_run(dist, mode, strength, K, role, i, detector):
+    rng = SEEDS.rng(f'{role}_{dist}_{mode}_{strength}_{sorted(detector.items())}', i)
+    f = collect_bb84_features(distance_km=dist, eve_mode=mode, eve_intensity=strength, n_windows=8, rng=rng, target_k_signal_bits=K, detector=detector)
+    return [f[k] for k in BB84_FEATURE_NAMES]
+def det_runs(dist, mode, strength, K, role, n, detector):
+    return np.array(Parallel(n_jobs=N_JOBS)(delayed(det_run)(dist, mode, strength, K, role, i, detector) for i in range(n)), float)
+DET_TEST = {'ideal': {}, 'afterpulse 1e-3': dict(afterpulse=1e-3), 'afterpulse 1e-2': dict(afterpulse=1e-2), 'dead time 20 pulses': dict(dead_pulses=20), 'dead time 200 pulses': dict(dead_pulses=200),
+            'afterpulse 1e-2 + dead 200': dict(afterpulse=1e-2, dead_pulses=200)}
+rows262 = []; K = 500
+for dist in (5.0, OP['bb84']):
+    Xh = det_runs(dist, 'none', 0, K, 's26d_h', SC['s24_n_h'], {}); Xa = det_runs(dist, 'intercept_resend', 0.16, K, 's26d_a', SC['s24_n_att'], {})
+    X = np.nan_to_num(np.vstack([Xh, Xa])); y = np.r_[np.zeros(len(Xh)), np.ones(len(Xa))].astype(int)
+    mod, thr = fit_with_val_threshold(X, y, seed=SEEDS.seed('s26_det', 0), fpr=0.05)       # trained on IDEAL honest links, threshold at 5 % FPR on held-out ideal data
+    for name, det in DET_TEST.items():
+        Th = det_runs(dist, 'none', 0, K, f's26d_t', SC['s24_n_att'], det); Ta = det_runs(dist, 'intercept_resend', 0.16, K, 's26d_ta', SC['s24_n_att'], det)
+        ph = mod.predict_proba(np.nan_to_num(Th))[:, 1]; pa = mod.predict_proba(np.nan_to_num(Ta))[:, 1]
+        rows262.append(dict(distance_km=round(dist, 1), hardware=name, FPR=float((ph > thr).mean()), FPR_ci_hi=cp_upper(int((ph > thr).sum()), len(ph)), TPR=float((pa > thr).mean())))
+det_df = pd.DataFrame(rows262); det_df.to_csv('data/detector_imperfections.csv', index=False)
+print("Detector trained on IDEAL honest links (threshold = 5% FPR on ideal held-out links), tested on honest links with imperfect hardware:")
+print(det_df.round(3).to_string(index=False))
+print(SCOPE_NOTE)
+
+# %%
+# ── 26.3 honest drift (B8) x attack timing profile (B9) ──────────────────────────────────────────────────────────────
+GROUPS_T = {'A+ aggregate': FEATURE_GROUPS_BB84['A+ aggregate'], 'B + temporal': FEATURE_GROUPS_BB84['B + temporal']}
+idxT = {n: i for i, n in enumerate(BB84_FEATURE_NAMES)}
+def drift_runs(mode, strength, K, role, n, drift, profile='iid'):
+    def one(i):
+        f = collect_bb84_features(distance_km=OP['bb84'], eve_mode=mode, eve_intensity=strength, profile=profile, n_windows=32, rng=SEEDS.rng(f'{role}_{mode}_{strength}_{drift}_{profile}', i),
+                                  target_k_signal_bits=K, detector=dict(drift_amp=drift))
+        return [f[k] for k in BB84_FEATURE_NAMES]
+    return np.array(Parallel(n_jobs=N_JOBS)(delayed(one)(i) for i in range(n)), float)
+rows263 = []; K = 2000
+H = {d: drift_runs('none', 0, K, 's26t_h', SC['s24_tt_h'], d) for d in (0.0, 0.25, 0.5)}
+for prof in ('iid', 'bursty', 'drifting'):
+    Xa = drift_runs('intercept_resend', 0.08, K, 's26t_a', SC['s24_tt_a'], 0.0, prof)
+    for d, Xh in H.items():
+        r = dict(attack_profile=prof, honest_drift=d, honest_dispersion=float(np.nanmean(Xh[:, idxT['qber_dispersion']])), attack_dispersion=float(np.nanmean(Xa[:, idxT['qber_dispersion']])))
+        for g, feats in GROUPS_T.items():
+            cols = [idxT[f] for f in feats]; r[g] = cv_auc_feats(Xh[:, cols], Xa[:, cols])
+        r['temporal_gain'] = r['B + temporal'] - r['A+ aggregate']; rows263.append(r)
+drift_df = pd.DataFrame(rows263); drift_df.to_csv('data/honest_drift_vs_profile.csv', index=False)
+print(drift_df.round(3).to_string(index=False))
+print("Reading: honest links that drift raise the honest dispersion index, so a dispersion-based temporal feature no longer separates a bursty attack from honest drift; compare temporal_gain across honest_drift.")
+print(SCOPE_NOTE)
+
+# %%
+# ── 26.4 findings generated from THIS run (review F1) + Holm-corrected ledger (review D10) ────────────────────────────────
+print("=" * 100); print("GENERATED FINDINGS (every sentence below is computed from the tables of this run)"); print("=" * 100)
+print("\n[Detectability, Section 24.1] smallest excess QBER reaching AUC 0.8 (features vs QBER only; statistical floor = 3 sigma_K):")
+for _, r in tab.iterrows():
+    f_, q_ = r['feat_AUC0.8'], r['QBERonly_AUC0.8']
+    verdict = 'features no better than QBER alone' if not (np.isfinite(f_) and np.isfinite(q_)) or f_ > 0.8 * q_ else f'features detect {q_ / f_:.1f}x smaller excess than QBER alone'
+    print(f"  {r['protocol']:6s} {r['family']:4s} K={int(r['K']):5d}: features {f_:.4f} | QBER only {q_:.4f} | floor {r['stat_limit_3SE']:.4f}  -> {verdict}")
+print("\n[Deep learning, Section 24.4] session AUC (96-event windows), mean +/- sd over %d seeds, paired comparisons per seed:" % len(DL_SEEDS))
+piv = dl_df[dl_df.window == 96].pivot_table(index=['protocol', 'seed'], columns='model', values='session_auc')
+for proto in ('bb84', 'bkm07', 'e91'):
+    P = piv.loc[proto]; arch_best = max((c for c in P.columns if c != 'classical_features'), key=lambda c: P[c].mean())
+    d_cls = (P[arch_best] - P['classical_features']).to_numpy(); p_cls = signflip_p(d_cls); ledger(f'DL best ({arch_best}) vs ML features alone [{proto}]', p_cls)
+    gains = []
+    for a in ARCH:
+        d = (P[a + '+feat'] - P[a]).to_numpy(); ledger(f'{a}: +feat vs sequence-only [{proto}]', signflip_p(d)); gains.append(d.mean())
+    works = P[[c for c in P.columns if c != 'classical_features']].max(axis=1).mean() > 0.6
+    print(f"  {proto:5s}: best DL variant {arch_best} {P[arch_best].mean():.3f}+-{P[arch_best].std():.3f} | ML features alone {P['classical_features'].mean():.3f}+-{P['classical_features'].std():.3f} "
+          f"(gap {d_cls.mean():+.3f}, sign-flip p={p_cls:.3f}) | mean gain from adding ML features to the DL models {np.mean(gains):+.3f} | "
+          f"DL {'separates attacked from clean (best AUC > 0.6)' if works else 'does NOT separate attacked from clean (best AUC <= 0.6)'}")
+print("\n[Model ranking] mean session AUC over seeds, protocol x model:"); print(piv.groupby('protocol').mean().round(3).to_string())
+print("\n" + SCOPE_NOTE)
+
+# %%
+# ── 26.5 multiple-comparison ledger: every confirmatory test of this run, Holm-corrected as one family (review D10) ──────────
+if P_LEDGER:
+    names, ps = zip(*P_LEDGER); led = pd.DataFrame(dict(test=names, p=ps)); led['p_holm'] = holm(led.p.to_numpy()); led['significant_at_0.05_after_Holm'] = led.p_holm < 0.05
+    led.to_csv('data/ledger_holm.csv', index=False); print(f"{len(led)} confirmatory tests registered; Holm-adjusted over the whole family:"); print(led.round(4).to_string(index=False))
+else:
+    print("ledger is empty (the experiments that fill it were skipped)")
+# ── provenance (review A1): which saved files were NOT written by this run? ───────────────────────────────────────────────
+import glob
+_stale = sorted(f for f in glob.glob('data/*') + glob.glob('plots/*') if os.path.isfile(f) and not f.endswith('.pkl') and os.path.getmtime(f) < RUN_START)
+print(f"\nPROVENANCE: {len(_stale)} data/plot file(s) were NOT regenerated by this run (written by an earlier run -- delete or re-run before quoting them):")
+for f in _stale: print("   ", f)

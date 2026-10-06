@@ -335,12 +335,9 @@ to `data/`.
 
 ## Running `changed.ipynb` / `changed.py` (audit pass)
 
-```bash
-pip install -r requirements.txt
-python run_quick_test.py     # same code at tiny scale: proves every section runs on your machine
-python changed.py            # full scale; or open changed.ipynb and Restart & Run All
-```
+See **RUN_INSTRUCTIONS.md** (install, quick check, background run on Linux/macOS/Windows, run profiles `quick|standard|large|xl`).
 
-* Physics is unchanged. New **Section 25** validates the simulators against independent calculations and lists the model simplifications found (documented, not altered).
-* The ML engineered features now feed every Section 24 deep-learning model (`<arch>` = sequence only, `<arch>+feat` = with the features), and data, seeds and run counts were raised for ML and DL on all three protocols (table at the top of the notebook).
-* Full scale takes many hours (Section 18 deep learning dominates). Outputs of older cells saved in the notebook are stale until you re-run it.
+* All 43 review items (A1-F4) are addressed in code; the status table is at the top of the notebook. Physics corrections sit behind switches in Section 0.
+* New: Section 25 (physics validation against independent calculations), Section 26 (adaptive attackers, imperfect hardware, honest drift, findings generated from the run, Holm-corrected ledger).
+* ML engineered features feed every Section 24 deep-learning model (`<arch>` vs `<arch>+feat`); every sample size, seed count and epoch count is one `SC[...]` profile value.
+* Saved outputs are cleared; run the script/notebook to regenerate everything.
