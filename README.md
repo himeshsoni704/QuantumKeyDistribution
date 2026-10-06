@@ -330,3 +330,17 @@ to `data/`.
 - Lydersen et al., "Hacking commercial quantum cryptography systems by
   tailored bright illumination," *Nature Photonics* 4, 686 (2010) —
   detector-blinding attacks (not modelled here; see Section 8).
+
+---
+
+## Running `changed.ipynb` / `changed.py` (audit pass)
+
+```bash
+pip install -r requirements.txt
+python run_quick_test.py     # same code at tiny scale: proves every section runs on your machine
+python changed.py            # full scale; or open changed.ipynb and Restart & Run All
+```
+
+* Physics is unchanged. New **Section 25** validates the simulators against independent calculations and lists the model simplifications found (documented, not altered).
+* The ML engineered features now feed every Section 24 deep-learning model (`<arch>` = sequence only, `<arch>+feat` = with the features), and data, seeds and run counts were raised for ML and DL on all three protocols (table at the top of the notebook).
+* Full scale takes many hours (Section 18 deep learning dominates). Outputs of older cells saved in the notebook are stale until you re-run it.
