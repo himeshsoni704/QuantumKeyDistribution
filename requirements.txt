@@ -1,0 +1,12 @@
+# Versions this notebook / script were executed with (Python 3.13). Other recent versions should work.
+# xgboost is optional (HistGradientBoosting is the fallback); shap is only used in Section 22; torch is needed from Section 18 on.
+numpy==2.5.3
+scipy==1.18.1
+pandas==3.0.5
+scikit-learn==1.9.1
+matplotlib==3.11.2
+joblib==1.6.0
+torch==2.14.1
+xgboost==3.4.1
+shap==0.52.0
+ipykernel==7.4.0
