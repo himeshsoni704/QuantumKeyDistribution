@@ -56,3 +56,20 @@ All keys are in the `SC = dict(...)` block in Section 0.
 
 ## 6. Notebook instead of script
 `jupyter lab changed.ipynb` -> Kernel > Restart & Run All (same profiles via `QKD_PROFILE` set before starting Jupyter). For a long run the script above is more robust.
+
+## 7. Ubuntu: run in the background and auto-push plots/results
+```bash
+git clone -b claude/wonderful-meitner-16r3p0 https://github.com/himeshsoni704/QuantumKeyDistribution.git
+cd QuantumKeyDistribution
+sudo apt update && sudo apt install -y python3-venv python3-pip git
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+git config user.name "your name" && git config user.email "you@example.com"   # and make sure `git push` works (SSH key or token)
+
+python run_quick_test.py          # optional: ~30-60 min check
+./run_bg.sh large                 # starts the run + a watcher that pushes data/ and plots/ every 10 min to a new branch results-large-<date>
+tail -f run.log                   # progress
+tail -f autopush.log              # push log
+./stop_bg.sh                      # stop everything (does a final push)
+```
+Push interval: `PUSH_EVERY_SECONDS=300 ./run_bg.sh large`. If the machine may reboot, run it inside `tmux` (`tmux new -s qkd`, then `./run_bg.sh large`, detach with Ctrl-b d).
