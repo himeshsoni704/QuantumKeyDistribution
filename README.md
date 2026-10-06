@@ -330,3 +330,14 @@ to `data/`.
 - Lydersen et al., "Hacking commercial quantum cryptography systems by
   tailored bright illumination," *Nature Photonics* 4, 686 (2010) —
   detector-blinding attacks (not modelled here; see Section 8).
+
+---
+
+## Running `changed.ipynb` / `changed.py` (audit pass)
+
+See **RUN_INSTRUCTIONS.md** (install, quick check, background run on Linux/macOS/Windows, run profiles `quick|standard|large|xl`).
+
+* All 43 review items (A1-F4) are addressed in code; the status table is at the top of the notebook. Physics corrections sit behind switches in Section 0.
+* New: Section 25 (physics validation against independent calculations), Section 26 (adaptive attackers, imperfect hardware, honest drift, findings generated from the run, Holm-corrected ledger).
+* ML engineered features feed every Section 24 deep-learning model (`<arch>` vs `<arch>+feat`); every sample size, seed count and epoch count is one `SC[...]` profile value.
+* Saved outputs are cleared; run the script/notebook to regenerate everything.

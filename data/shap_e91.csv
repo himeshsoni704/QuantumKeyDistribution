@@ -1,0 +1,12 @@
+feature,mean_abs_shap
+qber_key,2.4692175
+per_pair_corr_spread,0.5315262
+h_qber_key,0.49668553
+r_secure_di,0.48858988
+chsh_S,0.45267487
+autocorr_lag1,0.36762354
+jump_energy,0.29758933
+s_qber_residual,0.2741848
+sifted_rate,0.2342515
+spectral_entropy,0.23075925
+s_deviation,0.052676424
