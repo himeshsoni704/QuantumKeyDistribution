@@ -8714,6 +8714,9 @@ def run_dl(proto, L, epochs=DL_EPOCHS, seed=0, models=tuple(MODELS)):
 DL_RES, DL_SCORES = [], {}
 for p, Ls in (('bb84', (96, 192, 384)), ('bkm07', (96,)), ('e91', (96,))):
     for L in Ls:
+        _min_ev = min(len(x) for x in SESS[p][1])
+        if L > _min_ev:                       # a window longer than the shortest session leaves no windows at all (happens with tiny sessions)
+            print(f"  {p}: window length {L} > shortest session ({_min_ev} events) -- skipped"); continue
         for sd_ in DL_SEEDS:
             r, sc = run_dl(p, L, seed=sd_); DL_RES += r; DL_SCORES[(p, L, sd_)] = sc
 dl_df = pd.DataFrame(DL_RES); dl_df.to_csv('data/final_dl_results.csv', index=False)
@@ -8738,7 +8741,7 @@ for (p, L, sd_), sc in DL_SCORES.items():
             if att.sum() >= 3 and clean.sum() >= 3:
                 rows.append(dict(protocol=p, window=L, seed=sd_, model=name, strength_bin=f'{lo}-{hi}', n_att=int(att.sum()),
                                  auc=float(roc_auc_score(np.r_[np.zeros(clean.sum()), np.ones(att.sum())], np.r_[s[clean], s[att]]))))
-bins_seed_df = pd.DataFrame(rows); bins_seed_df.to_csv('data/final_dl_strength_bins_per_seed.csv', index=False)
+bins_seed_df = pd.DataFrame(rows, columns=['protocol', 'window', 'seed', 'model', 'strength_bin', 'n_att', 'auc']); bins_seed_df.to_csv('data/final_dl_strength_bins_per_seed.csv', index=False)
 bins_df = bins_seed_df.groupby(['protocol', 'window', 'model', 'strength_bin'], sort=False).agg(auc=('auc', 'mean'), auc_sd=('auc', 'std'), n_att=('n_att', 'mean')).reset_index()
 bins_df.to_csv('data/final_dl_strength_bins.csv', index=False)
 print(bins_df[bins_df.window == 96].pivot_table(index=['protocol', 'model'], columns='strength_bin', values='auc').round(3).to_string())
@@ -9235,7 +9238,7 @@ print("=" * 100); print("GENERATED FINDINGS (every sentence below is computed fr
 print("\n[Detectability, Section 24.1] smallest excess QBER reaching AUC 0.8 (features vs QBER only; statistical floor = 3 sigma_K):")
 for _, r in tab.iterrows():
     f_, q_ = r['feat_AUC0.8'], r['QBERonly_AUC0.8']
-    verdict = 'features no better than QBER alone' if not (np.isfinite(f_) and np.isfinite(q_)) or f_ > 0.8 * q_ else f'features detect {q_ / f_:.1f}x smaller excess than QBER alone'
+    verdict = ('AUC 0.8 not reached by %s within the sweep' % ('either' if not (np.isfinite(f_) or np.isfinite(q_)) else ('QBER alone' if np.isfinite(f_) else 'the features'))) if not (np.isfinite(f_) and np.isfinite(q_)) else ('features no better than QBER alone' if f_ > 0.8 * q_ else f'features detect {q_ / f_:.1f}x smaller excess than QBER alone')
     print(f"  {r['protocol']:6s} {r['family']:4s} K={int(r['K']):5d}: features {f_:.4f} | QBER only {q_:.4f} | floor {r['stat_limit_3SE']:.4f}  -> {verdict}")
 print("\n[Deep learning, Section 24.4] session AUC (96-event windows), mean +/- sd over %d seeds, paired comparisons per seed:" % len(DL_SEEDS))
 piv = dl_df[dl_df.window == 96].pivot_table(index=['protocol', 'seed'], columns='model', values='session_auc')
