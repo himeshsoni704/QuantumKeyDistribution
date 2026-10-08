@@ -1,0 +1,1892 @@
+nohup: ignoring input
+=== Activating environment ===
+=== Installing dependencies ===
+Collecting numpy==2.5.3 (from -r requirements.txt (line 3))
+  Downloading numpy-2.5.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+Collecting scipy==1.18.1 (from -r requirements.txt (line 4))
+  Downloading scipy-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+Collecting pandas==3.0.5 (from -r requirements.txt (line 5))
+  Downloading pandas-3.0.5-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+Collecting scikit-learn==1.9.1 (from -r requirements.txt (line 6))
+  Downloading scikit_learn-1.9.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.3 kB)
+Collecting matplotlib==3.11.2 (from -r requirements.txt (line 7))
+  Downloading matplotlib-3.11.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (80 kB)
+Collecting joblib==1.6.0 (from -r requirements.txt (line 8))
+  Downloading joblib-1.6.0-py3-none-any.whl.metadata (6.5 kB)
+Collecting torch==2.14.1 (from -r requirements.txt (line 9))
+  Downloading torch-2.14.1-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (37 kB)
+Collecting xgboost==3.4.1 (from -r requirements.txt (line 10))
+  Downloading xgboost-3.4.1-py3-none-manylinux_2_28_x86_64.whl.metadata (2.0 kB)
+Collecting shap==0.52.0 (from -r requirements.txt (line 11))
+  Downloading shap-0.52.0-cp312-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (26 kB)
+Collecting ipykernel==7.4.0 (from -r requirements.txt (line 12))
+  Downloading ipykernel-7.4.0-py3-none-any.whl.metadata (3.4 kB)
+Collecting python-dateutil>=2.8.2 (from pandas==3.0.5->-r requirements.txt (line 5))
+  Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting narwhals>=2.0.1 (from scikit-learn==1.9.1->-r requirements.txt (line 6))
+  Downloading narwhals-2.26.0-py3-none-any.whl.metadata (15 kB)
+Collecting threadpoolctl>=3.5.0 (from scikit-learn==1.9.1->-r requirements.txt (line 6))
+  Downloading threadpoolctl-3.7.0-py3-none-any.whl.metadata (24 kB)
+Collecting contourpy>=1.0.1 (from matplotlib==3.11.2->-r requirements.txt (line 7))
+  Downloading contourpy-1.4.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (3.8 kB)
+Collecting cycler>=0.10 (from matplotlib==3.11.2->-r requirements.txt (line 7))
+  Downloading cycler-0.12.1-py3-none-any.whl.metadata (3.8 kB)
+Collecting fonttools>=4.28.2 (from matplotlib==3.11.2->-r requirements.txt (line 7))
+  Downloading fonttools-4.66.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (130 kB)
+Collecting kiwisolver>=1.3.1 (from matplotlib==3.11.2->-r requirements.txt (line 7))
+  Downloading kiwisolver-1.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (5.2 kB)
+Collecting packaging>=20.0 (from matplotlib==3.11.2->-r requirements.txt (line 7))
+  Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting pillow>=9 (from matplotlib==3.11.2->-r requirements.txt (line 7))
+  Downloading pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+Collecting pyparsing>=3 (from matplotlib==3.11.2->-r requirements.txt (line 7))
+  Downloading pyparsing-3.3.3-py3-none-any.whl.metadata (5.9 kB)
+Collecting cloudpickle>=3.0 (from joblib==1.6.0->-r requirements.txt (line 8))
+  Downloading cloudpickle-3.1.2-py3-none-any.whl.metadata (7.1 kB)
+Collecting filelock (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading filelock-4.0.12-py3-none-any.whl.metadata (2.0 kB)
+Collecting typing-extensions>=4.10.0 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting setuptools>=77.0.3 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading setuptools-84.0.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting sympy>=1.13.3 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+Collecting networkx>=2.5.1 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading networkx-3.7-py3-none-any.whl.metadata (6.7 kB)
+Collecting jinja2 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting fsspec>=0.8.5 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading fsspec-2026.9.0-py3-none-any.whl.metadata (10 kB)
+Collecting cuda-toolkit==13.0.3 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading cuda_toolkit-13.0.3.0-py2.py3-none-any.whl.metadata (17 kB)
+Collecting cuda-bindings<14,>=13.0.3 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading cuda_bindings-13.4.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting nvidia-cudnn-cu13==9.24.0.43 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cudnn_cu13-9.24.0.43-py3-none-manylinux_2_27_x86_64.whl.metadata (1.9 kB)
+Collecting nvidia-cusparselt-cu13==0.8.1 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl.metadata (12 kB)
+Collecting nvidia-nccl-cu13==2.30.7 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_nccl_cu13-2.30.7-py3-none-manylinux_2_18_x86_64.whl.metadata (2.1 kB)
+Collecting nvidia-nvshmem-cu13==3.4.5 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_nvshmem_cu13-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.1 kB)
+Collecting triton~=3.8.0 (from torch==2.14.1->-r requirements.txt (line 9))
+  Downloading triton-3.8.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (978 bytes)
+Collecting tqdm>=4.27.0 (from shap==0.52.0->-r requirements.txt (line 11))
+  Downloading tqdm-4.70.1-py3-none-any.whl.metadata (57 kB)
+Collecting slicer==0.0.8 (from shap==0.52.0->-r requirements.txt (line 11))
+  Downloading slicer-0.0.8-py3-none-any.whl.metadata (4.0 kB)
+Collecting numba (from shap==0.52.0->-r requirements.txt (line 11))
+  Downloading numba-0.68.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (2.8 kB)
+Collecting llvmlite (from shap==0.52.0->-r requirements.txt (line 11))
+  Downloading llvmlite-0.50.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (5.1 kB)
+Collecting comm>=0.1.1 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading comm-0.2.3-py3-none-any.whl.metadata (3.7 kB)
+Collecting debugpy>=1.6.5 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading debugpy-1.8.22-cp312-cp312-manylinux_2_34_x86_64.whl.metadata (1.4 kB)
+Collecting ipython>=7.23.1 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading ipython-9.17.1-py3-none-any.whl.metadata (4.6 kB)
+Collecting jupyter-client>=8.9.0 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading jupyter_client-8.10.0-py3-none-any.whl.metadata (8.5 kB)
+Collecting jupyter-core!=6.0.*,>=5.1 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading jupyter_core-5.9.1-py3-none-any.whl.metadata (1.5 kB)
+Collecting matplotlib-inline>=0.1 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading matplotlib_inline-0.2.2-py3-none-any.whl.metadata (2.4 kB)
+Collecting nest-asyncio2>=1.7.0 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading nest_asyncio2-1.7.3-py3-none-any.whl.metadata (6.7 kB)
+Collecting pyzmq>=25 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading pyzmq-27.2.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (3.8 kB)
+Collecting tornado>=6.5.7 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading tornado-6.5.10-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (2.8 kB)
+Collecting traitlets>=5.4.0 (from ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading traitlets-5.16.1-py3-none-any.whl.metadata (10 kB)
+Collecting nvidia-cublas==13.1.1.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-cuda-nvrtc==13.0.88.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cuda_nvrtc-13.0.88-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cuda-runtime==13.0.96.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cuda_runtime-13.0.96-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cufft==12.0.0.61.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cufft-12.0.0.61-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-nvjitlink<14,>=13.0.88 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_nvjitlink-13.4.92-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-cufile==1.15.1.6.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cufile-1.15.1.6-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cuda-cupti==13.0.85.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cuda_cupti-13.0.85-py3-none-manylinux_2_25_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-curand==10.4.0.35.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_curand-10.4.0.35-py3-none-manylinux_2_27_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cusolver==12.0.4.66.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cusolver-12.0.4.66-py3-none-manylinux_2_27_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-cusparse==12.6.3.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_cusparse-12.6.3.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-nvtx==13.0.85.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl.metadata (1.8 kB)
+Collecting cuda-pathfinder>=1.4.2 (from cuda-bindings<14,>=13.0.3->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading cuda_pathfinder-1.8.3-py3-none-any.whl.metadata (1.9 kB)
+Collecting ipython-pygments-lexers>=1.0.0 (from ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading ipython_pygments_lexers-1.1.1-py3-none-any.whl.metadata (1.1 kB)
+Collecting jedi>=0.18.2 (from ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading jedi-0.20.0-py2.py3-none-any.whl.metadata (23 kB)
+Collecting pexpect>4.6 (from ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading pexpect-4.9.0-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting prompt_toolkit<3.1.0,>=3.0.41 (from ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading prompt_toolkit-3.0.53-py3-none-any.whl.metadata (6.4 kB)
+Collecting psutil>=7 (from ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+Collecting pygments>=2.14.0 (from ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting stack_data>=0.6.0 (from ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading stack_data-0.6.3-py3-none-any.whl.metadata (18 kB)
+Collecting wcwidth>=0.1.4 (from prompt_toolkit<3.1.0,>=3.0.41->ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading wcwidth-0.9.2-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (23 kB)
+Collecting parso<0.9.0,>=0.8.6 (from jedi>=0.18.2->ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading parso-0.8.7-py2.py3-none-any.whl.metadata (8.2 kB)
+Collecting platformdirs>=2.5 (from jupyter-core!=6.0.*,>=5.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading platformdirs-4.12.3-py3-none-any.whl.metadata (5.5 kB)
+Collecting ptyprocess>=0.5 (from pexpect>4.6->ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading ptyprocess-0.7.0-py2.py3-none-any.whl.metadata (1.3 kB)
+Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas==3.0.5->-r requirements.txt (line 5))
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting executing>=1.2.0 (from stack_data>=0.6.0->ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading executing-2.2.1-py2.py3-none-any.whl.metadata (8.9 kB)
+Collecting asttokens>=2.1.0 (from stack_data>=0.6.0->ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading asttokens-3.0.2-py3-none-any.whl.metadata (5.7 kB)
+Collecting pure-eval (from stack_data>=0.6.0->ipython>=7.23.1->ipykernel==7.4.0->-r requirements.txt (line 12))
+  Downloading pure_eval-0.2.4-py3-none-any.whl.metadata (6.4 kB)
+Collecting mpmath<1.4,>=1.1.0 (from sympy>=1.13.3->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2->torch==2.14.1->-r requirements.txt (line 9))
+  Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Downloading numpy-2.5.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.7/16.7 MB 10.5 MB/s  0:00:01
+Downloading scipy-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.3/35.3 MB 10.0 MB/s  0:00:03
+Downloading pandas-3.0.5-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (11.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.0/11.0 MB 9.7 MB/s  0:00:01
+Downloading scikit_learn-1.9.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (9.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 9.2 MB/s  0:00:01
+Downloading matplotlib-3.11.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (9.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.9/9.9 MB 10.4 MB/s  0:00:00
+Downloading joblib-1.6.0-py3-none-any.whl (306 kB)
+Downloading torch-2.14.1-cp312-cp312-manylinux_2_28_x86_64.whl (554.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 554.6/554.6 MB 9.5 MB/s  0:00:56
+Downloading xgboost-3.4.1-py3-none-manylinux_2_28_x86_64.whl (57.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 57.6/57.6 MB 10.0 MB/s  0:00:05
+Downloading shap-0.52.0-cp312-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (498 kB)
+Downloading ipykernel-7.4.0-py3-none-any.whl (123 kB)
+Downloading cuda_toolkit-13.0.3.0-py2.py3-none-any.whl (2.5 kB)
+Downloading nvidia_cudnn_cu13-9.24.0.43-py3-none-manylinux_2_27_x86_64.whl (553.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 553.1/553.1 MB 9.0 MB/s  0:01:00
+Downloading nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl (170.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 170.1/170.1 MB 9.0 MB/s  0:00:19
+Downloading nvidia_nccl_cu13-2.30.7-py3-none-manylinux_2_18_x86_64.whl (216.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 216.0/216.0 MB 9.1 MB/s  0:00:23
+Downloading nvidia_nvshmem_cu13-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (60.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 60.4/60.4 MB 9.7 MB/s  0:00:06
+Downloading slicer-0.0.8-py3-none-any.whl (15 kB)
+Downloading cuda_bindings-13.4.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (7.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.2/7.2 MB 10.2 MB/s  0:00:00
+Downloading nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl (423.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 423.1/423.1 MB 9.4 MB/s  0:00:44
+Downloading nvidia_cuda_cupti-13.0.85-py3-none-manylinux_2_25_x86_64.whl (10.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.7/10.7 MB 8.8 MB/s  0:00:01
+Downloading nvidia_cuda_nvrtc-13.0.88-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (90.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 90.2/90.2 MB 9.6 MB/s  0:00:09
+Downloading nvidia_cuda_runtime-13.0.96-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 6.9 MB/s  0:00:00
+Downloading nvidia_cufft-12.0.0.61-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (214.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 214.1/214.1 MB 8.9 MB/s  0:00:23
+Downloading nvidia_cufile-1.15.1.6-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 6.1 MB/s  0:00:00
+Downloading nvidia_curand-10.4.0.35-py3-none-manylinux_2_27_x86_64.whl (59.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.5/59.5 MB 9.1 MB/s  0:00:06
+Downloading nvidia_cusolver-12.0.4.66-py3-none-manylinux_2_27_x86_64.whl (200.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 200.9/200.9 MB 9.1 MB/s  0:00:22
+Downloading nvidia_cusparse-12.6.3.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (145.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 145.9/145.9 MB 9.5 MB/s  0:00:15
+Downloading nvidia_nvjitlink-13.4.92-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (42.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 42.5/42.5 MB 9.5 MB/s  0:00:04
+Downloading nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl (148 kB)
+Downloading triton-3.8.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (248.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 248.0/248.0 MB 9.3 MB/s  0:00:26
+Downloading cloudpickle-3.1.2-py3-none-any.whl (22 kB)
+Downloading comm-0.2.3-py3-none-any.whl (7.3 kB)
+Downloading contourpy-1.4.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (383 kB)
+Downloading cuda_pathfinder-1.8.3-py3-none-any.whl (62 kB)
+Downloading cycler-0.12.1-py3-none-any.whl (8.3 kB)
+Downloading debugpy-1.8.22-cp312-cp312-manylinux_2_34_x86_64.whl (4.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.0/4.0 MB 9.4 MB/s  0:00:00
+Downloading fonttools-4.66.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (5.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.4/5.4 MB 9.2 MB/s  0:00:00
+Downloading fsspec-2026.9.0-py3-none-any.whl (221 kB)
+Downloading ipython-9.17.1-py3-none-any.whl (639 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 639.0/639.0 kB 6.6 MB/s  0:00:00
+Downloading prompt_toolkit-3.0.53-py3-none-any.whl (392 kB)
+Downloading ipython_pygments_lexers-1.1.1-py3-none-any.whl (8.1 kB)
+Downloading jedi-0.20.0-py2.py3-none-any.whl (4.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.9/4.9 MB 10.5 MB/s  0:00:00
+Downloading parso-0.8.7-py2.py3-none-any.whl (107 kB)
+Downloading jupyter_client-8.10.0-py3-none-any.whl (110 kB)
+Downloading jupyter_core-5.9.1-py3-none-any.whl (29 kB)
+Downloading kiwisolver-1.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB 8.8 MB/s  0:00:00
+Downloading matplotlib_inline-0.2.2-py3-none-any.whl (9.5 kB)
+Downloading narwhals-2.26.0-py3-none-any.whl (474 kB)
+Downloading nest_asyncio2-1.7.3-py3-none-any.whl (8.4 kB)
+Downloading networkx-3.7-py3-none-any.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 9.1 MB/s  0:00:00
+Downloading packaging-26.3-py3-none-any.whl (129 kB)
+Downloading pexpect-4.9.0-py2.py3-none-any.whl (63 kB)
+Downloading pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 10.5 MB/s  0:00:00
+Downloading platformdirs-4.12.3-py3-none-any.whl (32 kB)
+Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+Downloading ptyprocess-0.7.0-py2.py3-none-any.whl (13 kB)
+Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 9.2 MB/s  0:00:00
+Downloading pyparsing-3.3.3-py3-none-any.whl (126 kB)
+Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+Downloading pyzmq-27.2.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (872 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 872.3/872.3 kB 9.0 MB/s  0:00:00
+Downloading setuptools-84.0.0-py3-none-any.whl (818 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 818.2/818.2 kB 8.8 MB/s  0:00:00
+Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading stack_data-0.6.3-py3-none-any.whl (24 kB)
+Downloading asttokens-3.0.2-py3-none-any.whl (28 kB)
+Downloading executing-2.2.1-py2.py3-none-any.whl (28 kB)
+Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.3/6.3 MB 10.9 MB/s  0:00:00
+Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 536.2/536.2 kB 6.9 MB/s  0:00:00
+Downloading threadpoolctl-3.7.0-py3-none-any.whl (26 kB)
+Downloading tornado-6.5.10-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (467 kB)
+Downloading tqdm-4.70.1-py3-none-any.whl (80 kB)
+Downloading traitlets-5.16.1-py3-none-any.whl (86 kB)
+Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading wcwidth-0.9.2-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (769 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 769.8/769.8 kB 9.0 MB/s  0:00:00
+Downloading filelock-4.0.12-py3-none-any.whl (111 kB)
+Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+Downloading llvmlite-0.50.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (59.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.7/59.7 MB 10.6 MB/s  0:00:05
+Downloading numba-0.68.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (3.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.9/3.9 MB 10.4 MB/s  0:00:00
+Downloading pure_eval-0.2.4-py3-none-any.whl (11 kB)
+Installing collected packages: pure-eval, ptyprocess, nvidia-cusparselt-cu13, mpmath, cuda-toolkit, wcwidth, typing-extensions, triton, traitlets, tqdm, tornado, threadpoolctl, sympy, slicer, six, setuptools, pyzmq, pyparsing, pygments, psutil, platformdirs, pillow, pexpect, parso, packaging, nvidia-nvtx, nvidia-nvshmem-cu13, nvidia-nvjitlink, nvidia-nccl-cu13, nvidia-curand, nvidia-cufile, nvidia-cuda-runtime, nvidia-cuda-nvrtc, nvidia-cuda-cupti, numpy, networkx, nest-asyncio2, narwhals, MarkupSafe, llvmlite, kiwisolver, fsspec, fonttools, filelock, executing, debugpy, cycler, cuda-pathfinder, comm, cloudpickle, asttokens, stack_data, scipy, python-dateutil, prompt_toolkit, nvidia-cusparse, nvidia-cufft, nvidia-cublas, numba, matplotlib-inline, jupyter-core, joblib, jinja2, jedi, ipython-pygments-lexers, cuda-bindings, contourpy, xgboost, scikit-learn, pandas, nvidia-cusolver, nvidia-cudnn-cu13, matplotlib, jupyter-client, ipython, shap, ipykernel, torch
+
+Successfully installed MarkupSafe-3.0.4 asttokens-3.0.2 cloudpickle-3.1.2 comm-0.2.3 contourpy-1.4.0 cuda-bindings-13.4.3 cuda-pathfinder-1.8.3 cuda-toolkit-13.0.3.0 cycler-0.12.1 debugpy-1.8.22 executing-2.2.1 filelock-4.0.12 fonttools-4.66.1 fsspec-2026.9.0 ipykernel-7.4.0 ipython-9.17.1 ipython-pygments-lexers-1.1.1 jedi-0.20.0 jinja2-3.1.6 joblib-1.6.0 jupyter-client-8.10.0 jupyter-core-5.9.1 kiwisolver-1.5.1 llvmlite-0.50.0 matplotlib-3.11.2 matplotlib-inline-0.2.2 mpmath-1.3.0 narwhals-2.26.0 nest-asyncio2-1.7.3 networkx-3.7 numba-0.68.0 numpy-2.5.3 nvidia-cublas-13.1.1.3 nvidia-cuda-cupti-13.0.85 nvidia-cuda-nvrtc-13.0.88 nvidia-cuda-runtime-13.0.96 nvidia-cudnn-cu13-9.24.0.43 nvidia-cufft-12.0.0.61 nvidia-cufile-1.15.1.6 nvidia-curand-10.4.0.35 nvidia-cusolver-12.0.4.66 nvidia-cusparse-12.6.3.3 nvidia-cusparselt-cu13-0.8.1 nvidia-nccl-cu13-2.30.7 nvidia-nvjitlink-13.4.92 nvidia-nvshmem-cu13-3.4.5 nvidia-nvtx-13.0.85 packaging-26.3 pandas-3.0.5 parso-0.8.7 pexpect-4.9.0 pillow-12.3.0 platformdirs-4.12.3 prompt_toolkit-3.0.53 psutil-7.2.2 ptyprocess-0.7.0 pure-eval-0.2.4 pygments-2.21.0 pyparsing-3.3.3 python-dateutil-2.9.0.post0 pyzmq-27.2.0 scikit-learn-1.9.1 scipy-1.18.1 setuptools-84.0.0 shap-0.52.0 six-1.17.0 slicer-0.0.8 stack_data-0.6.3 sympy-1.14.0 threadpoolctl-3.7.0 torch-2.14.1 tornado-6.5.10 tqdm-4.70.1 traitlets-5.16.1 triton-3.8.0 typing-extensions-4.16.0 wcwidth-0.9.2 xgboost-3.4.1
+=== Running QKD script ===
+/home/himesh/Downloads/changed.py:1257: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+/home/himesh/Downloads/changed.py:1473: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+XGBoost available : True
+RUN_PROFILE = 'large'
+All imports OK.
+Measuring |+⟩ in Z-basis 2000 times:
+  P(0) ≈ 0.511  (expected 0.500)
+  P(1) ≈ 0.489  (expected 0.500)
+  L (km)  QBER E_mu    gain Q_mu
+       0     0.0330    2.137e-02
+      25     0.0331    6.429e-03
+      50     0.0334    1.925e-03
+     100     0.0376    1.733e-04
+     122     0.0460    6.092e-05
+     140     0.0630    2.650e-05
+GYS measured 8.9% QBER at 122 km (Appl. Phys. Lett. 84, 3762); this closed-form model gives 4.6% at the same distance -- matches the 0-100km rows above but undershoots GYS's own longest reported distance, so treat the model as validated only up to ~100km.
+BB84 QBER vs Eve intercept intensity (distance=15km, N=5000):
+   Eve intensity    QBER
+             0.0   0.000
+             0.1   0.087
+             0.2   0.087
+             0.5   0.261
+             1.0   0.435
+mu=0.05  single=0.047  multi=0.001  QBER honest=0.0325+-0.0022  PNS=0.0403+-0.0086  (z=+0.9)
+mu=0.10  single=0.090  multi=0.005  QBER honest=0.0373+-0.0017  PNS=0.0374+-0.0029  (z=+0.0)
+mu=0.15  single=0.129  multi=0.010  QBER honest=0.0337+-0.0011  PNS=0.0334+-0.0023  (z=-0.1)
+mu=0.20  single=0.164  multi=0.017  QBER honest=0.0342+-0.0014  PNS=0.0337+-0.0025  (z=-0.2)
+mu=0.30  single=0.222  multi=0.037  QBER honest=0.0325+-0.0008  PNS=0.0363+-0.0014  (z=+2.3)
+mu=0.50  single=0.303  multi=0.090  QBER honest=0.0336+-0.0009  PNS=0.0337+-0.0011  (z=+0.1)
+1,000,000 pulses simulated in 0.07s (14.5M pulses/s)
+  signal-intensity gain Q_mu = 6.3783e-03  (theory: 6.4294e-03)
+  signal-intensity QBER E_mu = 0.0347  (theory: 0.0331)
+Matches the closed-form channel_model() prediction: the simulator is drawing from that same distribution, just pulse-by-pulse.
+bb84_qber_convergence() / summarize_qber_convergence() defined.
+Running the convergence study: 14 pulse counts from 1,000 to 5,000,000, 20 independent repeats each (honest channel, distance_km=25) ...
+  N=     1,000  n_repeats= 20  mean n_sifted=        3    0.00s
+  N=     1,925  n_repeats= 20  mean n_sifted=        5    0.00s
+  N=     3,707  n_repeats= 20  mean n_sifted=        9    0.01s
+  N=     7,139  n_repeats= 20  mean n_sifted=       15    0.01s
+  N=    13,745  n_repeats= 20  mean n_sifted=       31    0.02s
+  N=    26,466  n_repeats= 20  mean n_sifted=       58    0.03s
+  N=    50,959  n_repeats= 20  mean n_sifted=      112    0.05s
+  N=    98,119  n_repeats= 20  mean n_sifted=      220    0.10s
+  N=   188,925  n_repeats= 20  mean n_sifted=      422    0.20s
+  N=   363,769  n_repeats= 20  mean n_sifted=      813    0.40s
+  N=   700,425  n_repeats= 20  mean n_sifted=     1571    0.79s
+  N= 1,348,645  n_repeats= 20  mean n_sifted=     3045    1.53s
+  N= 2,596,772  n_repeats= 20  mean n_sifted=     5889    3.11s
+  N= 5,000,000  n_repeats= 20  mean n_sifted=    11279    7.03s
+
+      N  mean_qber  std_qber  mean_n_sifted  sec_per_run  theory_se    bias
+   1000     0.0185    0.0786           2.75       0.0002     0.1079 -0.0146
+   1925     0.0377    0.0868           5.00       0.0002     0.0800  0.0046
+   3707     0.0124    0.0426           9.30       0.0003     0.0587 -0.0207
+   7139     0.0251    0.0363          14.85       0.0005     0.0464 -0.0080
+  13745     0.0264    0.0275          30.80       0.0008     0.0322 -0.0067
+  26466     0.0291    0.0230          57.85       0.0015     0.0235 -0.0041
+  50959     0.0266    0.0205         111.90       0.0027     0.0169 -0.0066
+  98119     0.0287    0.0087         219.95       0.0051     0.0121 -0.0045
+ 188925     0.0354    0.0073         422.15       0.0101     0.0087  0.0022
+ 363769     0.0330    0.0077         813.35       0.0199     0.0063 -0.0002
+ 700425     0.0341    0.0050        1570.65       0.0394     0.0045  0.0009
+1348645     0.0326    0.0037        3045.15       0.0766     0.0032 -0.0006
+2596772     0.0327    0.0024        5888.75       0.1554     0.0023 -0.0004
+5000000     0.0326    0.0015       11278.85       0.3514     0.0017 -0.0005
+
+Honest-channel theory QBER at 25km: 0.0331
+'Ideal' N to resolve a 0.05 (5-point) attack effect with margin: 98,119
+'Ideal' N under a stricter 0.02 (2-point) target: 1,348,645
+
+At the 'ideal' N=98,119, the estimator's spread is already +/-0.0087 -- 5.7x smaller than the effect size itself. Section 5's N=2,000,000 tightens that further to only +/-0.0024, for 20.4x the pulses and roughly 20.4x the compute -- narrowing noise that was already well below the effect sizes this notebook cares about resolving. That is the 'smoothing irrelevant noise' this convergence study set out to check: N=2,000,000 is not WRONG, it just buys much more precision on qber_total alone than qber_total alone needs -- its real justification is Section 2.4's original one, the WINDOWED temporal features (qber_dispersion, spectral_entropy, ...), which need many more sifted bits per window than a single pooled QBER estimate ever did.
+Saved: plots/qber_convergence.png
+simulate_bkm07_batch() defined (Draft 2, item 7).
+Physics validation -- Werner-state E91 (200,000 pairs per row):
+     V   |S| measured   2sqrt2*V   QBER measured    (1-V)/2
+  1.00         2.8500     2.8284          0.0000     0.0000
+  0.95         2.7061     2.6870          0.0256     0.0250
+  0.90         2.5646     2.5456          0.0492     0.0500
+  0.85         2.4204     2.4042          0.0733     0.0750
+e91_qber_convergence() / summarize_e91_qber_convergence() defined.
+Running the E91 convergence study: 12 pair-counts from 500 to 300,000, 20 repeats each (honest channel, V=0.95) ...
+  N=       500  n_repeats= 20  mean n_sifted=      109    0.02s
+  N=       894  n_repeats= 20  mean n_sifted=      202    0.02s
+  N=     1,600  n_repeats= 20  mean n_sifted=      363    0.02s
+  N=     2,862  n_repeats= 20  mean n_sifted=      644    0.03s
+  N=     5,119  n_repeats= 20  mean n_sifted=     1139    0.04s
+  N=     9,157  n_repeats= 20  mean n_sifted=     2043    0.06s
+  N=    16,380  n_repeats= 20  mean n_sifted=     3639    0.09s
+  N=    29,301  n_repeats= 20  mean n_sifted=     6512    0.16s
+  N=    52,414  n_repeats= 20  mean n_sifted=    11597    0.27s
+  N=    93,757  n_repeats= 20  mean n_sifted=    20890    0.46s
+  N=   167,711  n_repeats= 20  mean n_sifted=    37197    0.82s
+  N=   300,000  n_repeats= 20  mean n_sifted=    66655    1.46s
+
+     N  mean_qber  std_qber  mean_n_sifted  sec_per_run  theory_se     bias
+   500    0.03005   0.01457         108.65      0.00083    0.01498  0.00505
+   894    0.02276   0.01176         202.25      0.00089    0.01098 -0.00224
+  1600    0.02448   0.00711         362.65      0.00105    0.00820 -0.00052
+  2862    0.02334   0.00456         643.55      0.00134    0.00615 -0.00166
+  5119    0.02602   0.00491        1139.15      0.00197    0.00463  0.00102
+  9157    0.02477   0.00343        2043.30      0.00293    0.00345 -0.00023
+ 16380    0.02604   0.00251        3639.45      0.00472    0.00259  0.00104
+ 29301    0.02512   0.00216        6512.10      0.00786    0.00193  0.00012
+ 52414    0.02504   0.00168       11596.80      0.01329    0.00145  0.00004
+ 93757    0.02504   0.00096       20890.50      0.02306    0.00108  0.00004
+167711    0.02502   0.00053       37196.65      0.04079    0.00081  0.00002
+300000    0.02489   0.00059       66654.70      0.07311    0.00060 -0.00011
+
+Honest-channel theory QBER (V=0.95): 0.0250
+'Ideal' N for E91: 1,600
+bkm07_qber_convergence() / summarize_bkm07_qber_convergence() defined.
+Running the BKM07 convergence study: 9 pulse counts from 2,000 to 1,000,000, 15 repeats each (honest channel, distance_km=0, e_detector=0.033) ...
+(BKM07's simulator is a per-pulse Python loop with severe round-trip loss --
+ this is the slow part of this study. Expect a couple of minutes.)
+  N=     2,000  n_repeats= 15  mean n_sifted=      1.1    0.11s
+  N=     4,349  n_repeats= 15  mean n_sifted=      2.3    0.23s
+  N=     9,457  n_repeats= 15  mean n_sifted=      4.6    0.52s
+  N=    20,566  n_repeats= 15  mean n_sifted=     10.9    1.17s
+  N=    44,721  n_repeats= 15  mean n_sifted=     23.8    2.40s
+  N=    97,249  n_repeats= 15  mean n_sifted=     49.1    5.17s
+  N=   211,474  n_repeats= 15  mean n_sifted=    108.9   10.99s
+  N=   459,863  n_repeats= 15  mean n_sifted=    241.1   23.81s/home/himesh/Downloads/changed.py:2057: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+
+  N= 1,000,000  n_repeats= 15  mean n_sifted=    498.5   52.04s
+
+      N  mean_qber  std_qber  mean_n_sifted  sec_per_run  theory_se     bias
+   2000    0.02500   0.07906        1.13333      0.00719    0.27230 -0.06761
+   4349    0.11538   0.24185        2.33333      0.01548    0.18977  0.02277
+   9457    0.12921   0.14975        4.60000      0.03455    0.13516  0.03660
+  20566    0.11440   0.07889       10.86667      0.07783    0.08794  0.02179
+  44721    0.10030   0.05254       23.80000      0.15994    0.05942  0.00769
+  97249    0.07080   0.03510       49.06667      0.34488    0.04138 -0.02181
+ 211474    0.08098   0.02005      108.86667      0.73251    0.02778 -0.01163
+ 459863    0.08864   0.01592      241.06667      1.58757    0.01867 -0.00397
+1000000    0.09631   0.00932      498.46667      3.46929    0.01298  0.00370
+
+Honest-channel theory qber_key (e_detector=0.033): 0.0926
+'Ideal' N for BKM07: 1,000,000
+Cross-protocol convergence comparison (target excess QBER = 0.05, same threshold for all three):
+
+  BB84    N=98,119                             5.10 ms/run  ~   0.1s for a 20-repeat dataset at that N
+  BKM07   N=1,000,000                       3469.29 ms/run  ~  69.4s for a 20-repeat dataset at that N
+  E91     N=1,600                              1.05 ms/run  ~   0.0s for a 20-repeat dataset at that N
+
+E91 converges fastest and cheapest: no loss model at all, so the sifted fraction is fixed regardless of scale -- 1,600 pairs is enough. BB84 needs ~61x more pulses than E91 (exponential fibre loss competing against sifting), but each pulse is cheap (vectorised). BKM07 is worst on BOTH axes at once: round-trip loss (~eta_bob**2) makes each pulse far less likely to yield a usable bit than BB84's one-way loss does, AND its simulator is a genuine per-pulse Python loop, not vectorised -- so it pays a higher per-pulse cost for a lower per-pulse information yield. That compounding, not just one or the other, is why it needed the most pulses of the three in this study.
+
+Saved: plots/qber_convergence_comparison.png
+Temporal-feature helpers defined (P6: fixed spectral entropy, added dispersion index).
+Feature-extraction functions defined (BB84 decoy+dispersion; BKM07 round-fix).
+E91 device-independent SKR: r=0 below V~=0.8571 (honest QBER 0.0715) on the honest-channel curve -- our honest-noise draw is V~Uniform(0.85, 0.99), so the noisiest slice of it (V < 0.857) cannot support a DI key even with no attack at all.
+E91 feature-extraction functions defined.
+
+Single-run feature vectors, one per attack mode:
+
+--- eve_mode = none ---
+  qber_key                  : 0.0259
+  chsh_S                    : -2.6869
+  s_deviation               : 0.1416
+  s_qber_residual           : 0.0052
+  per_pair_corr_spread      : 1.3442
+  jump_energy               : 0.6680
+  chsh_jump_energy          : 1.2761
+  qber_dispersion           : 1.2054
+  spectral_entropy          : 0.7464
+  autocorr_lag1             : 0.4206
+  h_qber_key                : 0.1736
+  sifted_rate               : 0.2226
+  attack_duty_cycle         : 0.0000
+  V                         : 0.9500
+  r_secure_di               : 0.5339
+  z_qber_key                : 0.0000
+  _k_achieved               : 44522
+  _N_used                   : 200000
+  _N_trunc                  : 200000
+
+--- eve_mode = intercept_resend ---
+  qber_key                  : 0.1445
+  chsh_S                    : -2.0219
+  s_deviation               : 0.8065
+  s_qber_residual           : 0.0111
+  per_pair_corr_spread      : 1.0116
+  jump_energy               : 1.0528
+  chsh_jump_energy          : 1.1116
+  qber_dispersion           : 0.8975
+  spectral_entropy          : 0.8855
+  autocorr_lag1             : -0.2099
+  h_qber_key                : 0.5960
+  sifted_rate               : 0.2226
+  attack_duty_cycle         : 0.5000
+  V                         : 0.9500
+  r_secure_di               : 0.0000
+  z_qber_key                : 0.0000
+  _k_achieved               : 44522
+  _N_used                   : 200000
+  _N_trunc                  : 200000
+
+--- eve_mode = ancilla ---
+  qber_key                  : 0.0782
+  chsh_S                    : -2.4837
+  s_deviation               : 0.3447
+  s_qber_residual           : 0.0976
+  per_pair_corr_spread      : 1.3397
+  jump_energy               : 0.6037
+  chsh_jump_energy          : 1.0701
+  qber_dispersion           : 0.7096
+  spectral_entropy          : 0.9015
+  autocorr_lag1             : 0.1327
+  h_qber_key                : 0.3958
+  sifted_rate               : 0.2226
+  attack_duty_cycle         : 0.5000
+  V                         : 0.9500
+  r_secure_di               : 0.0418
+  z_qber_key                : 0.0000
+  _k_achieved               : 44522
+  _N_used                   : 200000
+  _N_trunc                  : 200000
+
+--- eve_mode = extra_depolarisation ---
+  qber_key                  : 0.0847
+  chsh_S                    : -2.3427
+  s_deviation               : 0.4857
+  s_qber_residual           : -0.0063
+  per_pair_corr_spread      : 1.1715
+  jump_energy               : 0.5578
+  chsh_jump_energy          : 1.1131
+  qber_dispersion           : 0.6366
+  spectral_entropy          : 0.8259
+  autocorr_lag1             : 0.0975
+  h_qber_key                : 0.4187
+  sifted_rate               : 0.2226
+  attack_duty_cycle         : 0.5000
+  V                         : 0.9500
+  r_secure_di               : 0.0000
+  z_qber_key                : 0.0000
+  _k_achieved               : 44522
+  _N_used                   : 200000
+  _N_trunc                  : 200000
+
+chsh_S -- none=-2.6869  intercept_resend=-2.0219  ancilla=-2.4837  extra_depolarisation=-2.3427  (Tsirelson bound = 2.8284, classical bound = 2)
+s_qber_residual -- none=0.0052  intercept_resend=0.0111  ancilla=0.0976  (expect ancilla >> the other two -- it is basis-anisotropic, they are not)
+PASS -- simulator behaves correctly, safe to build features on top of it.
+Closed-form self-check (each protocol's own honest-noise formula):
+ target_qber | BB84 dist_km   -> qber |   E91 V   -> qber |  BKM07 e_det   -> qber
+       0.020 |          n/a        -- |  0.9600    0.0200 |       0.0068    0.0200
+       0.033 |          n/a        -- |  0.9340    0.0330 |       0.0113    0.0330
+       0.050 |       127.68    0.0500 |  0.9000    0.0500 |       0.0173    0.0500
+       0.080 |       150.14    0.0800 |  0.8400    0.0800 |       0.0282    0.0800
+       0.100 |       158.48    0.1000 |  0.8000    0.1000 |       0.0358    0.1000
+       0.150 |       172.77    0.1500 |  0.7000    0.1500 |       0.0560    0.1500
+
+Empirical check -- collect_bkm07_features() at the calibrated e_detector:
+  target=0.050  e_detector=0.0173  n_eff(theory)~=   1519  measured qber_key=0.0464  95% CI [0.0361, 0.0579]
+  target=0.100  e_detector=0.0358  n_eff(theory)~=   1519  measured qber_key=0.1016  95% CI [0.0867, 0.1177]
+Attack-strength calibration functions defined (calibrate_bb84_attack / calibrate_bkm07_attack / calibrate_e91_attack).
+generate_datasets(): reusing cached data/bb84_dataset.csv + data/bkm07_dataset.csv (1800 rows each, samples_per_class=600) -- skipping recompute.
+
+BB84 dataset shape : (1800, 21)   (label counts: {np.int64(0): np.int64(600), np.int64(1): np.int64(600), np.int64(2): np.int64(600)})
+BKM07 dataset shape: (1800, 21)   (label counts: {np.int64(0): np.int64(600), np.int64(1): np.int64(600), np.int64(2): np.int64(600)})
+CSVs saved to data/
+BB84 runs that did NOT reach K=2000 key bits (pulse cap): 10.3% (median achieved K 2000); BKM07: 8.7%.  Rows are flagged in data/*_meta.csv (n_capped).
+  (equal-information sampling, item 8: target_k_key_pairs=2000, matching BB84/BKM07 above)
+generate_e91_dataset(): reusing cached data/e91_dataset.csv (2400 rows) -- skipping recompute.
+
+E91 dataset shape: (2400, 14)   (label counts: {'ancilla': np.int64(600), 'extra_depolarisation': np.int64(600), 'intercept_resend': np.int64(600), 'none': np.int64(600)})
+(CSV was loaded from cache, not rewritten)
+==========================================================================
+LEAKAGE AUDIT
+==========================================================================
+
+L-1 Single-feature AUC (>0.99 is a red flag)
+  qber_total               AUC=0.6482
+  qber_z                   AUC=0.6562
+  qber_x                   AUC=0.6351
+  gain_mu                  AUC=0.5033
+  sifted_rate              AUC=0.5031
+  qber_dispersion          AUC=0.5955
+  jump_energy_norm         AUC=0.5461
+  spectral_entropy         AUC=0.5574
+  autocorr_lag1            AUC=0.5827
+  y1_lower                 AUC=0.5265
+  e1_upper                 AUC=0.6255
+  r_secure                 AUC=0.6746
+  gain_ratio_nu_mu         AUC=0.6051
+  h_qber                   AUC=0.6482
+  gain_vs_expected         AUC=0.5610
+  z_qber                   AUC=0.6499
+
+L-2/L-3 Exact separation and per-class constants
+
+L-4 Nuisance-parameter distributions must match across classes (KS test)
+  distance_km      none vs intercept_resend     KS=0.000 p=1
+  distance_km      none vs pns                  KS=0.000 p=1
+  e_det            none vs intercept_resend     KS=0.000 p=1
+  e_det            none vs pns                  KS=0.000 p=1
+  Y0               none vs intercept_resend     KS=0.000 p=1
+  Y0               none vs pns                  KS=0.000 p=1
+
+L-5 Sample length identical across classes
+  intercept_resend         n_unique= 512  min=     348,047  max=  20,000,000
+  none                     n_unique= 512  min=     348,047  max=  20,000,000
+  pns                      n_unique= 512  min=     348,047  max=  20,000,000
+  -> N sets identical across classes
+
+L-6 Feature availability (NaN rate) by class
+
+L-7 Shuffled-label control (AUC must be ~0.50)
+  shuffled-label AUC = 0.5163 (range 0.491-0.544 over 5 shuffles); OOF AUC 0.469, permutation p = 0.017 <-- PIPELINE BUG
+==========================================================================
+L-8 zero-strength control (BB84) AUC = 0.5211 (range 0.361-0.609 over 5 splits); OOF AUC 0.450, permutation p = 0.226 OK
+  nuisance-only model [BB84] (distance_km, e_det, Y0): AUC = 0.500, permutation p = 1.000  OK
+==========================================================================
+LEAKAGE AUDIT
+==========================================================================
+
+L-1 Single-feature AUC (>0.99 is a red flag)
+  qber_key                 AUC=0.7155
+  chsh_S                   AUC=0.6896
+  s_deviation              AUC=0.6897
+  s_qber_residual          AUC=0.5725
+  per_pair_corr_spread     AUC=0.6531
+  jump_energy              AUC=0.5460
+  spectral_entropy         AUC=0.5575
+  autocorr_lag1            AUC=0.5326
+  h_qber_key               AUC=0.7155
+  sifted_rate              AUC=0.5061
+  r_secure_di              AUC=0.6914
+  z_qber_key               AUC=0.8103
+  qber_dispersion          AUC=0.5562
+  chsh_jump_energy         AUC=0.5351
+
+L-2/L-3 Exact separation and per-class constants
+
+L-4 Nuisance-parameter distributions must match across classes (KS test)
+  V                none vs ancilla              KS=0.067 p=0.139
+  V                none vs extra_depolarisation KS=0.037 p=0.815
+  V                none vs intercept_resend     KS=0.030 p=0.95
+
+L-5 Sample length identical across classes
+  ancilla                  n_unique=   1  min=      11,700  max=      11,700
+  extra_depolarisation     n_unique=   1  min=      11,700  max=      11,700
+  intercept_resend         n_unique=   1  min=      11,700  max=      11,700
+  none                     n_unique=   1  min=      11,700  max=      11,700
+  -> N sets identical across classes
+
+L-6 Feature availability (NaN rate) by class
+
+L-7 Shuffled-label control (AUC must be ~0.50)
+  shuffled-label AUC = 0.4845 (range 0.455-0.538 over 5 shuffles); OOF AUC 0.477, permutation p = 0.086 OK
+==========================================================================
+L-8 zero-strength control (E91) AUC = 0.5167 (range 0.435-0.644 over 5 splits); OOF AUC 0.462, permutation p = 0.405 OK
+  nuisance-only model [E91] (V, N): AUC = 0.506, permutation p = 0.693  OK
+==========================================================================
+LEAKAGE AUDIT
+==========================================================================
+
+L-1 Single-feature AUC (>0.99 is a red flag)
+  qber_key                 AUC=0.7649
+  qber_zs                  AUC=0.6963
+  qber_zsr                 AUC=0.8122
+  ret_monitor              AUC=0.8157
+  qber_zc                  AUC=0.8061
+  qber_xc                  AUC=0.8063
+  asymmetry                AUC=0.6387
+  ctrl_sift_ratio          AUC=0.8042
+  xctrl_dispersion         AUC=0.5154
+  jump_energy              AUC=0.5240
+  spectral_entropy         AUC=0.5013
+  autocorr_lag1            AUC=0.5137
+  h_ctrl                   AUC=0.8127
+  sifted_rate              AUC=0.5098
+  z_qber_ctrl              AUC=0.8583
+
+L-2/L-3 Exact separation and per-class constants
+
+L-4 Nuisance-parameter distributions must match across classes (KS test)
+  distance_km      none vs asymmetric           KS=0.000 p=1
+  distance_km      none vs symmetric            KS=0.000 p=1
+  e_det            none vs asymmetric           KS=0.000 p=1
+  e_det            none vs symmetric            KS=0.000 p=1
+
+L-5 Sample length identical across classes
+  asymmetric               n_unique= 444  min=   5,167,243  max=  15,000,000
+  none                     n_unique= 444  min=   5,167,243  max=  15,000,000
+  symmetric                n_unique= 444  min=   5,167,243  max=  15,000,000
+  -> N sets identical across classes
+
+L-6 Feature availability (NaN rate) by class
+
+L-7 Shuffled-label control (AUC must be ~0.50)
+  shuffled-label AUC = 0.4893 (range 0.455-0.546 over 5 shuffles); OOF AUC 0.475, permutation p = 0.096 OK
+==========================================================================
+L-8 zero-strength control (BKM07) AUC = 0.4609 (range 0.281-0.562 over 5 splits); OOF AUC 0.503, permutation p = 0.963 OK
+  nuisance-only model [BKM07] (distance_km, e_det): AUC = 0.500, permutation p = 1.000  OK
+BB84  — train: (1440, 16), test: (360, 16)
+BKM07 — train: (1440, 15), test: (360, 15)
+BB84  class balance in train: {np.int64(0): np.int64(480), np.int64(1): np.int64(960)}
+BKM07 class balance in train: {np.int64(0): np.int64(480), np.int64(1): np.int64(960)}
+E91 -- train: (1920, 14), test: (480, 14)
+E91 class balance in train: {np.int64(0): np.int64(488), np.int64(1): np.int64(1432)}
+E91 test-set attack-type breakdown: {'ancilla': np.int64(118), 'extra_depolarisation': np.int64(127), 'intercept_resend': np.int64(123), 'none': np.int64(112)}
+Model factory and tuning functions defined.
+============================================================
+Tuning Boosted Trees — BB84
+============================================================
+  Best CV-AUC : 0.7652
+  Best params : {'learning_rate': 0.03, 'max_depth': 3, 'n_estimators': 200, 'subsample': 0.8}
+
+============================================================
+Tuning SVM-RBF — BB84
+============================================================
+  Best CV-AUC : 0.7698
+  Best params : {'clf__estimator__C': 10, 'clf__estimator__gamma': 0.01}
+
+============================================================
+Tuning Random Forest — BB84
+============================================================
+  Best CV-AUC : 0.7609
+  Best params : {'max_depth': 8, 'min_samples_leaf': 4, 'n_estimators': 200}
+
+============================================================
+Tuning Boosted Trees — BKM07
+============================================================
+  Best CV-AUC : 0.8749
+  Best params : {'learning_rate': 0.03, 'max_depth': 3, 'n_estimators': 200, 'subsample': 0.8}
+
+============================================================
+Tuning Random Forest — BKM07
+============================================================
+  Best CV-AUC : 0.8720
+  Best params : {'max_depth': 8, 'min_samples_leaf': 4, 'n_estimators': 200}
+
+============================================================
+Tuning SVM-RBF — BKM07
+============================================================
+  Best CV-AUC : 0.8760
+  Best params : {'clf__estimator__C': 10, 'clf__estimator__gamma': 0.01}
+Fitting KNN and Logistic Regression for BB84 and BKM07 …
+Fitting Isolation Forests …
+
+All models ready:
+  BB84  : KNN, LogReg, RF (tuned), SVM-RBF (tuned), XGBoost (tuned), IsoForest
+  BKM07 : KNN, LogReg, RF (tuned), SVM-RBF (tuned), XGBoost (tuned), IsoForest
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BB84 — Test-set performance
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  KNN                             ACC= 66.7%   AUC=0.7041 [0.656,0.747]   F1=0.7468   (n=360)
+  Logistic Regression             ACC= 66.9%   AUC=0.7765 [0.736,0.815]   F1=0.7047   (n=360)
+  Random Forest (tuned)           ACC= 66.4%   AUC=0.7740 [0.733,0.812]   F1=0.6905   (n=360)
+  SVM-RBF (tuned)                 ACC= 72.8%   AUC=0.7848 [0.746,0.822]   F1=0.8048   (n=360)
+  XGBoost (tuned)                 ACC= 65.8%   AUC=0.7640 [0.722,0.803]   F1=0.6886   (n=360)
+  Isolation Forest (unsupervised)  ACC= N/A    AUC=0.6721
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BKM07 — Test-set performance
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  KNN                             ACC= 70.3%   AUC=0.7702 [0.727,0.817]   F1=0.7679   (n=360)
+  Logistic Regression             ACC= 75.8%   AUC=0.8804 [0.848,0.908]   F1=0.7924   (n=360)
+  Random Forest (tuned)           ACC= 75.3%   AUC=0.8603 [0.828,0.890]   F1=0.7845   (n=360)
+  SVM-RBF (tuned)                 ACC= 79.7%   AUC=0.8723 [0.839,0.903]   F1=0.8437   (n=360)
+  XGBoost (tuned)                 ACC= 74.4%   AUC=0.8713 [0.840,0.900]   F1=0.7788   (n=360)
+  Isolation Forest (unsupervised)  ACC= N/A    AUC=0.7606
+Running the Model A/A+/B/C ablation for BB84 (50 repeats per group)...
+
+                  model  n_feat                    auc                 pr_auc     fnr_at_1pct_fpr FNR_intercept_resend FNR_pns
+            A QBER only       1 0.6330 [0.6271,0.6389] 0.8055 [0.8021,0.8089] 0.762 [0.754,0.770]                0.534   0.991
+           A+ aggregate       5 0.6308 [0.6242,0.6373] 0.8079 [0.8044,0.8115] 0.764 [0.756,0.772]                0.543   0.986
+           B + temporal       9 0.6385 [0.6317,0.6452] 0.8143 [0.8102,0.8184] 0.750 [0.741,0.759]                0.517   0.983
+        C + decoy (all)      14 0.7185 [0.7127,0.7242] 0.8639 [0.8608,0.8669] 0.645 [0.634,0.656]                0.526   0.763
+D + link baseline (all)      16 0.7389 [0.7323,0.7456] 0.8766 [0.8731,0.8800] 0.617 [0.605,0.628]                0.509   0.724
+
+Hypotheses to check against the table (not guaranteed): FNR_pns should collapse at step C
+(decoy observables), and FNR_intercept_resend may improve at step B (temporal features).
+If B does not beat A+, the temporal features add nothing here -- report that as the result.
+run_ablation_reseeded() defined.
+
+=== Item 33: reseeding the whole ablation under 3 different master seeds ===
+model               master=20260913    master=1           master=2             range
+A QBER only         0.6330             0.6312             0.6321               0.0018
+A+ aggregate        0.6308             0.6364             0.6344               0.0056
+B + temporal        0.6385             0.6467             0.6418               0.0082
+C + decoy (all)     0.7185             0.7228             0.7269               0.0084
+D + link baseline (all)0.7389             0.7461             0.7428               0.0072
+
+Best-performing feature group per master seed: {20260913: 'D + link baseline (all)', 1: 'D + link baseline (all)', 2: 'D + link baseline (all)'}
+Consistent across all master seeds: True
+
+Range (max-min AUC across the 3 master seeds) per feature group -- small relative
+to the AUC gaps BETWEEN feature groups (compare against the table above) means the
+ablation's qualitative story does not depend on which master seed this notebook
+happens to use:
+                  model  range_across_masters  auc_master_20260913  auc_master_1  auc_master_2
+            A QBER only                0.0018               0.6330        0.6312        0.6321
+           A+ aggregate                0.0056               0.6308        0.6364        0.6344
+           B + temporal                0.0082               0.6385        0.6467        0.6418
+        C + decoy (all)                0.0084               0.7185        0.7228        0.7269
+D + link baseline (all)                0.0072               0.7389        0.7461        0.7428
+E1 Random stratified split (in-distribution) -- see the BB84/BKM07
+   'Test-set performance' tables above. This is the WEAKEST evidence
+   and should not be the headline result.
+
+E2 Unseen attack intensity (BB84, item 1 fix + Draft 2.1 group-consistent halves)
+  runs split into two disjoint halves by run index: 900 / 900 rows
+  (E2 is scoped to intercept-resend, whose strength spans weak and strong: weak n=350, strong n=137)
+  train weak IR (<=0.10) -> test strong IR (>=0.30) n_tr=  476 n_te=  368 AUC=0.9971 FNR@1%FPR=0.015
+  train strong IR (>=0.30) -> test weak IR (<=0.10) [hard direction] n_tr=  368 n_te=  476 AUC=0.4998 FNR@1%FPR=0.938
+
+E3 Unseen distance range (BB84)
+  train 0-40 km -> test 60-100 km                n_tr=  705 n_te=  741 AUC=0.6899 FNR@1%FPR=0.682
+  train 60-100 km -> test 0-40 km                n_tr=  741 n_te=  705 AUC=0.7202 FNR@1%FPR=0.700
+  (This is where a naive QBER-threshold detector would fail: distance-induced
+   degradation can look like an attack. Compare against E1's in-distribution AUC.)
+
+E4 Hold out one (distance bin x equal-count intensity bin) cell at a time, BB84
+  hold out distance bin 0, intensity quartile 1  n_tr= 1473 n_te=  162 AUC=0.4947 FNR@1%FPR=1.000
+  hold out distance bin 0, intensity quartile 2  n_tr= 1473 n_te=  161 AUC=0.7013 FNR@1%FPR=0.885
+  hold out distance bin 0, intensity quartile 3  n_tr= 1473 n_te=  169 AUC=0.8991 FNR@1%FPR=0.717
+  hold out distance bin 0, intensity quartile 4  n_tr= 1473 n_te=  162 AUC=0.9931 FNR@1%FPR=0.057
+  hold out distance bin 1, intensity quartile 1  n_tr= 1422 n_te=  183 AUC=0.5145 FNR@1%FPR=0.965
+  hold out distance bin 1, intensity quartile 2  n_tr= 1422 n_te=  181 AUC=0.6227 FNR@1%FPR=0.891
+  hold out distance bin 1, intensity quartile 3  n_tr= 1422 n_te=  187 AUC=0.8590 FNR@1%FPR=0.475
+  hold out distance bin 1, intensity quartile 4  n_tr= 1422 n_te=  205 AUC=0.9924 FNR@1%FPR=0.038
+  hold out distance bin 2, intensity quartile 1  n_tr= 1446 n_te=  185 AUC=0.6267 FNR@1%FPR=0.970
+  hold out distance bin 2, intensity quartile 2  n_tr= 1446 n_te=  183 AUC=0.6695 FNR@1%FPR=0.908
+  hold out distance bin 2, intensity quartile 3  n_tr= 1446 n_te=  176 AUC=0.8431 FNR@1%FPR=0.552
+  hold out distance bin 2, intensity quartile 4  n_tr= 1446 n_te=  164 AUC=0.9947 FNR@1%FPR=0.196
+  hold out distance bin 3, intensity quartile 1  n_tr= 1395 n_te=  197 AUC=0.5652 FNR@1%FPR=0.887
+  hold out distance bin 3, intensity quartile 2  n_tr= 1395 n_te=  207 AUC=0.6475 FNR@1%FPR=0.764
+  hold out distance bin 3, intensity quartile 3  n_tr= 1395 n_te=  204 AUC=0.7987 FNR@1%FPR=0.522
+  hold out distance bin 3, intensity quartile 4  n_tr= 1395 n_te=  202 AUC=0.9906 FNR@1%FPR=0.045
+  hold out distance bin 4, intensity quartile 1  n_tr= 1464 n_te=  173 AUC=0.4744 FNR@1%FPR=0.984
+  hold out distance bin 4, intensity quartile 2  n_tr= 1464 n_te=  168 AUC=0.5413 FNR@1%FPR=0.804
+  hold out distance bin 4, intensity quartile 3  n_tr= 1464 n_te=  164 AUC=0.8288 FNR@1%FPR=0.558
+  hold out distance bin 4, intensity quartile 4  n_tr= 1464 n_te=  167 AUC=0.9898 FNR@1%FPR=0.073/home/himesh/Downloads/changed.py:4539: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+/home/himesh/Downloads/changed.py:4599: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+/home/himesh/Downloads/changed.py:4733: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+
+
+  LOCO mean AUC = 0.7523  95% CI [0.6645, 0.8402]  over 20 held-out cells (equal-count intensity quartiles x distance bins; clean runs in every cell)
+
+(BKM07's distance range was narrowed to 0-15km for the round-trip-loss reasons
+ in Section 5/P10, so E2-E4 are reported for BB84 only, which has the full 0-100km range.)
+Saved: plots/roc_comparison_v2.png
+Saved: plots/feature_importance_v2.png
+
+Note (Hooker, Mentch & Zhou, Stat. Comput. 31:82, 2021): permutation
+importance is itself biased under feature correlation -- read the plot as a
+ranking among GROUPS of correlated features, not a precise attribution to
+any single column.
+Running the N x window sensitivity grid (100 runs per class, eve_intensity=0.02 so QBER alone does not saturate; 20x repeated 5-fold CV)...
+  N=  200,000 W=  16 n_w=    28.2 AUC_A=0.5506 AUC_B=0.5228 dAUC=-0.0279 [-0.0392,-0.0187]
+  N=  200,000 W=  32 n_w=    14.1 AUC_A=0.5506 AUC_B=0.4921 dAUC=-0.0586 [-0.0678,-0.0494]
+  N=  200,000 W=  64 n_w=     7.1 AUC_A=0.5506 AUC_B=0.5622 dAUC=+0.0116 [+0.0009,+0.0219]
+  N=1,000,000 W=  16 n_w=   140.6 AUC_A=0.6523 AUC_B=0.6884 dAUC=+0.0361 [+0.0254,+0.0463]
+  N=1,000,000 W=  32 n_w=    70.3 AUC_A=0.6523 AUC_B=0.6636 dAUC=+0.0113 [+0.0005,+0.0206]
+  N=1,000,000 W=  64 n_w=    35.1 AUC_A=0.6523 AUC_B=0.6980 dAUC=+0.0457 [+0.0374,+0.0545]
+  N=2,000,000 W=  16 n_w=   281.1 AUC_A=0.5844 AUC_B=0.6309 dAUC=+0.0465 [+0.0364,+0.0570]
+  N=2,000,000 W=  32 n_w=   140.6 AUC_A=0.5844 AUC_B=0.6469 dAUC=+0.0624 [+0.0516,+0.0733]
+  N=2,000,000 W=  64 n_w=    70.3 AUC_A=0.5844 AUC_B=0.6635 dAUC=+0.0791 [+0.0706,+0.0869]
+
+      N  W      n_w  AUC_A  AUC_B    dAUC  dAUC_lo  dAUC_hi
+ 200000 16  28.2183 0.5506 0.5228 -0.0279  -0.0392  -0.0187
+ 200000 32  14.1091 0.5506 0.4921 -0.0586  -0.0678  -0.0494
+ 200000 64   7.0546 0.5506 0.5622  0.0116   0.0009   0.0219
+1000000 16 140.5625 0.6523 0.6884  0.0361   0.0254   0.0463
+1000000 32  70.2812 0.6523 0.6636  0.0113   0.0005   0.0206
+1000000 64  35.1406 0.6523 0.6980  0.0457   0.0374   0.0545
+2000000 16 281.1356 0.5844 0.6309  0.0465   0.0364   0.0570
+2000000 32 140.5678 0.5844 0.6469  0.0624   0.0516   0.0733
+2000000 64  70.2839 0.5844 0.6635  0.0791   0.0706   0.0869
+Saved: plots/n_window_sensitivity.png
+Fitting KNN and Logistic Regression for E91 ...
+Tuning Random Forest for E91 ...
+  Best CV-AUC : 0.8073
+  Best params : {'max_depth': 8, 'min_samples_leaf': 1, 'n_estimators': 200}
+Tuning Boosted Trees for E91 ...
+  Best CV-AUC : 0.8088
+  Best params : {'learning_rate': 0.03, 'max_depth': 3, 'n_estimators': 200, 'subsample': 0.8}
+Fitting Isolation Forest (trained only on secure E91 samples) ...
+
+E91 models ready: KNN, LogReg, Random Forest (tuned), XGBoost (tuned), IsoForest
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+E91 -- Test-set performance (full physics-informed feature set)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  KNN                             ACC= 69.2%  AUC=0.6283 [0.581,0.671]  FNR=0.149 (missed 55/368)  FPR=0.830   <- at the default 0.5 threshold
+  Logistic Regression             ACC= 69.8%  AUC=0.8065 [0.768,0.843]  FNR=0.356 (missed 131/368)  FPR=0.125   <- at the default 0.5 threshold
+  Random Forest (tuned)           ACC= 70.4%  AUC=0.7780 [0.740,0.816]  FNR=0.340 (missed 125/368)  FPR=0.152   <- at the default 0.5 threshold
+  XGBoost (tuned)                 ACC= 69.0%  AUC=0.7893 [0.753,0.828]  FNR=0.359 (missed 132/368)  FPR=0.152   <- at the default 0.5 threshold
+  Isolation Forest (unsupervised) ACC= N/A    AUC=0.7005
+Critical baseline -- CHSH-only vs full physics-informed features (same model)
+----------------------------------------------------------------------
+/home/himesh/Downloads/changed.py:4976: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+  XGBoost, chsh_only (1 feature)  ACC= 48.8%  AUC=0.6450 [0.592,0.699]  FNR=0.639 (missed 235/368)  FPR=0.098   <- at the default 0.5 threshold
+  XGBoost, full (14 features)     ACC= 69.0%  AUC=0.7893 [0.753,0.828]  FNR=0.359 (missed 132/368)  FPR=0.152   <- at the default 0.5 threshold
+
+  ==> FNR 0.639 -> 0.359   |   AUC 0.645 -> 0.789
+  Per the audit's Sec. F.3 finding: basis-averaged intercept-resend sits on
+  the SAME |S| = 2*sqrt(2)*(1-2Q) honest-depolarisation curve as ordinary
+  noise, so aggregate CHSH/QBER alone cannot separate it -- only temporal
+  structure can. `ancilla` attacks are the exception: they are basis-
+  anisotropic (cost more QBER than CHSH), which is exactly what
+  s_qber_residual is built to catch. Expect a SMALLER, more honest gap
+  here than in the pre-patch version -- that gap was mostly the leak.
+
+  FNR by attack type at a FIXED 5% false-positive rate (review D3; thresholds from out-of-fold TRAINING scores, never test data):
+    intercept_resend     n=123  FNR(full)=0.423   FNR(chsh_only)=0.650
+    ancilla              n=118  FNR(full)=0.483   FNR(chsh_only)=0.864
+    extra_depolarisation n=127  FNR(full)=0.630   FNR(chsh_only)=0.780
+
+Adversarial generalisation: train weak intercept-resend (duty<=0.3),
+test strong intercept-resend (duty>=0.6)
+E91 -- weak-attack train samples : 815
+E91 -- strong-attack test samples: 123
+  E91 boosted (duty-cycle gen.)   ACC= 91.1%  AUC=1.0000 [1.000,1.000]  FNR=0.000 (missed 0/11)  FPR=0.098   <- at the default 0.5 threshold
+D3 -- recall (and FNR) at a FIXED false-positive rate; threshold from out-of-fold TRAINING scores (honest runs available shown):
+protocol  target_fpr  threshold  recall  recall_lo  recall_hi   FNR  test_FPR  honest_runs_for_threshold
+    BB84        0.01      0.842   0.392      0.335      0.440 0.608     0.008                        480
+    BB84        0.05      0.716   0.454      0.392      0.506 0.546     0.033                        480
+   BKM07        0.01      0.832   0.525      0.467      0.588 0.475     0.008                        480
+   BKM07        0.05      0.706   0.588      0.531      0.650 0.412     0.033                        480
+     E91        0.01      0.864   0.408      0.346      0.458 0.592     0.000                        488
+     E91        0.05      0.766   0.486      0.432      0.536 0.514     0.018                        488
+
+C2 -- one-vs-clean metrics per attack (macro-average at the bottom):
+protocol               attack  n_attacked  auc_vs_clean  pr_auc  recall_at_1pct_fpr
+    BB84     intercept_resend         120         0.800   0.853               0.483
+    BB84                  pns         120         0.728   0.786               0.300
+   BKM07           asymmetric         120         0.852   0.884               0.492
+   BKM07            symmetric         120         0.891   0.909               0.558
+     E91              ancilla         118         0.834   0.884               0.449
+     E91 extra_depolarisation         127         0.703   0.795               0.315
+     E91     intercept_resend         123         0.835   0.892               0.463
+          auc_vs_clean  pr_auc  recall_at_1pct_fpr
+protocol                                          
+BB84             0.764   0.820               0.392
+BKM07            0.871   0.896               0.525
+E91              0.791   0.857               0.409
+
+D4 -- strong simple baselines next to the ML model (AUC with grouped-bootstrap 95% CI):
+protocol                                           model   auc  auc_lo  auc_hi  n_test
+    BB84                    boosted trees (all features) 0.764   0.722   0.803     360
+    BB84            QBER z-test (pooled honest baseline) 0.636   0.601   0.670     360
+    BB84      logistic on best single feature (r_secure) 0.680   0.650   0.716     360
+    BB84 oracle: QBER minus the link's known honest QBER 0.634   0.583   0.677     360
+   BKM07                    boosted trees (all features) 0.871   0.840   0.900     360
+   BKM07            QBER z-test (pooled honest baseline) 0.743   0.707   0.781     360
+   BKM07   logistic on best single feature (z_qber_ctrl) 0.850   0.819   0.884     360
+   BKM07 oracle: QBER minus the link's known honest QBER 0.832   0.791   0.872     360
+     E91                    boosted trees (all features) 0.789   0.753   0.828     480
+     E91            QBER z-test (pooled honest baseline) 0.712   0.666   0.762     480
+     E91    logistic on best single feature (z_qber_key) 0.802   0.763   0.842     480
+     E91 oracle: QBER minus the link's known honest QBER 0.851   0.817   0.882     480
+
+Note: the honest-run counts above are below the >=300 the review recommends for a 1% FPR threshold; treat 1% numbers as indicative.
+Saved: plots/roc_e91.png
+Deep-learning device: cuda
+DL attack taxonomy: {'bb84': ['clean', 'intercept_resend', 'pns', 'blocking', 'loss_manipulation'], 'e91': ['clean', 'intercept_resend', 'ancilla', 'extra_depolarisation'], 'bkm07': ['clean', 'symmetric_attack', 'asymmetric_attack']}
+encode_session() / make_windows() defined.
+AttentionPool / LSTMAutoencoder defined.
+Session generation (simulate_session / build_dl_dataset / session_split) defined.
+CrossProtocolDetector defined (Draft 2, items 19-20: + protocol_head / forward_protocol_adv).
+train_binary / evaluate_binary / train_fine / evaluate_fine defined.
+Leave-one-protocol-out transfer machinery defined.
+paired_bootstrap_ci() / classical_baseline_auc() defined.
+BiasFreeSVDDEncoder() defined.
+Deep SVDD anomaly branch defined.
+run_representation_ablation_all_attacks() / summarize_ablation_all_attacks() / plot_ablation_all_attacks() defined.
+plot_embedding_diagnostic() / protocol_probe() defined.
+Building the DL dataset from this notebook's own physics simulators (event-based encoding, item 8's shared K=2,000)...
+Cached DL dataset to data/dl_data_cache.pkl
+total windows: 141638   feature dim: 8
+                      mean  min  max
+protocol attack                     
+bb84     0       40.000000   40   40
+         1       40.000000   40   40
+         2       39.430000   14   40
+         3       34.511706    1   40
+         4       38.428094    1   40
+bkm07    0       40.000000   40   40
+         1       40.000000   40   40
+         2       40.000000   40   40
+e91      0       40.000000   40   40
+         1       40.000000   40   40
+         2       40.000000   40   40
+         3       40.000000   40   40
+-> WARNING: session length differs between classes (some sessions fell short of target_events); length could leak the label
+  bb84  : 57638 windows across 5 classes ['clean', 'intercept_resend', 'pns', 'blocking', 'loss_manipulation']
+  e91   : 48000 windows across 4 classes ['clean', 'intercept_resend', 'ancilla', 'extra_depolarisation']
+  bkm07 : 36000 windows across 3 classes ['clean', 'symmetric_attack', 'asymmetric_attack']
+
+=== Per-protocol fine attack-type classifier ===
+[bb84] TEST macro-F1: 0.5537
+[bb84] confusion matrix (rows=true, cols=pred, order=['clean', 'intercept_resend', 'pns', 'blocking', 'loss_manipulation']):
+[[ 986   13  464   47  890]
+ [ 187 1941   94   24  154]
+ [ 318   25 1382  132  534]
+ [ 297    3  348 1157  386]
+ [ 701   15  607  149  862]]
+[e91] TEST macro-F1: 0.4686
+[e91] confusion matrix (rows=true, cols=pred, order=['clean', 'intercept_resend', 'ancilla', 'extra_depolarisation']):
+[[1841   13  309  237]
+ [ 773 1169  148  310]
+ [ 953  105 1236  106]
+ [1538  312  173  377]]
+[bkm07] TEST macro-F1: 0.7739
+[bkm07] confusion matrix (rows=true, cols=pred, order=['clean', 'symmetric_attack', 'asymmetric_attack']):
+[[2238  115   47]
+ [ 371 1787  242]
+ [ 523  307 1570]]
+trunk-freeze patch applied: LSTM in train mode, conv/pool frozen in eval mode.
+
+=== HEADLINE EXPERIMENT: leave-one-protocol-out transfer, all 3 directions ===
+
+[e91+bkm07 -> bb84] seed 0: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8980 (chance 0.333)  discriminator_loss 0.4633
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.2746 (chance 0.333)  discriminator_loss 2.6664
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3879 (chance 0.333)  discriminator_loss 1.3531
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.4455 (chance 0.333)  discriminator_loss 1.0979
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2065 (chance 0.333)  discriminator_loss 1.0332
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2746 (chance 0.333)  discriminator_loss 1.0113
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3880 (chance 0.333)  discriminator_loss 0.8726
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.1767 (chance 0.333)  discriminator_loss 0.9343
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3280 (chance 0.333)  discriminator_loss 0.8965
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.3317 (chance 0.333)  discriminator_loss 0.8449
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3231 (chance 0.333)  discriminator_loss 0.8454
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3341 (chance 0.333)  discriminator_loss 0.8092
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.4104 (chance 0.333)  discriminator_loss 0.7655
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4589 (chance 0.333)  discriminator_loss 0.7462
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.4476 (chance 0.333)  discriminator_loss 0.7280
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.4931 (chance 0.333)  discriminator_loss 0.7156
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5480 (chance 0.333)  discriminator_loss 0.7010
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5592 (chance 0.333)  discriminator_loss 0.7031
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5592 (chance 0.333)  discriminator_loss 0.6829
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5592 (chance 0.333)  discriminator_loss 0.6957
+  frac=0.05  n_sessions=52   transfer F1=0.690 AUC=0.619  |  scratch F1=0.666 AUC=0.659
+  frac=0.1   n_sessions=104  transfer F1=0.679 AUC=0.605  |  scratch F1=0.669 AUC=0.621
+  frac=0.25  n_sessions=262  transfer F1=0.730 AUC=0.746  |  scratch F1=0.736 AUC=0.730
+  frac=0.5   n_sessions=524  transfer F1=0.769 AUC=0.765  |  scratch F1=0.731 AUC=0.731
+  frac=1.0   n_sessions=1048 transfer F1=0.709 AUC=0.763  |  scratch F1=0.702 AUC=0.743
+  [checkpoint] saved after seed 0 (5 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 1: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8741 (chance 0.333)  discriminator_loss 0.4679
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4368 (chance 0.333)  discriminator_loss 2.9482
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3515 (chance 0.333)  discriminator_loss 1.3948
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3587 (chance 0.333)  discriminator_loss 1.0775
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2469 (chance 0.333)  discriminator_loss 1.0325
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2958 (chance 0.333)  discriminator_loss 1.1506
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2786 (chance 0.333)  discriminator_loss 0.9531
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3383 (chance 0.333)  discriminator_loss 0.9296
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3589 (chance 0.333)  discriminator_loss 0.9003
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2979 (chance 0.333)  discriminator_loss 0.8902
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.4292 (chance 0.333)  discriminator_loss 0.8253
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3049 (chance 0.333)  discriminator_loss 0.8065
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.4794 (chance 0.333)  discriminator_loss 0.7689
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5618 (chance 0.333)  discriminator_loss 0.7289
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.4959 (chance 0.333)  discriminator_loss 0.7345
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5693 (chance 0.333)  discriminator_loss 0.7121
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5701 (chance 0.333)  discriminator_loss 0.6955
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5697 (chance 0.333)  discriminator_loss 0.7083
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5701 (chance 0.333)  discriminator_loss 0.7000
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5701 (chance 0.333)  discriminator_loss 0.6769
+  frac=0.05  n_sessions=52   transfer F1=0.556 AUC=0.498  |  scratch F1=0.735 AUC=0.626
+  frac=0.1   n_sessions=104  transfer F1=0.660 AUC=0.594  |  scratch F1=0.790 AUC=0.746
+  frac=0.25  n_sessions=262  transfer F1=0.737 AUC=0.764  |  scratch F1=0.797 AUC=0.728
+  frac=0.5   n_sessions=524  transfer F1=0.748 AUC=0.775  |  scratch F1=0.731 AUC=0.749
+  frac=1.0   n_sessions=1048 transfer F1=0.721 AUC=0.771  |  scratch F1=0.787 AUC=0.746
+  [checkpoint] saved after seed 1 (10 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 2: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.9020 (chance 0.333)  discriminator_loss 0.4833
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.5555 (chance 0.333)  discriminator_loss 2.4277
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3283 (chance 0.333)  discriminator_loss 1.7279
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3597 (chance 0.333)  discriminator_loss 1.0666
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3818 (chance 0.333)  discriminator_loss 1.0462
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.4032 (chance 0.333)  discriminator_loss 0.9434
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3610 (chance 0.333)  discriminator_loss 0.8915
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.4856 (chance 0.333)  discriminator_loss 0.8742
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4187 (chance 0.333)  discriminator_loss 0.8854
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2897 (chance 0.333)  discriminator_loss 0.8649
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.4390 (chance 0.333)  discriminator_loss 0.8164
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.4876 (chance 0.333)  discriminator_loss 0.8287
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5075 (chance 0.333)  discriminator_loss 0.7643
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5263 (chance 0.333)  discriminator_loss 0.7307
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5824 (chance 0.333)  discriminator_loss 0.7390
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5827 (chance 0.333)  discriminator_loss 0.7037
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5830 (chance 0.333)  discriminator_loss 0.6941
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5830 (chance 0.333)  discriminator_loss 0.6939
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5830 (chance 0.333)  discriminator_loss 0.6889
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5830 (chance 0.333)  discriminator_loss 0.6882
+  frac=0.05  n_sessions=52   transfer F1=0.708 AUC=0.595  |  scratch F1=0.805 AUC=0.636
+  frac=0.1   n_sessions=104  transfer F1=0.711 AUC=0.690  |  scratch F1=0.749 AUC=0.715
+  frac=0.25  n_sessions=262  transfer F1=0.732 AUC=0.732  |  scratch F1=0.682 AUC=0.691
+  frac=0.5   n_sessions=524  transfer F1=0.687 AUC=0.741  |  scratch F1=0.671 AUC=0.708
+  frac=1.0   n_sessions=1048 transfer F1=0.701 AUC=0.746  |  scratch F1=0.653 AUC=0.727
+  [checkpoint] saved after seed 2 (15 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 3: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8512 (chance 0.333)  discriminator_loss 0.5291
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.8721 (chance 0.333)  discriminator_loss 0.9997
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 1.0000 (chance 0.333)  discriminator_loss 0.0037
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.7450 (chance 0.333)  discriminator_loss 1.1820
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.1388 (chance 0.333)  discriminator_loss 1.7548
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.4051 (chance 0.333)  discriminator_loss 1.1268
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2560 (chance 0.333)  discriminator_loss 0.9408
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3826 (chance 0.333)  discriminator_loss 0.9081
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3218 (chance 0.333)  discriminator_loss 0.9011
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.3858 (chance 0.333)  discriminator_loss 0.8376
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.2671 (chance 0.333)  discriminator_loss 0.8615
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.4143 (chance 0.333)  discriminator_loss 0.8068
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5035 (chance 0.333)  discriminator_loss 0.7458
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4733 (chance 0.333)  discriminator_loss 0.8078
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5668 (chance 0.333)  discriminator_loss 0.7258
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5706 (chance 0.333)  discriminator_loss 0.7083
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5499 (chance 0.333)  discriminator_loss 0.7071
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5707 (chance 0.333)  discriminator_loss 0.6967
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5707 (chance 0.333)  discriminator_loss 0.6912
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5707 (chance 0.333)  discriminator_loss 0.6809
+  frac=0.05  n_sessions=52   transfer F1=0.707 AUC=0.671  |  scratch F1=0.807 AUC=0.704
+  frac=0.1   n_sessions=104  transfer F1=0.754 AUC=0.683  |  scratch F1=0.791 AUC=0.702
+  frac=0.25  n_sessions=262  transfer F1=0.730 AUC=0.770  |  scratch F1=0.723 AUC=0.735
+  frac=0.5   n_sessions=524  transfer F1=0.731 AUC=0.778  |  scratch F1=0.738 AUC=0.752
+  frac=1.0   n_sessions=1048 transfer F1=0.737 AUC=0.779  |  scratch F1=0.708 AUC=0.760
+  [checkpoint] saved after seed 3 (20 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 4: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8657 (chance 0.333)  discriminator_loss 0.4595
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4231 (chance 0.333)  discriminator_loss 1.3391
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3807 (chance 0.333)  discriminator_loss 2.4418
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3374 (chance 0.333)  discriminator_loss 1.2521
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3109 (chance 0.333)  discriminator_loss 1.0736
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3044 (chance 0.333)  discriminator_loss 0.9324
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3059 (chance 0.333)  discriminator_loss 0.9993
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3274 (chance 0.333)  discriminator_loss 0.9049
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.2978 (chance 0.333)  discriminator_loss 0.9160
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2997 (chance 0.333)  discriminator_loss 0.8793
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3249 (chance 0.333)  discriminator_loss 0.8357
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.4039 (chance 0.333)  discriminator_loss 0.8013
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.4881 (chance 0.333)  discriminator_loss 0.7765
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5522 (chance 0.333)  discriminator_loss 0.7474
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5705 (chance 0.333)  discriminator_loss 0.7217
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5714 (chance 0.333)  discriminator_loss 0.7080
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5714 (chance 0.333)  discriminator_loss 0.7009
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5714 (chance 0.333)  discriminator_loss 0.7060
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5714 (chance 0.333)  discriminator_loss 0.6913
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5714 (chance 0.333)  discriminator_loss 0.7115
+  frac=0.05  n_sessions=52   transfer F1=0.678 AUC=0.557  |  scratch F1=0.757 AUC=0.592
+  frac=0.1   n_sessions=104  transfer F1=0.671 AUC=0.666  |  scratch F1=0.798 AUC=0.687
+  frac=0.25  n_sessions=262  transfer F1=0.701 AUC=0.706  |  scratch F1=0.781 AUC=0.686
+  frac=0.5   n_sessions=524  transfer F1=0.720 AUC=0.730  |  scratch F1=0.776 AUC=0.706
+  frac=1.0   n_sessions=1048 transfer F1=0.693 AUC=0.727  |  scratch F1=0.705 AUC=0.720
+  [checkpoint] saved after seed 4 (25 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 5: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.9049 (chance 0.333)  discriminator_loss 0.4882
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4221 (chance 0.333)  discriminator_loss 3.2070
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2978 (chance 0.333)  discriminator_loss 1.1701
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3154 (chance 0.333)  discriminator_loss 1.0074
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3482 (chance 0.333)  discriminator_loss 1.1669
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2561 (chance 0.333)  discriminator_loss 0.9923
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3313 (chance 0.333)  discriminator_loss 0.9144
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3618 (chance 0.333)  discriminator_loss 0.9373
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3774 (chance 0.333)  discriminator_loss 0.8606
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2851 (chance 0.333)  discriminator_loss 0.8902
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3959 (chance 0.333)  discriminator_loss 0.8020
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.4815 (chance 0.333)  discriminator_loss 0.7748
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5041 (chance 0.333)  discriminator_loss 0.7732
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4612 (chance 0.333)  discriminator_loss 0.7443
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5719 (chance 0.333)  discriminator_loss 0.7182
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5512 (chance 0.333)  discriminator_loss 0.7126
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5668 (chance 0.333)  discriminator_loss 0.7004
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5721 (chance 0.333)  discriminator_loss 0.6905
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5721 (chance 0.333)  discriminator_loss 0.7020
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5721 (chance 0.333)  discriminator_loss 0.6792
+  frac=0.05  n_sessions=52   transfer F1=0.631 AUC=0.618  |  scratch F1=0.709 AUC=0.623
+  frac=0.1   n_sessions=104  transfer F1=0.654 AUC=0.641  |  scratch F1=0.731 AUC=0.677
+  frac=0.25  n_sessions=262  transfer F1=0.709 AUC=0.724  |  scratch F1=0.615 AUC=0.685
+  frac=0.5   n_sessions=524  transfer F1=0.688 AUC=0.735  |  scratch F1=0.686 AUC=0.711
+  frac=1.0   n_sessions=1048 transfer F1=0.682 AUC=0.733  |  scratch F1=0.603 AUC=0.722
+  [checkpoint] saved after seed 5 (30 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 6: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.9169 (chance 0.333)  discriminator_loss 0.4714
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.3234 (chance 0.333)  discriminator_loss 3.2650
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.4916 (chance 0.333)  discriminator_loss 1.2393
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3742 (chance 0.333)  discriminator_loss 1.0258
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3407 (chance 0.333)  discriminator_loss 1.1142
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3355 (chance 0.333)  discriminator_loss 1.0642
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3124 (chance 0.333)  discriminator_loss 0.9587
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3003 (chance 0.333)  discriminator_loss 0.9527
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4144 (chance 0.333)  discriminator_loss 0.8527
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.4203 (chance 0.333)  discriminator_loss 0.8185
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.4598 (chance 0.333)  discriminator_loss 0.8101
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.4579 (chance 0.333)  discriminator_loss 0.7782
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.4451 (chance 0.333)  discriminator_loss 0.7746
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5626 (chance 0.333)  discriminator_loss 0.7439
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5685 (chance 0.333)  discriminator_loss 0.7119
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5773 (chance 0.333)  discriminator_loss 0.7097
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5792 (chance 0.333)  discriminator_loss 0.7040
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5796 (chance 0.333)  discriminator_loss 0.6907
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5796 (chance 0.333)  discriminator_loss 0.6897
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5796 (chance 0.333)  discriminator_loss 0.6795
+  frac=0.05  n_sessions=52   transfer F1=0.769 AUC=0.659  |  scratch F1=0.821 AUC=0.713
+  frac=0.1   n_sessions=104  transfer F1=0.730 AUC=0.698  |  scratch F1=0.672 AUC=0.720
+  frac=0.25  n_sessions=262  transfer F1=0.761 AUC=0.761  |  scratch F1=0.751 AUC=0.721
+  frac=0.5   n_sessions=524  transfer F1=0.716 AUC=0.792  |  scratch F1=0.670 AUC=0.757
+  frac=1.0   n_sessions=1048 transfer F1=0.755 AUC=0.794  |  scratch F1=0.714 AUC=0.769
+  [checkpoint] saved after seed 6 (35 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 7: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8741 (chance 0.333)  discriminator_loss 0.4875
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4548 (chance 0.333)  discriminator_loss 2.4375
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2973 (chance 0.333)  discriminator_loss 1.3867
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3561 (chance 0.333)  discriminator_loss 1.1208
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3259 (chance 0.333)  discriminator_loss 1.0262
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2931 (chance 0.333)  discriminator_loss 0.9712
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2112 (chance 0.333)  discriminator_loss 1.0237
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.2911 (chance 0.333)  discriminator_loss 0.9264
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3285 (chance 0.333)  discriminator_loss 0.9662
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.3498 (chance 0.333)  discriminator_loss 0.8589
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3070 (chance 0.333)  discriminator_loss 0.8593
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3243 (chance 0.333)  discriminator_loss 0.8085
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5134 (chance 0.333)  discriminator_loss 0.8028
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4897 (chance 0.333)  discriminator_loss 0.7541
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5272 (chance 0.333)  discriminator_loss 0.7201
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5071 (chance 0.333)  discriminator_loss 0.7203
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5403 (chance 0.333)  discriminator_loss 0.7028
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5667 (chance 0.333)  discriminator_loss 0.6992
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5667 (chance 0.333)  discriminator_loss 0.6865
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5667 (chance 0.333)  discriminator_loss 0.6866
+  frac=0.05  n_sessions=52   transfer F1=0.781 AUC=0.677  |  scratch F1=0.828 AUC=0.696
+  frac=0.1   n_sessions=104  transfer F1=0.751 AUC=0.752  |  scratch F1=0.732 AUC=0.717
+  frac=0.25  n_sessions=262  transfer F1=0.718 AUC=0.817  |  scratch F1=0.813 AUC=0.764
+  frac=0.5   n_sessions=524  transfer F1=0.753 AUC=0.809  |  scratch F1=0.712 AUC=0.753
+  frac=1.0   n_sessions=1048 transfer F1=0.762 AUC=0.827  |  scratch F1=0.725 AUC=0.786
+  [checkpoint] saved after seed 7 (40 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 8: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8697 (chance 0.333)  discriminator_loss 0.4840
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4546 (chance 0.333)  discriminator_loss 1.8074
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2562 (chance 0.333)  discriminator_loss 1.5893
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3630 (chance 0.333)  discriminator_loss 1.1682
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.4253 (chance 0.333)  discriminator_loss 1.0745
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3620 (chance 0.333)  discriminator_loss 0.9452
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3198 (chance 0.333)  discriminator_loss 0.9232
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3419 (chance 0.333)  discriminator_loss 0.9162
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3506 (chance 0.333)  discriminator_loss 0.8878
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.4372 (chance 0.333)  discriminator_loss 0.8285
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3233 (chance 0.333)  discriminator_loss 0.8323
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.4598 (chance 0.333)  discriminator_loss 0.7847
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.4275 (chance 0.333)  discriminator_loss 0.7599
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5331 (chance 0.333)  discriminator_loss 0.7348
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5704 (chance 0.333)  discriminator_loss 0.7177
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5421 (chance 0.333)  discriminator_loss 0.7032
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5769 (chance 0.333)  discriminator_loss 0.6970
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5729 (chance 0.333)  discriminator_loss 0.7044
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5769 (chance 0.333)  discriminator_loss 0.6895
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5769 (chance 0.333)  discriminator_loss 0.6861
+  frac=0.05  n_sessions=52   transfer F1=0.612 AUC=0.485  |  scratch F1=0.743 AUC=0.622
+  frac=0.1   n_sessions=104  transfer F1=0.566 AUC=0.590  |  scratch F1=0.682 AUC=0.661
+  frac=0.25  n_sessions=262  transfer F1=0.719 AUC=0.714  |  scratch F1=0.704 AUC=0.681
+  frac=0.5   n_sessions=524  transfer F1=0.752 AUC=0.760  |  scratch F1=0.797 AUC=0.728
+  frac=1.0   n_sessions=1048 transfer F1=0.744 AUC=0.757  |  scratch F1=0.713 AUC=0.736
+  [checkpoint] saved after seed 8 (45 rows total for bb84)
+
+[e91+bkm07 -> bb84] seed 9: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.9037 (chance 0.333)  discriminator_loss 0.4607
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.3115 (chance 0.333)  discriminator_loss 2.6829
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.4646 (chance 0.333)  discriminator_loss 1.2863
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.4305 (chance 0.333)  discriminator_loss 1.0780
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3261 (chance 0.333)  discriminator_loss 0.9782
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3303 (chance 0.333)  discriminator_loss 1.0022
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3589 (chance 0.333)  discriminator_loss 0.9317
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.2769 (chance 0.333)  discriminator_loss 0.9699
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4650 (chance 0.333)  discriminator_loss 0.8512
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.3965 (chance 0.333)  discriminator_loss 0.8405
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3518 (chance 0.333)  discriminator_loss 0.8044
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3879 (chance 0.333)  discriminator_loss 0.7909
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5242 (chance 0.333)  discriminator_loss 0.7659
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5679 (chance 0.333)  discriminator_loss 0.7352
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5724 (chance 0.333)  discriminator_loss 0.7581
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5731 (chance 0.333)  discriminator_loss 0.7098
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5723 (chance 0.333)  discriminator_loss 0.6843
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5730 (chance 0.333)  discriminator_loss 0.7161
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5735 (chance 0.333)  discriminator_loss 0.6837
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5735 (chance 0.333)  discriminator_loss 0.6888
+  frac=0.05  n_sessions=52   transfer F1=0.694 AUC=0.626  |  scratch F1=0.799 AUC=0.576
+  frac=0.1   n_sessions=104  transfer F1=0.674 AUC=0.667  |  scratch F1=0.776 AUC=0.657
+  frac=0.25  n_sessions=262  transfer F1=0.691 AUC=0.698  |  scratch F1=0.682 AUC=0.679
+  frac=0.5   n_sessions=524  transfer F1=0.731 AUC=0.701  |  scratch F1=0.755 AUC=0.676
+  frac=1.0   n_sessions=1048 transfer F1=0.664 AUC=0.708  |  scratch F1=0.689 AUC=0.706
+  [checkpoint] saved after seed 9 (50 rows total for bb84)
+
+[bb84+bkm07 -> e91] seed 0: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.9063 (chance 0.333)  discriminator_loss 0.4812
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.6320 (chance 0.333)  discriminator_loss 2.4805
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3948 (chance 0.333)  discriminator_loss 1.3405
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.4016 (chance 0.333)  discriminator_loss 1.0498
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3561 (chance 0.333)  discriminator_loss 1.0644
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.4552 (chance 0.333)  discriminator_loss 0.8955
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.5784 (chance 0.333)  discriminator_loss 0.8472
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3090 (chance 0.333)  discriminator_loss 1.0339
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.5185 (chance 0.333)  discriminator_loss 0.8299
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.5496 (chance 0.333)  discriminator_loss 0.8142
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.5355 (chance 0.333)  discriminator_loss 0.8056
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.5790 (chance 0.333)  discriminator_loss 0.7714
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.6032 (chance 0.333)  discriminator_loss 0.7521
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5945 (chance 0.333)  discriminator_loss 0.7329
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6115 (chance 0.333)  discriminator_loss 0.6964
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6116 (chance 0.333)  discriminator_loss 0.7038
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6116 (chance 0.333)  discriminator_loss 0.6770
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6116 (chance 0.333)  discriminator_loss 0.6762
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6116 (chance 0.333)  discriminator_loss 0.6748
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6116 (chance 0.333)  discriminator_loss 0.6806
+  frac=0.05  n_sessions=42   transfer F1=0.754 AUC=0.690  |  scratch F1=0.782 AUC=0.655
+  frac=0.1   n_sessions=84   transfer F1=0.725 AUC=0.664  |  scratch F1=0.755 AUC=0.605
+  frac=0.25  n_sessions=210  transfer F1=0.658 AUC=0.646  |  scratch F1=0.652 AUC=0.652
+  frac=0.5   n_sessions=420  transfer F1=0.672 AUC=0.703  |  scratch F1=0.765 AUC=0.686
+  frac=1.0   n_sessions=840  transfer F1=0.630 AUC=0.694  |  scratch F1=0.657 AUC=0.690
+  [checkpoint] saved after seed 0 (5 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 1: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.9156 (chance 0.333)  discriminator_loss 0.4775
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.6103 (chance 0.333)  discriminator_loss 3.2611
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.4594 (chance 0.333)  discriminator_loss 1.2142
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.4255 (chance 0.333)  discriminator_loss 1.3335
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3874 (chance 0.333)  discriminator_loss 1.1068
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.4736 (chance 0.333)  discriminator_loss 0.9208
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.4178 (chance 0.333)  discriminator_loss 0.9596
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.4071 (chance 0.333)  discriminator_loss 0.9096
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4703 (chance 0.333)  discriminator_loss 0.8498
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.5248 (chance 0.333)  discriminator_loss 0.8593
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.5886 (chance 0.333)  discriminator_loss 0.7666
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.5165 (chance 0.333)  discriminator_loss 0.8007
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5766 (chance 0.333)  discriminator_loss 0.7429
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5547 (chance 0.333)  discriminator_loss 0.7391
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6148 (chance 0.333)  discriminator_loss 0.7079
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6049 (chance 0.333)  discriminator_loss 0.6952
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6148 (chance 0.333)  discriminator_loss 0.6816
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6148 (chance 0.333)  discriminator_loss 0.6795
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6148 (chance 0.333)  discriminator_loss 0.6707
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6148 (chance 0.333)  discriminator_loss 0.6716
+  frac=0.05  n_sessions=42   transfer F1=0.731 AUC=0.669  |  scratch F1=0.711 AUC=0.658
+  frac=0.1   n_sessions=84   transfer F1=0.653 AUC=0.634  |  scratch F1=0.707 AUC=0.599
+  frac=0.25  n_sessions=210  transfer F1=0.714 AUC=0.700  |  scratch F1=0.721 AUC=0.691
+  frac=0.5   n_sessions=420  transfer F1=0.703 AUC=0.757  |  scratch F1=0.639 AUC=0.695
+  frac=1.0   n_sessions=840  transfer F1=0.669 AUC=0.738  |  scratch F1=0.696 AUC=0.714
+  [checkpoint] saved after seed 1 (10 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 2: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8915 (chance 0.333)  discriminator_loss 0.5004
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.8531 (chance 0.333)  discriminator_loss 1.6074
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.8101 (chance 0.333)  discriminator_loss 1.5036
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.2766 (chance 0.333)  discriminator_loss 1.9027
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2864 (chance 0.333)  discriminator_loss 1.1328
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3834 (chance 0.333)  discriminator_loss 0.9689
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.4861 (chance 0.333)  discriminator_loss 0.8802
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.4697 (chance 0.333)  discriminator_loss 1.0036
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4645 (chance 0.333)  discriminator_loss 0.8391
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.4824 (chance 0.333)  discriminator_loss 0.8440
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.5607 (chance 0.333)  discriminator_loss 0.8041
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.6079 (chance 0.333)  discriminator_loss 0.7710
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.6320 (chance 0.333)  discriminator_loss 0.7310
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.6343 (chance 0.333)  discriminator_loss 0.7082
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6343 (chance 0.333)  discriminator_loss 0.6872
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6343 (chance 0.333)  discriminator_loss 0.6796
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6343 (chance 0.333)  discriminator_loss 0.6691
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6343 (chance 0.333)  discriminator_loss 0.6711
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6343 (chance 0.333)  discriminator_loss 0.6726
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6343 (chance 0.333)  discriminator_loss 0.6593
+  frac=0.05  n_sessions=42   transfer F1=0.698 AUC=0.674  |  scratch F1=0.740 AUC=0.636
+  frac=0.1   n_sessions=84   transfer F1=0.764 AUC=0.633  |  scratch F1=0.629 AUC=0.613
+  frac=0.25  n_sessions=210  transfer F1=0.653 AUC=0.688  |  scratch F1=0.709 AUC=0.666
+  frac=0.5   n_sessions=420  transfer F1=0.664 AUC=0.685  |  scratch F1=0.627 AUC=0.675
+  frac=1.0   n_sessions=840  transfer F1=0.641 AUC=0.699  |  scratch F1=0.651 AUC=0.687
+  [checkpoint] saved after seed 2 (15 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 3: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8591 (chance 0.333)  discriminator_loss 0.4927
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4855 (chance 0.333)  discriminator_loss 3.2200
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.4209 (chance 0.333)  discriminator_loss 1.3841
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3342 (chance 0.333)  discriminator_loss 1.1344
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.4629 (chance 0.333)  discriminator_loss 0.8963
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.4264 (chance 0.333)  discriminator_loss 0.9143
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.4186 (chance 0.333)  discriminator_loss 1.0076
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.5677 (chance 0.333)  discriminator_loss 0.8585
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4761 (chance 0.333)  discriminator_loss 0.8816
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.5348 (chance 0.333)  discriminator_loss 0.8554
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.4869 (chance 0.333)  discriminator_loss 0.8240
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.5338 (chance 0.333)  discriminator_loss 0.7764
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5545 (chance 0.333)  discriminator_loss 0.7634
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5956 (chance 0.333)  discriminator_loss 0.7238
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6150 (chance 0.333)  discriminator_loss 0.7214
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6192 (chance 0.333)  discriminator_loss 0.6907
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6172 (chance 0.333)  discriminator_loss 0.7025
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6172 (chance 0.333)  discriminator_loss 0.6576
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6172 (chance 0.333)  discriminator_loss 0.6687
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6172 (chance 0.333)  discriminator_loss 0.6654
+  frac=0.05  n_sessions=42   transfer F1=0.738 AUC=0.663  |  scratch F1=0.646 AUC=0.648
+  frac=0.1   n_sessions=84   transfer F1=0.650 AUC=0.614  |  scratch F1=0.718 AUC=0.601
+  frac=0.25  n_sessions=210  transfer F1=0.699 AUC=0.682  |  scratch F1=0.660 AUC=0.655
+  frac=0.5   n_sessions=420  transfer F1=0.639 AUC=0.696  |  scratch F1=0.644 AUC=0.685
+  frac=1.0   n_sessions=840  transfer F1=0.652 AUC=0.698  |  scratch F1=0.648 AUC=0.696
+  [checkpoint] saved after seed 3 (20 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 4: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8437 (chance 0.333)  discriminator_loss 0.5249
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4454 (chance 0.333)  discriminator_loss 3.2154
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.4559 (chance 0.333)  discriminator_loss 1.1658
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3218 (chance 0.333)  discriminator_loss 1.1047
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.4425 (chance 0.333)  discriminator_loss 0.9502
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3974 (chance 0.333)  discriminator_loss 1.0929
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.4535 (chance 0.333)  discriminator_loss 0.9199
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.4632 (chance 0.333)  discriminator_loss 0.8982
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.6118 (chance 0.333)  discriminator_loss 0.8034
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.4598 (chance 0.333)  discriminator_loss 0.8617
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.5141 (chance 0.333)  discriminator_loss 0.8090
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.5740 (chance 0.333)  discriminator_loss 0.7735
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.6138 (chance 0.333)  discriminator_loss 0.7636
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5914 (chance 0.333)  discriminator_loss 0.7293
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6212 (chance 0.333)  discriminator_loss 0.7172
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6212 (chance 0.333)  discriminator_loss 0.6831
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6212 (chance 0.333)  discriminator_loss 0.6838
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6212 (chance 0.333)  discriminator_loss 0.6687
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6212 (chance 0.333)  discriminator_loss 0.6715
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6212 (chance 0.333)  discriminator_loss 0.6735
+  frac=0.05  n_sessions=42   transfer F1=0.573 AUC=0.556  |  scratch F1=0.668 AUC=0.542
+  frac=0.1   n_sessions=84   transfer F1=0.679 AUC=0.711  |  scratch F1=0.766 AUC=0.652
+  frac=0.25  n_sessions=210  transfer F1=0.718 AUC=0.712  |  scratch F1=0.704 AUC=0.680
+  frac=0.5   n_sessions=420  transfer F1=0.674 AUC=0.723  |  scratch F1=0.657 AUC=0.705
+  frac=1.0   n_sessions=840  transfer F1=0.660 AUC=0.718  |  scratch F1=0.599 AUC=0.706
+  [checkpoint] saved after seed 4 (25 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 5: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8261 (chance 0.333)  discriminator_loss 0.5320
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.3966 (chance 0.333)  discriminator_loss 3.0760
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.4595 (chance 0.333)  discriminator_loss 1.2154
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3776 (chance 0.333)  discriminator_loss 1.1688
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.4216 (chance 0.333)  discriminator_loss 0.9709
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.4032 (chance 0.333)  discriminator_loss 0.9208
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.4303 (chance 0.333)  discriminator_loss 0.9692
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.5388 (chance 0.333)  discriminator_loss 0.9056
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.5048 (chance 0.333)  discriminator_loss 0.8494
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.4832 (chance 0.333)  discriminator_loss 0.8130
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.5848 (chance 0.333)  discriminator_loss 0.7724
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.6001 (chance 0.333)  discriminator_loss 0.7582
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.6149 (chance 0.333)  discriminator_loss 0.7908
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.6022 (chance 0.333)  discriminator_loss 0.7547
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6155 (chance 0.333)  discriminator_loss 0.7174
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6280 (chance 0.333)  discriminator_loss 0.6848
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6191 (chance 0.333)  discriminator_loss 0.6866
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6191 (chance 0.333)  discriminator_loss 0.6767
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6191 (chance 0.333)  discriminator_loss 0.6711
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6191 (chance 0.333)  discriminator_loss 0.6640
+  frac=0.05  n_sessions=42   transfer F1=0.704 AUC=0.720  |  scratch F1=0.495 AUC=0.634
+  frac=0.1   n_sessions=84   transfer F1=0.725 AUC=0.697  |  scratch F1=0.742 AUC=0.610
+  frac=0.25  n_sessions=210  transfer F1=0.749 AUC=0.750  |  scratch F1=0.697 AUC=0.715
+  frac=0.5   n_sessions=420  transfer F1=0.708 AUC=0.753  |  scratch F1=0.651 AUC=0.726
+  frac=1.0   n_sessions=840  transfer F1=0.706 AUC=0.770  |  scratch F1=0.709 AUC=0.758
+  [checkpoint] saved after seed 5 (30 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 6: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8900 (chance 0.333)  discriminator_loss 0.4899
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4806 (chance 0.333)  discriminator_loss 3.5128
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3845 (chance 0.333)  discriminator_loss 1.5619
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.4989 (chance 0.333)  discriminator_loss 0.9469
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3715 (chance 0.333)  discriminator_loss 1.1333
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3846 (chance 0.333)  discriminator_loss 0.9500
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.4343 (chance 0.333)  discriminator_loss 0.9322
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.4766 (chance 0.333)  discriminator_loss 0.8395
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4612 (chance 0.333)  discriminator_loss 0.8727
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.5219 (chance 0.333)  discriminator_loss 0.8158
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.5590 (chance 0.333)  discriminator_loss 0.7985
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.5878 (chance 0.333)  discriminator_loss 0.7543
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5987 (chance 0.333)  discriminator_loss 0.7571
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.6182 (chance 0.333)  discriminator_loss 0.7095
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6185 (chance 0.333)  discriminator_loss 0.7112
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6187 (chance 0.333)  discriminator_loss 0.6908
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6187 (chance 0.333)  discriminator_loss 0.6888
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6187 (chance 0.333)  discriminator_loss 0.6714
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6187 (chance 0.333)  discriminator_loss 0.6765
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6187 (chance 0.333)  discriminator_loss 0.6639
+  frac=0.05  n_sessions=42   transfer F1=0.746 AUC=0.650  |  scratch F1=0.738 AUC=0.628
+  frac=0.1   n_sessions=84   transfer F1=0.662 AUC=0.639  |  scratch F1=0.727 AUC=0.611
+  frac=0.25  n_sessions=210  transfer F1=0.687 AUC=0.680  |  scratch F1=0.766 AUC=0.662
+  frac=0.5   n_sessions=420  transfer F1=0.650 AUC=0.693  |  scratch F1=0.703 AUC=0.672
+  frac=1.0   n_sessions=840  transfer F1=0.631 AUC=0.690  |  scratch F1=0.618 AUC=0.682
+  [checkpoint] saved after seed 6 (35 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 7: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8901 (chance 0.333)  discriminator_loss 0.5181
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.5515 (chance 0.333)  discriminator_loss 2.5670
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.4891 (chance 0.333)  discriminator_loss 1.5232
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.4198 (chance 0.333)  discriminator_loss 1.2301
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3603 (chance 0.333)  discriminator_loss 0.9522
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.4975 (chance 0.333)  discriminator_loss 0.9711
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.4854 (chance 0.333)  discriminator_loss 0.9721
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.4508 (chance 0.333)  discriminator_loss 0.9253
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4902 (chance 0.333)  discriminator_loss 0.8585
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.5534 (chance 0.333)  discriminator_loss 0.8298
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.5349 (chance 0.333)  discriminator_loss 0.8068
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.5947 (chance 0.333)  discriminator_loss 0.7644
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5586 (chance 0.333)  discriminator_loss 0.7710
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.6157 (chance 0.333)  discriminator_loss 0.7165
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6200 (chance 0.333)  discriminator_loss 0.7116
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6201 (chance 0.333)  discriminator_loss 0.6893
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6201 (chance 0.333)  discriminator_loss 0.6837
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6201 (chance 0.333)  discriminator_loss 0.6732
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6201 (chance 0.333)  discriminator_loss 0.6669
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6201 (chance 0.333)  discriminator_loss 0.6717
+  frac=0.05  n_sessions=42   transfer F1=0.831 AUC=0.770  |  scratch F1=0.833 AUC=0.749
+  frac=0.1   n_sessions=84   transfer F1=0.712 AUC=0.683  |  scratch F1=0.755 AUC=0.667
+  frac=0.25  n_sessions=210  transfer F1=0.680 AUC=0.684  |  scratch F1=0.727 AUC=0.713
+  frac=0.5   n_sessions=420  transfer F1=0.728 AUC=0.719  |  scratch F1=0.719 AUC=0.711
+  frac=1.0   n_sessions=840  transfer F1=0.707 AUC=0.762  |  scratch F1=0.710 AUC=0.757
+  [checkpoint] saved after seed 7 (40 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 8: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8846 (chance 0.333)  discriminator_loss 0.5257
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.7362 (chance 0.333)  discriminator_loss 2.0424
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3348 (chance 0.333)  discriminator_loss 1.6546
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.4539 (chance 0.333)  discriminator_loss 1.2416
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.5072 (chance 0.333)  discriminator_loss 0.9053
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3809 (chance 0.333)  discriminator_loss 1.0174
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3380 (chance 0.333)  discriminator_loss 0.9845
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.4082 (chance 0.333)  discriminator_loss 0.9531
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.4390 (chance 0.333)  discriminator_loss 0.8172
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.4377 (chance 0.333)  discriminator_loss 0.8539
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.4624 (chance 0.333)  discriminator_loss 0.8026
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.5326 (chance 0.333)  discriminator_loss 0.7951
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.6100 (chance 0.333)  discriminator_loss 0.7676
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.6084 (chance 0.333)  discriminator_loss 0.7228
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6107 (chance 0.333)  discriminator_loss 0.7044
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6107 (chance 0.333)  discriminator_loss 0.6751
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5996 (chance 0.333)  discriminator_loss 0.7031
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6107 (chance 0.333)  discriminator_loss 0.6823
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6107 (chance 0.333)  discriminator_loss 0.6705
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6107 (chance 0.333)  discriminator_loss 0.6698
+  frac=0.05  n_sessions=42   transfer F1=0.748 AUC=0.701  |  scratch F1=0.670 AUC=0.629
+  frac=0.1   n_sessions=84   transfer F1=0.708 AUC=0.687  |  scratch F1=0.655 AUC=0.621
+  frac=0.25  n_sessions=210  transfer F1=0.630 AUC=0.716  |  scratch F1=0.614 AUC=0.670
+  frac=0.5   n_sessions=420  transfer F1=0.697 AUC=0.724  |  scratch F1=0.662 AUC=0.693
+  frac=1.0   n_sessions=840  transfer F1=0.697 AUC=0.748  |  scratch F1=0.633 AUC=0.736
+  [checkpoint] saved after seed 8 (45 rows total for e91)
+
+[bb84+bkm07 -> e91] seed 9: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8645 (chance 0.333)  discriminator_loss 0.4949
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4015 (chance 0.333)  discriminator_loss 2.8293
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.4036 (chance 0.333)  discriminator_loss 1.5079
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.4701 (chance 0.333)  discriminator_loss 1.3266
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3400 (chance 0.333)  discriminator_loss 1.0584
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3616 (chance 0.333)  discriminator_loss 0.9124
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.4325 (chance 0.333)  discriminator_loss 0.9306
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.5117 (chance 0.333)  discriminator_loss 0.8617
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.5159 (chance 0.333)  discriminator_loss 0.8809
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.5313 (chance 0.333)  discriminator_loss 0.8110
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.5207 (chance 0.333)  discriminator_loss 0.7833
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.5838 (chance 0.333)  discriminator_loss 0.7547
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.5581 (chance 0.333)  discriminator_loss 0.7803
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5994 (chance 0.333)  discriminator_loss 0.7437
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.6176 (chance 0.333)  discriminator_loss 0.7080
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.6177 (chance 0.333)  discriminator_loss 0.6869
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.6177 (chance 0.333)  discriminator_loss 0.6814
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.6177 (chance 0.333)  discriminator_loss 0.6773
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.6177 (chance 0.333)  discriminator_loss 0.6699
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.6177 (chance 0.333)  discriminator_loss 0.6657
+  frac=0.05  n_sessions=42   transfer F1=0.649 AUC=0.713  |  scratch F1=0.735 AUC=0.656
+  frac=0.1   n_sessions=84   transfer F1=0.707 AUC=0.671  |  scratch F1=0.669 AUC=0.629
+  frac=0.25  n_sessions=210  transfer F1=0.705 AUC=0.743  |  scratch F1=0.718 AUC=0.710
+  frac=0.5   n_sessions=420  transfer F1=0.687 AUC=0.739  |  scratch F1=0.765 AUC=0.701
+  frac=1.0   n_sessions=840  transfer F1=0.676 AUC=0.735  |  scratch F1=0.700 AUC=0.726
+  [checkpoint] saved after seed 9 (50 rows total for e91)
+
+[bb84+e91 -> bkm07] seed 0: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8989 (chance 0.333)  discriminator_loss 0.4724
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.2269 (chance 0.333)  discriminator_loss 3.8228
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2537 (chance 0.333)  discriminator_loss 1.1228
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.2339 (chance 0.333)  discriminator_loss 1.0601
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2343 (chance 0.333)  discriminator_loss 1.0012
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2166 (chance 0.333)  discriminator_loss 1.0570
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.1712 (chance 0.333)  discriminator_loss 0.9517
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3417 (chance 0.333)  discriminator_loss 0.9752
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.2805 (chance 0.333)  discriminator_loss 0.8940
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2736 (chance 0.333)  discriminator_loss 0.8402
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.2638 (chance 0.333)  discriminator_loss 0.8221
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.2873 (chance 0.333)  discriminator_loss 0.8073
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.3369 (chance 0.333)  discriminator_loss 0.7742
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4098 (chance 0.333)  discriminator_loss 0.7538
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.4922 (chance 0.333)  discriminator_loss 0.7326
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5372 (chance 0.333)  discriminator_loss 0.7116
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5311 (chance 0.333)  discriminator_loss 0.7008
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5446 (chance 0.333)  discriminator_loss 0.6973
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5447 (chance 0.333)  discriminator_loss 0.6910
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5447 (chance 0.333)  discriminator_loss 0.7019
+  frac=0.05  n_sessions=31   transfer F1=0.787 AUC=0.859  |  scratch F1=0.786 AUC=0.788
+  frac=0.1   n_sessions=63   transfer F1=0.796 AUC=0.888  |  scratch F1=0.795 AUC=0.840
+  frac=0.25  n_sessions=157  transfer F1=0.858 AUC=0.904  |  scratch F1=0.827 AUC=0.892
+  frac=0.5   n_sessions=315  transfer F1=0.878 AUC=0.943  |  scratch F1=0.852 AUC=0.923
+  frac=1.0   n_sessions=630  transfer F1=0.895 AUC=0.942  |  scratch F1=0.883 AUC=0.938
+  [checkpoint] saved after seed 0 (5 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 1: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8578 (chance 0.333)  discriminator_loss 0.5683
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.6047 (chance 0.333)  discriminator_loss 3.1545
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3199 (chance 0.333)  discriminator_loss 2.1788
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3817 (chance 0.333)  discriminator_loss 1.1442
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.1743 (chance 0.333)  discriminator_loss 1.1358
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2176 (chance 0.333)  discriminator_loss 1.1438
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2452 (chance 0.333)  discriminator_loss 0.9688
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.2051 (chance 0.333)  discriminator_loss 0.9215
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.2949 (chance 0.333)  discriminator_loss 0.8631
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.3250 (chance 0.333)  discriminator_loss 0.8789
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.2487 (chance 0.333)  discriminator_loss 0.8147
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3367 (chance 0.333)  discriminator_loss 0.8256
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.2619 (chance 0.333)  discriminator_loss 0.8038
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.3349 (chance 0.333)  discriminator_loss 0.7459
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.3868 (chance 0.333)  discriminator_loss 0.7397
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.4659 (chance 0.333)  discriminator_loss 0.7146
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.4842 (chance 0.333)  discriminator_loss 0.7105
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5311 (chance 0.333)  discriminator_loss 0.6987
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5312 (chance 0.333)  discriminator_loss 0.6958
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5312 (chance 0.333)  discriminator_loss 0.6936
+  frac=0.05  n_sessions=31   transfer F1=0.903 AUC=0.941  |  scratch F1=0.791 AUC=0.827
+  frac=0.1   n_sessions=63   transfer F1=0.852 AUC=0.911  |  scratch F1=0.828 AUC=0.861
+  frac=0.25  n_sessions=157  transfer F1=0.912 AUC=0.971  |  scratch F1=0.874 AUC=0.941
+  frac=0.5   n_sessions=315  transfer F1=0.943 AUC=0.980  |  scratch F1=0.926 AUC=0.968
+  frac=1.0   n_sessions=630  transfer F1=0.939 AUC=0.977  |  scratch F1=0.933 AUC=0.971
+  [checkpoint] saved after seed 1 (10 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 2: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.5699 (chance 0.333)  discriminator_loss 0.6781
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4048 (chance 0.333)  discriminator_loss 2.8244
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3681 (chance 0.333)  discriminator_loss 1.2114
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.3414 (chance 0.333)  discriminator_loss 1.0831
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2377 (chance 0.333)  discriminator_loss 1.0153
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3336 (chance 0.333)  discriminator_loss 1.0402
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2902 (chance 0.333)  discriminator_loss 0.9697
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3206 (chance 0.333)  discriminator_loss 0.9258
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.2666 (chance 0.333)  discriminator_loss 0.8500
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.3276 (chance 0.333)  discriminator_loss 0.8567
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3948 (chance 0.333)  discriminator_loss 0.8303
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.4112 (chance 0.333)  discriminator_loss 0.8245
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.4987 (chance 0.333)  discriminator_loss 0.7591
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.5129 (chance 0.333)  discriminator_loss 0.7447
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5205 (chance 0.333)  discriminator_loss 0.7249
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5661 (chance 0.333)  discriminator_loss 0.7162
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5675 (chance 0.333)  discriminator_loss 0.6912
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5675 (chance 0.333)  discriminator_loss 0.6940
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5675 (chance 0.333)  discriminator_loss 0.6955
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5675 (chance 0.333)  discriminator_loss 0.6900
+  frac=0.05  n_sessions=31   transfer F1=0.745 AUC=0.818  |  scratch F1=0.687 AUC=0.791
+  frac=0.1   n_sessions=63   transfer F1=0.792 AUC=0.855  |  scratch F1=0.783 AUC=0.783
+  frac=0.25  n_sessions=157  transfer F1=0.888 AUC=0.938  |  scratch F1=0.864 AUC=0.906
+  frac=0.5   n_sessions=315  transfer F1=0.880 AUC=0.953  |  scratch F1=0.876 AUC=0.926
+  frac=1.0   n_sessions=630  transfer F1=0.911 AUC=0.955  |  scratch F1=0.907 AUC=0.946
+  [checkpoint] saved after seed 2 (15 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 3: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.7131 (chance 0.333)  discriminator_loss 0.6081
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.4155 (chance 0.333)  discriminator_loss 3.1481
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.3395 (chance 0.333)  discriminator_loss 1.3428
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.2012 (chance 0.333)  discriminator_loss 1.2338
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2717 (chance 0.333)  discriminator_loss 0.9814
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2128 (chance 0.333)  discriminator_loss 1.0089
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2432 (chance 0.333)  discriminator_loss 0.9447
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.2225 (chance 0.333)  discriminator_loss 0.9234
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.2875 (chance 0.333)  discriminator_loss 0.8794
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2360 (chance 0.333)  discriminator_loss 0.8898
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.2519 (chance 0.333)  discriminator_loss 0.8287
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.2753 (chance 0.333)  discriminator_loss 0.8214
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.3575 (chance 0.333)  discriminator_loss 0.7720
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.3012 (chance 0.333)  discriminator_loss 0.7491
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.4258 (chance 0.333)  discriminator_loss 0.7326
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5167 (chance 0.333)  discriminator_loss 0.7096
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5089 (chance 0.333)  discriminator_loss 0.7109
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.4623 (chance 0.333)  discriminator_loss 0.7004
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5357 (chance 0.333)  discriminator_loss 0.6997
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5357 (chance 0.333)  discriminator_loss 0.6835
+  frac=0.05  n_sessions=31   transfer F1=0.813 AUC=0.896  |  scratch F1=0.809 AUC=0.833
+  frac=0.1   n_sessions=63   transfer F1=0.814 AUC=0.848  |  scratch F1=0.789 AUC=0.808
+  frac=0.25  n_sessions=157  transfer F1=0.857 AUC=0.890  |  scratch F1=0.830 AUC=0.884
+  frac=0.5   n_sessions=315  transfer F1=0.899 AUC=0.956  |  scratch F1=0.892 AUC=0.953
+  frac=1.0   n_sessions=630  transfer F1=0.903 AUC=0.956  |  scratch F1=0.909 AUC=0.954
+  [checkpoint] saved after seed 3 (20 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 4: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.7024 (chance 0.333)  discriminator_loss 0.6214
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.2360 (chance 0.333)  discriminator_loss 2.9843
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2250 (chance 0.333)  discriminator_loss 1.1099
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.2558 (chance 0.333)  discriminator_loss 1.0142
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3300 (chance 0.333)  discriminator_loss 0.9767
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3001 (chance 0.333)  discriminator_loss 0.9912
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2857 (chance 0.333)  discriminator_loss 0.9570
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.2643 (chance 0.333)  discriminator_loss 0.9272
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3051 (chance 0.333)  discriminator_loss 0.9028
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2969 (chance 0.333)  discriminator_loss 0.8897
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3021 (chance 0.333)  discriminator_loss 0.8399
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3674 (chance 0.333)  discriminator_loss 0.8217
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.4829 (chance 0.333)  discriminator_loss 0.7733
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4644 (chance 0.333)  discriminator_loss 0.7409
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5580 (chance 0.333)  discriminator_loss 0.7269
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.4969 (chance 0.333)  discriminator_loss 0.7238
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5559 (chance 0.333)  discriminator_loss 0.7043
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5562 (chance 0.333)  discriminator_loss 0.6911
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5562 (chance 0.333)  discriminator_loss 0.6964
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5562 (chance 0.333)  discriminator_loss 0.6823
+  frac=0.05  n_sessions=31   transfer F1=0.780 AUC=0.839  |  scratch F1=0.753 AUC=0.750
+  frac=0.1   n_sessions=63   transfer F1=0.831 AUC=0.871  |  scratch F1=0.826 AUC=0.859
+  frac=0.25  n_sessions=157  transfer F1=0.846 AUC=0.970  |  scratch F1=0.892 AUC=0.946
+  frac=0.5   n_sessions=315  transfer F1=0.924 AUC=0.977  |  scratch F1=0.909 AUC=0.965
+  frac=1.0   n_sessions=630  transfer F1=0.924 AUC=0.981  |  scratch F1=0.920 AUC=0.973
+  [checkpoint] saved after seed 4 (25 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 5: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8541 (chance 0.333)  discriminator_loss 0.5267
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.3738 (chance 0.333)  discriminator_loss 2.7001
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2150 (chance 0.333)  discriminator_loss 1.2671
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.1585 (chance 0.333)  discriminator_loss 1.0772
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.3043 (chance 0.333)  discriminator_loss 1.0052
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3022 (chance 0.333)  discriminator_loss 0.9585
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.1155 (chance 0.333)  discriminator_loss 0.9241
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.2402 (chance 0.333)  discriminator_loss 0.9073
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.2526 (chance 0.333)  discriminator_loss 0.8723
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2890 (chance 0.333)  discriminator_loss 0.8665
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3333 (chance 0.333)  discriminator_loss 0.8463
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3008 (chance 0.333)  discriminator_loss 0.8088
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.3496 (chance 0.333)  discriminator_loss 0.7667
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4289 (chance 0.333)  discriminator_loss 0.7597
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.4292 (chance 0.333)  discriminator_loss 0.7296
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.4999 (chance 0.333)  discriminator_loss 0.7352
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.4983 (chance 0.333)  discriminator_loss 0.7112
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5492 (chance 0.333)  discriminator_loss 0.7063
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5493 (chance 0.333)  discriminator_loss 0.6914
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5493 (chance 0.333)  discriminator_loss 0.6884
+  frac=0.05  n_sessions=31   transfer F1=0.829 AUC=0.928  |  scratch F1=0.801 AUC=0.850
+  frac=0.1   n_sessions=63   transfer F1=0.837 AUC=0.929  |  scratch F1=0.803 AUC=0.855
+  frac=0.25  n_sessions=157  transfer F1=0.916 AUC=0.966  |  scratch F1=0.885 AUC=0.953
+  frac=0.5   n_sessions=315  transfer F1=0.923 AUC=0.971  |  scratch F1=0.926 AUC=0.964
+  frac=1.0   n_sessions=630  transfer F1=0.934 AUC=0.983  |  scratch F1=0.946 AUC=0.982
+  [checkpoint] saved after seed 5 (30 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 6: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.6950 (chance 0.333)  discriminator_loss 0.6067
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.2982 (chance 0.333)  discriminator_loss 1.5326
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2640 (chance 0.333)  discriminator_loss 2.1131
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.2269 (chance 0.333)  discriminator_loss 1.0667
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2626 (chance 0.333)  discriminator_loss 0.9928
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.1970 (chance 0.333)  discriminator_loss 0.9767
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.3790 (chance 0.333)  discriminator_loss 0.9602
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.1946 (chance 0.333)  discriminator_loss 0.9569
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3142 (chance 0.333)  discriminator_loss 0.8997
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.3214 (chance 0.333)  discriminator_loss 0.9025
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3287 (chance 0.333)  discriminator_loss 0.8236
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3567 (chance 0.333)  discriminator_loss 0.7960
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.3131 (chance 0.333)  discriminator_loss 0.8025
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4796 (chance 0.333)  discriminator_loss 0.7332
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.4192 (chance 0.333)  discriminator_loss 0.7491
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.4286 (chance 0.333)  discriminator_loss 0.7226
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5034 (chance 0.333)  discriminator_loss 0.7069
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5505 (chance 0.333)  discriminator_loss 0.7061
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5525 (chance 0.333)  discriminator_loss 0.6980
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5525 (chance 0.333)  discriminator_loss 0.6846
+  frac=0.05  n_sessions=31   transfer F1=0.815 AUC=0.886  |  scratch F1=0.766 AUC=0.801
+  frac=0.1   n_sessions=63   transfer F1=0.898 AUC=0.931  |  scratch F1=0.865 AUC=0.923
+  frac=0.25  n_sessions=157  transfer F1=0.921 AUC=0.962  |  scratch F1=0.900 AUC=0.942
+  frac=0.5   n_sessions=315  transfer F1=0.939 AUC=0.963  |  scratch F1=0.899 AUC=0.955
+  frac=1.0   n_sessions=630  transfer F1=0.930 AUC=0.967  |  scratch F1=0.926 AUC=0.965
+  [checkpoint] saved after seed 6 (35 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 7: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8562 (chance 0.333)  discriminator_loss 0.5660
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.2843 (chance 0.333)  discriminator_loss 2.8251
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2168 (chance 0.333)  discriminator_loss 1.3109
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.2826 (chance 0.333)  discriminator_loss 1.0092
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2204 (chance 0.333)  discriminator_loss 0.9931
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2329 (chance 0.333)  discriminator_loss 0.9568
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2615 (chance 0.333)  discriminator_loss 0.9903
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3009 (chance 0.333)  discriminator_loss 0.8798
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3469 (chance 0.333)  discriminator_loss 0.8444
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2284 (chance 0.333)  discriminator_loss 0.9209
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.2941 (chance 0.333)  discriminator_loss 0.8186
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.2938 (chance 0.333)  discriminator_loss 0.7876
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.3277 (chance 0.333)  discriminator_loss 0.7654
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4737 (chance 0.333)  discriminator_loss 0.7508
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5181 (chance 0.333)  discriminator_loss 0.7215
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5176 (chance 0.333)  discriminator_loss 0.7251
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5516 (chance 0.333)  discriminator_loss 0.6984
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.4352 (chance 0.333)  discriminator_loss 0.7098
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5516 (chance 0.333)  discriminator_loss 0.6946
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5516 (chance 0.333)  discriminator_loss 0.6886
+  frac=0.05  n_sessions=31   transfer F1=0.868 AUC=0.951  |  scratch F1=0.822 AUC=0.861
+  frac=0.1   n_sessions=63   transfer F1=0.882 AUC=0.936  |  scratch F1=0.840 AUC=0.898
+  frac=0.25  n_sessions=157  transfer F1=0.904 AUC=0.982  |  scratch F1=0.874 AUC=0.957
+  frac=0.5   n_sessions=315  transfer F1=0.924 AUC=0.989  |  scratch F1=0.900 AUC=0.978
+  frac=1.0   n_sessions=630  transfer F1=0.899 AUC=0.993  |  scratch F1=0.939 AUC=0.984
+  [checkpoint] saved after seed 7 (40 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 8: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.8472 (chance 0.333)  discriminator_loss 0.5969
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.3004 (chance 0.333)  discriminator_loss 2.6525
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.1974 (chance 0.333)  discriminator_loss 1.7044
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.2461 (chance 0.333)  discriminator_loss 1.1805
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2030 (chance 0.333)  discriminator_loss 0.9945
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.2620 (chance 0.333)  discriminator_loss 1.0220
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2038 (chance 0.333)  discriminator_loss 0.9561
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.3439 (chance 0.333)  discriminator_loss 0.9044
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3368 (chance 0.333)  discriminator_loss 0.8867
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.2637 (chance 0.333)  discriminator_loss 0.8478
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.3290 (chance 0.333)  discriminator_loss 0.8224
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.3785 (chance 0.333)  discriminator_loss 0.7860
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.3772 (chance 0.333)  discriminator_loss 0.7899
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.3928 (chance 0.333)  discriminator_loss 0.7473
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.4709 (chance 0.333)  discriminator_loss 0.7518
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5086 (chance 0.333)  discriminator_loss 0.7113
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5331 (chance 0.333)  discriminator_loss 0.7238
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5474 (chance 0.333)  discriminator_loss 0.7042
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5472 (chance 0.333)  discriminator_loss 0.6906
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5472 (chance 0.333)  discriminator_loss 0.6894
+  frac=0.05  n_sessions=31   transfer F1=0.914 AUC=0.983  |  scratch F1=0.838 AUC=0.874
+  frac=0.1   n_sessions=63   transfer F1=0.898 AUC=0.939  |  scratch F1=0.859 AUC=0.888
+  frac=0.25  n_sessions=157  transfer F1=0.929 AUC=0.982  |  scratch F1=0.917 AUC=0.961
+  frac=0.5   n_sessions=315  transfer F1=0.926 AUC=0.987  |  scratch F1=0.931 AUC=0.979
+  frac=1.0   n_sessions=630  transfer F1=0.955 AUC=0.990  |  scratch F1=0.946 AUC=0.984
+  [checkpoint] saved after seed 8 (45 rows total for bkm07)
+
+[bb84+e91 -> bkm07] seed 9: pretraining shared trunk (adversarial=True, contrastive=True) ...
+  epoch   1  lambda_dann 0.000  |  discriminator_acc 0.6869 (chance 0.333)  discriminator_loss 0.6041
+  epoch   2  lambda_dann 0.257  |  discriminator_acc 0.2635 (chance 0.333)  discriminator_loss 2.9242
+  epoch   3  lambda_dann 0.483  |  discriminator_acc 0.2444 (chance 0.333)  discriminator_loss 1.3392
+  epoch   4  lambda_dann 0.658  |  discriminator_acc 0.2367 (chance 0.333)  discriminator_loss 1.0455
+  epoch   5  lambda_dann 0.783  |  discriminator_acc 0.2281 (chance 0.333)  discriminator_loss 0.9361
+  epoch   6  lambda_dann 0.866  |  discriminator_acc 0.3254 (chance 0.333)  discriminator_loss 0.9310
+  epoch   7  lambda_dann 0.918  |  discriminator_acc 0.2767 (chance 0.333)  discriminator_loss 0.9519
+  epoch   8  lambda_dann 0.951  |  discriminator_acc 0.2378 (chance 0.333)  discriminator_loss 0.9002
+  epoch   9  lambda_dann 0.971  |  discriminator_acc 0.3715 (chance 0.333)  discriminator_loss 0.8849
+  epoch  10  lambda_dann 0.983  |  discriminator_acc 0.3101 (chance 0.333)  discriminator_loss 0.8725
+  epoch  11  lambda_dann 0.990  |  discriminator_acc 0.2774 (chance 0.333)  discriminator_loss 0.8639
+  epoch  12  lambda_dann 0.994  |  discriminator_acc 0.4144 (chance 0.333)  discriminator_loss 0.7707
+  epoch  13  lambda_dann 0.996  |  discriminator_acc 0.3304 (chance 0.333)  discriminator_loss 0.8037
+  epoch  14  lambda_dann 0.998  |  discriminator_acc 0.4947 (chance 0.333)  discriminator_loss 0.7504
+  epoch  15  lambda_dann 0.999  |  discriminator_acc 0.5556 (chance 0.333)  discriminator_loss 0.7258
+  epoch  16  lambda_dann 0.999  |  discriminator_acc 0.5064 (chance 0.333)  discriminator_loss 0.7192
+  epoch  17  lambda_dann 1.000  |  discriminator_acc 0.5316 (chance 0.333)  discriminator_loss 0.7029
+  epoch  18  lambda_dann 1.000  |  discriminator_acc 0.5586 (chance 0.333)  discriminator_loss 0.6955
+  epoch  19  lambda_dann 1.000  |  discriminator_acc 0.5586 (chance 0.333)  discriminator_loss 0.6899
+  epoch  20  lambda_dann 1.000  |  discriminator_acc 0.5586 (chance 0.333)  discriminator_loss 0.6820
+  frac=0.05  n_sessions=31   transfer F1=0.862 AUC=0.916  |  scratch F1=0.806 AUC=0.817
+  frac=0.1   n_sessions=63   transfer F1=0.835 AUC=0.902  |  scratch F1=0.819 AUC=0.858
+  frac=0.25  n_sessions=157  transfer F1=0.889 AUC=0.964  |  scratch F1=0.893 AUC=0.933
+  frac=0.5   n_sessions=315  transfer F1=0.907 AUC=0.973  |  scratch F1=0.890 AUC=0.955
+  frac=1.0   n_sessions=630  transfer F1=0.904 AUC=0.980  |  scratch F1=0.905 AUC=0.971
+  [checkpoint] saved after seed 9 (50 rows total for bkm07)
+
+### e91+bkm07 -> bb84 ###
+
+fraction  n_ses    transfer_F1    scratch_F1   transfer_AUC   scratch_AUC
+    0.05     52   0.682+-0.065  0.767+-0.051   0.600+-0.064  0.645+-0.044
+    0.10    104   0.685+-0.053  0.739+-0.048   0.658+-0.049  0.690+-0.035
+    0.25    262   0.723+-0.019  0.728+-0.057   0.743+-0.034  0.710+-0.028
+    0.50    524   0.730+-0.026  0.727+-0.041   0.759+-0.031  0.727+-0.025
+    1.00   1048   0.717+-0.031  0.700+-0.045   0.761+-0.033  0.741+-0.023
+saved plot to plots/dl_transfer_e91_bkm07_to_bb84.png
+
+### bb84+bkm07 -> e91 ###
+
+fraction  n_ses    transfer_F1    scratch_F1   transfer_AUC   scratch_AUC
+    0.05     42   0.717+-0.065  0.702+-0.087   0.681+-0.053  0.643+-0.047
+    0.10     84   0.699+-0.035  0.712+-0.045   0.663+-0.031  0.621+-0.021
+    0.25    210   0.689+-0.034  0.697+-0.042   0.700+-0.030  0.681+-0.023
+    0.50    420   0.682+-0.026  0.683+-0.049   0.719+-0.024  0.695+-0.016
+    1.00    840   0.667+-0.028  0.662+-0.038   0.725+-0.028  0.715+-0.027
+saved plot to plots/dl_transfer_bb84_bkm07_to_e91.png
+
+### bb84+e91 -> bkm07 ###
+
+fraction  n_ses    transfer_F1    scratch_F1   transfer_AUC   scratch_AUC
+    0.05     31   0.831+-0.052  0.786+-0.041   0.902+-0.050  0.819+-0.036
+    0.10     63   0.843+-0.037  0.821+-0.027   0.901+-0.032  0.857+-0.039
+    0.25    157   0.892+-0.028  0.876+-0.027   0.953+-0.030  0.931+-0.026
+    0.50    315   0.914+-0.022  0.900+-0.023   0.969+-0.014  0.957+-0.018
+    1.00    630   0.919+-0.019  0.921+-0.020   0.972+-0.016  0.967+-0.015
+saved plot to plots/dl_transfer_bb84_e91_to_bkm07.png
+
+If transfer_F1 > scratch_F1 especially at LOW fractions, in most/all three
+directions, that is the headline result: the shared trunk learns attack
+signatures that generalize ACROSS protocols, not just for one convenient pairing.
+(5 seeds x 5-fold session-grouped CV below -- see 18.7c for the full-coverage cross-check.)
+
+=== Classical-features baseline + significance test (transfer vs. scratch) ===
+  (Bonferroni-corrected alpha for 3 targets = 0.0167)
+[bb84] transfer=0.761  scratch=0.741  classical-features=0.980  transfer-scratch gap: +0.019 (significant (95% CI excludes 0))
+  (Bonferroni-corrected alpha for 3 targets = 0.0167)
+[e91] transfer=0.725  scratch=0.715  classical-features=0.906  transfer-scratch gap: +0.010 (significant (95% CI excludes 0))
+  (Bonferroni-corrected alpha for 3 targets = 0.0167)
+[bkm07] transfer=0.972  scratch=0.967  classical-features=1.000  transfer-scratch gap: +0.005 (significant (95% CI excludes 0))
+  VERDICT [bb84]: mean AUC gap (transfer - scratch) = +0.019, sign-flip p = 0.0021 (Bonferroni alpha 0.0167) -> transfer BETTER
+  VERDICT [e91]: mean AUC gap (transfer - scratch) = +0.010, sign-flip p = 0.0021 (Bonferroni alpha 0.0167) -> transfer BETTER
+  VERDICT [bkm07]: mean AUC gap (transfer - scratch) = +0.005, sign-flip p = 0.0021 (Bonferroni alpha 0.0167) -> transfer BETTER
+
+target_protocol  transfer_auc  scratch_auc  classical_auc  gap_mean  gap_ci_lo  gap_ci_hi                        gap_note
+           bb84         0.761        0.741          0.980     0.019      0.013      0.025 significant (95% CI excludes 0)
+            e91         0.725        0.715          0.906     0.010      0.007      0.014 significant (95% CI excludes 0)
+          bkm07         0.972        0.967          1.000     0.005      0.004      0.007 significant (95% CI excludes 0)
+
+Read: 'classical-features' trains a boosted-tree model on this protocol's OWN
+hand-crafted physics features (Sections 3-17), at their intended scale (full-size
+runs, not small DL-session windows) -- matched on training-instance count to the
