@@ -6,11 +6,51 @@ Generated from the notebook: every notebook cell is a block starting with "# %%"
 markdown cells are comments. Run top to bottom:
 
     pip install -r requirements.txt
-    python changed.py                # full scale (many hours: Section 18 deep learning dominates)
+    python changed.py --profile large --seed 20260913 --regenerate  # fresh full-scale run (many hours: Section 18 deep learning dominates)
     python run_quick_test.py         # same code at tiny scale (~30 min) to check that everything runs on your machine
 
-Outputs go to ./data and ./plots. Physics is unchanged from the notebook; see Section 25 for the validation checks.
+Outputs go to ./data and ./plots, or a fresh qkd_runs directory with --regenerate. Physics is unchanged from the notebook; see Section 25 for the validation checks.
 """
+
+# %% [markdown]
+# ## Review checklist implementation (2026-10-09)
+# This patch changes experimental validation and reporting requested in the review.
+# Results from earlier code versions cannot validate this version; regenerate them.
+# Equal-information operating point: the primary ML and DL sessions contain exactly
+# K=2,000 usable key-contributing events. Clicks, CTRL tests and CHSH observations are
+# retained alongside those events; their counts still differ across protocols. Equal K
+# controls one evidence budget, not identical total information or communication cost.
+# Raw N used, generated batch overhead, key yield, detection yield and loss are reported.
+# Fixed-raw-N and variable-K experiments are supplementary sensitivity analyses.
+# Short batches continue on the SAME link rather than dropping difficult/attacked runs.
+# Drift/attack timing profiles restart at continuation batch boundaries; physical
+# detector state is not propagated across those boundaries. These are simulation limits.
+# BKM07 SKR remains unavailable/NaN and excluded from SKR comparisons. BB84's asymptotic
+# per-signal-pulse estimate and E91's asymptotic per-key-bit fraction have different units;
+# neither is a finite-key certificate or directly a bits/second measurement.
+# Scratch, labelled-target transfer, shared pooled training and source-only transfer are
+# explicitly distinguished. Source-only uses a shared adapter; per-protocol adapters for
+# an unseen target would otherwise be untrained. Protocol probe macro OVR AUC chance is
+# 0.5; THREE-class accuracy chance is 1/3. A low probe score is evidence, not proof, of invariance.
+# Engineered vectors include explicit masks; padding may still expose protocol identity,
+# so the fusion/adapter ablations and held-out probe must accompany any invariance claim.
+# DL classical statistics are now computed from the SAME exact-K record as the sequence.
+# BB84 kept now means sifted SIGNAL key event; decoy sifted errors remain in the error
+# channel and test_flag identifies decoy/vacuum. The other seven channel mappings below
+# remain unchanged. Raw counts/labels/strength never become classifier feature columns.
+# Empirical minimum detectable strength uses the prespecified rule: the lower 95% AUC
+# interval exceeds 0.80 at a tested grid value. It is not a theoretical security threshold.
+# CUSUM estimates its baseline from honest burn-in, then starts monitoring; its false
+# alarm rate is measured on a separate honest monitoring segment. Delays are observed
+# key events, not a count of compromised secret-key bits and not a Bayesian posterior.
+# Mixed PNS+IR compares equal RAW simulator knobs, not equal information gained by Eve.
+# No cancellation, optimal/adaptive Eve or first-in-literature claim is made.
+# Limitations: GYS/Werner models; modeled attacks/hardware only; synthetic honest noise;
+# finite calibration samples; protocol-dependent monitoring counts; finite DL compute;
+# absent BKM07 rate bound; domain mismatch with real hardware. AUC rankings apply only
+# under these simulated conditions. Physics, detection, reliability and efficiency are
+# reported separately. The selected profile and seeds are stamped into result artifacts.
+# Implementation and targeted tests are distinct from a completed full-scale run.
 
 # %% [markdown]
 # ## Changed notebook — implementation of the external review (43 items)
@@ -104,7 +144,7 @@ Outputs go to ./data and ./plots. Physics is unchanged from the notebook; see Se
 #
 # ## Background
 #
-# In Quantum Key Distribution (QKD) , traditionally  **Alice** and **Bob** share a secret cryptographic key. This key can be  eavesdropped by **Eve** which inevitably disturbs the channel and gets detected. In practical implemention there is a presence of noise introduced by various sources, this distrubs the detection of eavesdropping attacks.
+# In Quantum Key Distribution (QKD) , traditionally  **Alice** and **Bob** share a secret cryptographic key. This key can be  eavesdropped by **Eve** which may change the observed statistics under the modeled attacks. In practical implemention there is a presence of noise introduced by various sources, this distrubs the detection of eavesdropping attacks.
 #
 # This code implements eavesdropping detection:
 #
@@ -119,7 +159,7 @@ Outputs go to ./data and ./plots. Physics is unchanged from the notebook; see Se
 # |---|---|---|
 # | **BB84** (Bennett & Brassard, 1984) | Fully quantum | Alice sends single photons in one of two bases; Eve's intercept forces a random re-preparation, causing detectable errors |
 # | **BKM07** (Boyer–Kenigsberg–Mor, 2007) | Semi-quantum | Bob is "classical" — he can only measure in the Z-basis or reflect. Eve must attack both the forward and return legs to learn anything |
-# | **E91** (Arthur Ekert, 1991) | Entanglement based | Uses Quantum Entanglement and bell's theorem to securely generate a shared encryption key using Singlet state while instantly exposing any eavesdropper |
+# | **E91** (Arthur Ekert, 1991) | Entanglement based | Uses Quantum Entanglement and bell's theorem to securely generate a shared encryption key using Singlet state with security assessed through protocol assumptions and observed statistics |
 #
 #
 
@@ -224,7 +264,7 @@ Outputs go to ./data and ./plots. Physics is unchanged from the notebook; see Se
 #
 # * BB84 deep-learning detection was at chance in the saved run (AUC 0.43-0.59, never predicts "clean"); transfer was not better than scratch in any direction; the normal-only Deep SVDD baseline was also at chance.
 # * Section 19 / 19b / 21.1 saturated at AUC = 1.0 in the saved run because the +0.05 excess-QBER attack is very strong; lower `target_excess_qber` before drawing protocol comparisons. The three protocols are also compared under different attacks (intercept-resend / symmetric / ancilla).
-# * BKM07's main-dataset task is trivially separable (see the note under the BKM07 leakage audit).
+# * Historical BKM07 easy/separable results are supplementary; inspect the current weak-attack sweep for model ranking.
 
 # %%
 # Dependency installation lives in the next cell (guarded by INSTALL_DEPS).
@@ -239,6 +279,25 @@ if INSTALL_DEPS:
 
 import os as _os
 _os.environ.setdefault('CUBLAS_WORKSPACE_CONFIG', ':4096:8')   # A3: reproducible cuBLAS (must be set before torch is imported)
+# Review checklist: command-line reproducibility and isolated regeneration.
+import argparse as _argparse, pathlib as _pathlib, hashlib as _hashlib
+import json as _json, datetime as _datetime
+_cli = _argparse.ArgumentParser(description="QKD simulation study; full large runs require substantial compute.")
+_cli.add_argument('--profile', choices=('quick', 'standard', 'large', 'xl'), default=_os.environ.get('QKD_PROFILE', 'large'))
+_cli.add_argument('--seed', type=int, default=int(_os.environ.get('QKD_SEED', '20260913')))
+_cli.add_argument('--regenerate', action='store_true', help='Ignore caches and use a fresh output directory; retain historical runs.')
+_cli.add_argument('--output-dir', type=_pathlib.Path)
+_args = _cli.parse_args() if __name__ == '__main__' else _cli.parse_args([])
+CODE_VERSION = _hashlib.sha256(_pathlib.Path(__file__).read_bytes()).hexdigest()
+_output = _args.output_dir
+if _args.regenerate and _output is None:
+    _output = _pathlib.Path.cwd() / 'qkd_runs' / (_args.profile + '_' + str(_args.seed) + '_' + _datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
+if _output is not None:
+    _output = _output.resolve()
+    if _args.regenerate and any((_output / d).exists() for d in ('data', 'plots')):
+        raise ValueError('--regenerate requires a fresh output directory, to prevent mixing old and new results')
+    _output.mkdir(parents=True, exist_ok=True)
+    _os.chdir(_output)
 import numpy as np
 import zlib
 import matplotlib
@@ -292,7 +351,7 @@ audit , which removes simulator noise from
 class comparisons and is what lets the leakage audit's nuisance-parameter
 check (L-4) pass honestly.'''
 
-MASTER_SEED = 20260913
+MASTER_SEED = _args.seed
 
 
 class SeedBook:
@@ -361,16 +420,16 @@ HONEST_DRIFT_MAX = 0.5            #     relative amplitude of that drift (error 
 #   large    default: many more runs and seeds, so that classifier / deep-learning differences are resolved (many hours; a GPU helps Sections 18 and 24)
 #   xl       as large, but with 1,000 + 1,000 Section-24 deep-learning sessions per protocol, 10 seeds and 30 epochs
 # Select with the environment variable QKD_PROFILE (e.g. QKD_PROFILE=standard python changed.py) or by editing RUN_PROFILE below.
-RUN_PROFILE = _os.environ.get('QKD_PROFILE', 'large')
+RUN_PROFILE = _args.profile
 _P = lambda quick, standard, large, xl=None: dict(quick=quick, standard=standard, large=large, xl=large if xl is None else xl)[RUN_PROFILE]
 SC = dict(
-    n_repeats=_P(3, 30, 50), gd_samples=_P(8, 300, 600), e91_runs=_P(8, 300, 600), k_main=_P(400, 2000, 2000), commission_k=_P(200, 1000, 1000),
+    n_repeats=_P(3, 30, 50), gd_samples=_P(8, 300, 600), e91_runs=_P(8, 300, 600), k_main=2000, commission_k=_P(200, 1000, 1000),
     conv_bb84=_P((1_000, 50_000, 3, 3), (1_000, 5_000_000, 14, 20), (1_000, 5_000_000, 14, 20)),
     conv_e91=_P((500, 20_000, 3, 3), (500, 300_000, 12, 20), (500, 300_000, 12, 20)),
     conv_bkm=_P((2_000, 20_000, 2, 2), (2_000, 1_000_000, 9, 15), (2_000, 1_000_000, 9, 15)), n_check=_P(200_000, 3_000_000, 3_000_000),
     nw_per_class=_P(6, 100, 200), nw_N=_P((100_000, 200_000), (200_000, 1_000_000, 2_000_000), (200_000, 1_000_000, 2_000_000)),
     nw_W=_P((16, 32), (16, 32, 64), (16, 32, 64)), nw_seeds=_P(2, 20, 20),
-    dl_sessions=_P(10, 100, 300, 400), dl_events=_P(300, 2000, 2000), loo_seeds=_P((0,), (0, 1, 2, 3, 4), tuple(range(10)), tuple(range(20))),
+    dl_sessions=_P(10, 100, 300, 400), dl_events=2000, loo_seeds=_P((0,), (0, 1, 2, 3, 4), tuple(range(5)), tuple(range(5))),
     loo_fractions=_P((0.5, 1.0), (0.05, 0.1, 0.25, 0.5, 1.0), (0.05, 0.1, 0.25, 0.5, 1.0)), ep_pre=_P(1, 20, 20, 30), ep_ft=_P(1, 15, 15, 20),
     cv_seeds=_P((0,), (0, 1, 2), tuple(range(5)), tuple(range(10))), cv_epochs=_P(1, 10, 15, 20),
     abl_seeds=_P((0,), (0, 1, 2), tuple(range(5)), tuple(range(10))),
@@ -384,6 +443,7 @@ SC = dict(
 import json as _json
 for _k, _v in _json.loads(_os.environ.get('QKD_SC_OVERRIDE', '{}')).items():
     SC[_k] = tuple(_v) if isinstance(_v, list) else _v
+assert SC['k_main'] == SC['dl_events'] == 2000, 'Primary datasets require exactly 2,000 usable key events; vary K only in sensitivity experiments'
 print(f"RUN_PROFILE = {RUN_PROFILE!r}" + (f"  (overrides: {_os.environ['QKD_SC_OVERRIDE']})" if _os.environ.get('QKD_SC_OVERRIDE') else ""))
 
 N_REPEATS = SC['n_repeats']  # >= 20 is the minimum for a usable 95% CI on AUC-type metrics
@@ -397,7 +457,7 @@ K_MARGIN = 1.3
 # Final draft: every cached dataset / DL checkpoint written by an earlier run is IGNORED, because the
 # attack-strength ranges, burst lengths and equal-K margins below changed. Set False only to resume a
 # run of THIS notebook.
-FINAL_REGENERATE = False   # review fix A2: caches are now validated by a content fingerprint (see fingerprint()), not a switch
+FINAL_REGENERATE = _args.regenerate   # review fix A2: caches are now validated by a content fingerprint (see fingerprint()), not a switch
 COMMISSION_K = SC['commission_k']         # review fix B8: key bits in the attack-free per-link commissioning run
 
 
@@ -405,15 +465,120 @@ def fingerprint(*fns, **cfg):
     """Review fix A2: short hash of the generator source code + arguments (+ master seed, library versions).
     Cache files are named with it, so any change to a simulator, feature or seed forces regeneration."""
     import hashlib, inspect, sklearn, scipy
-    h = hashlib.sha256()
+    h = hashlib.sha256(CODE_VERSION.encode())
     for f in fns:
         try:
             h.update(inspect.getsource(f).encode())
         except (OSError, TypeError):                     # source unavailable (e.g. exec'd cell): hash the bytecode
             h.update(f.__code__.co_code); h.update(repr(f.__code__.co_consts).encode())
     cfg = dict(cfg, numpy=np.__version__, sklearn=sklearn.__version__, scipy=scipy.__version__)
+    cfg.update(master_seed=MASTER_SEED, run_profile=RUN_PROFILE, settings=_json.dumps(SC, sort_keys=True))
     h.update(repr(sorted(cfg.items())).encode())
     return h.hexdigest()[:12]
+
+
+
+# Review checklist: explicit split/threshold audits and common reporting.
+SPLIT_AUDIT = []
+THRESHOLD_AUDIT = []
+RESULT_ARTIFACTS = []
+
+def audit_split(groups, train, validation, test, name):
+    groups = np.asarray(groups)
+    parts = [set(groups[np.asarray(i, dtype=int)].tolist()) for i in (train, validation, test)]
+    overlaps = [len(parts[0] & parts[1]), len(parts[0] & parts[2]), len(parts[1] & parts[2])]
+    assert overlaps == [0, 0, 0], f'{name}: group leakage {overlaps}'
+    row = dict(experiment=name, unique_groups=len(set.union(*parts)), train_groups=len(parts[0]),
+               validation_groups=len(parts[1]), test_groups=len(parts[2]),
+               train_validation_overlap=overlaps[0], train_test_overlap=overlaps[1], validation_test_overlap=overlaps[2])
+    SPLIT_AUDIT.append(row)
+    print('GROUP AUDIT:', row)
+    return row
+
+def grouped_three_way(X, y, groups=None, seed=0, test_size=0.2, val_size=0.2, name='classical'):
+    y = np.asarray(y); groups = np.arange(len(y)) if groups is None else np.asarray(groups)
+    # Search only for class coverage, never for favourable performance.
+    for offset in range(100):
+        tv, te = next(GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=seed + offset).split(X, y, groups))
+        tr0, va0 = next(GroupShuffleSplit(n_splits=1, test_size=val_size / (1-test_size), random_state=seed + offset).split(np.asarray(X)[tv], y[tv], groups[tv]))
+        tr, va = tv[tr0], tv[va0]
+        if all(len(np.unique(y[i])) == 2 for i in (tr, va, te)):
+            audit_split(groups, tr, va, te, name)
+            return tr, va, te
+    raise ValueError(f'{name}: insufficient independent groups for train/validation/test class coverage')
+
+def fixed_fpr_threshold(honest_scores, target=0.01, source='validation'):
+    if source not in ('validation', 'oof_training'):
+        raise ValueError('Thresholds may only be fitted to validation or OOF training scores')
+    v = np.sort(np.asarray(honest_scores, float))
+    if not len(v) or not np.isfinite(v).all():
+        raise ValueError('Finite honest calibration scores are required')
+    # Decisions use STRICT > throughout: tied scores do not exceed the FPR budget.
+    threshold = float(v[max(0, len(v) - int(np.floor(target * len(v))) - 1)])
+    THRESHOLD_AUDIT.append(dict(source=source, target_fpr=target, n_honest=len(v), threshold=threshold))
+    return threshold
+
+def binomial_ci(k, n, alpha=0.05):
+    if n == 0: return np.nan, np.nan
+    return (0.0 if k == 0 else float(stats.beta.ppf(alpha/2, k, n-k+1)),
+            1.0 if k == n else float(stats.beta.ppf(1-alpha/2, k+1, n-k)))
+
+def detection_metrics(y, score, threshold, groups=None, seed=0, probability=True):
+    y = np.asarray(y, int); score = np.asarray(score, float); pred = score > threshold
+    neg, pos = y == 0, y == 1
+    fp, tp = int(pred[neg].sum()), int(pred[pos].sum())
+    flo, fhi = binomial_ci(fp, int(neg.sum()))
+    lo, hi = grouped_boot_auc(y, score, groups, B=200 if RUN_PROFILE == 'quick' else 1000, seed=seed)
+    return dict(auc=float(roc_auc_score(y, score)) if len(np.unique(y)) == 2 else np.nan,
+                auc_lo=lo, auc_hi=hi, pr_auc=float(average_precision_score(y, score)) if pos.any() else np.nan,
+                f1=float(f1_score(y, pred, zero_division=0)), recall=tp / max(int(pos.sum()), 1),
+                FPR=fp / max(int(neg.sum()), 1), FPR_lo=flo, FPR_hi=fhi,
+                FNR=1-tp / max(int(pos.sum()), 1), precision=tp / max(int(pred.sum()), 1),
+                threshold=float(threshold), n_honest=int(neg.sum()), n_attacked=int(pos.sum()),
+                brier=float(np.mean((score-y)**2)) if probability else np.nan,
+                ece=expected_calibration_error(y, score) if probability else np.nan)
+
+def _save_csv(frame, path, *args, **kwargs):
+    # Dataset schemas stay stable; every CSV gets a sidecar recording its exact input fingerprints.
+    path = _pathlib.Path(path)
+    inputs = {key: globals()[key] for key in ('_GD_FP', '_E91_FP', '_DL_FP') if key in globals()}
+    provenance = dict(code_version=CODE_VERSION, master_seed=MASTER_SEED, profile=RUN_PROFILE,
+                      dataset_fingerprints=inputs, settings=SC, status='generated_this_run')
+    out = frame.copy()
+    dataset_file = ('dataset' in path.name or 'meta' in path.name or path.name in
+                    [ _pathlib.Path(v).name for v in globals().get('_GD_PATHS', ()) ] or
+                    path.name == _pathlib.Path(globals().get('_E91_PATH', 'NONE')).name)
+    if not dataset_file:
+        out['code_version'] = CODE_VERSION; out['master_seed'] = MASTER_SEED; out['run_profile'] = RUN_PROFILE
+        if 'dataset_fingerprint' not in out: out['dataset_fingerprint'] = _json.dumps(inputs, sort_keys=True)
+        for col, aliases in {'protocol': ('target_protocol',), 'attack': ('family',), 'attack_strength': ('strength',),
+                             'split_seed': ('seed',), 'K': ('target_k', 'k_achieved'), 'N_used': ('mean_N_used',), 'model': ()}.items():
+            if col not in out:
+                out[col] = next((out[a] for a in aliases if a in out), np.nan)
+    result = out.to_csv(path, *args, **kwargs)
+    provenance['artifact_sha256']=_hashlib.sha256(path.read_bytes()).hexdigest()
+    path.with_suffix(path.suffix + '.provenance.json').write_text(_json.dumps(provenance, indent=2), encoding='utf-8')
+    RESULT_ARTIFACTS.append(str(path))
+    return result
+
+def _extend_to_k(record, draw, key_mask, K, batch_size):
+    """Continue independent simulation batches; never drop a short run or replace it with another link.
+    max_pulses bounds one draw, not the information budget. Timing profiles restart at batch
+    boundaries; this is a stated simulation limitation for exceptionally lossy long sessions.
+    """
+    if K is None: return record
+    if K <= 0: raise ValueError('K must be positive')
+    total = len(key_mask(record)); counts = int(key_mask(record).sum())
+    for _ in range(1000):
+        if counts >= K: return record
+        extra = draw(int(batch_size))
+        m = key_mask(extra); n = len(m)
+        for key, value in list(record.items()):
+            if isinstance(value, np.ndarray) and value.shape[:1] == (total,):
+                record[key] = np.concatenate((value, extra[key]))
+        total += n; counts += int(m.sum())
+        if 'N' in record: record['N'] = total
+    raise RuntimeError(f'Unable to obtain K={K}; collected {counts} after {total} raw events')
 
 
 def sigma_K(p, K):
@@ -421,7 +586,7 @@ def sigma_K(p, K):
     return float(np.sqrt(p * (1 - p) / max(K, 1)))
 
 
-SATURATION_STRICT = True
+SATURATION_STRICT = False  # retain and label easy/separable benchmarks; do not abort all later experiments
 
 
 def check_saturation(auc_values, label, thr=0.99, strict=None):
@@ -430,7 +595,7 @@ def check_saturation(auc_values, label, thr=0.99, strict=None):
     a = np.asarray(list(auc_values), float); a = a[np.isfinite(a)]
     sat = bool(len(a) and (a >= thr).all())
     if sat:
-        msg = f"SATURATED: every AUC in '{label}' is >= {thr} -- reduce the attack strength (in sigma_K units) or K before comparing."
+        msg = f"EASY/SEPARABLE ATTACK BENCHMARK (not suitable for model ranking): every AUC in '{label}' is >= {thr} -- reduce the attack strength (in sigma_K units) or K before comparing."
         if SATURATION_STRICT if strict is None else strict:
             raise AssertionError(msg)
         print("WARNING:", msg)
@@ -461,7 +626,7 @@ print("All imports OK.")
 # %%
 # ── Review-document utilities (D1, D2, D4, D7, D9) ───────────────────────────────
 from sklearn.model_selection import cross_val_predict
-from sklearn.base import clone
+from sklearn.base import clone, BaseEstimator, ClassifierMixin
 from sklearn.metrics import average_precision_score
 
 
@@ -505,11 +670,17 @@ def expected_calibration_error(y, p, n_bins=10):
     return float(sum(len(b) / len(y) * abs(y[b].mean() - p[b].mean()) for b in bins if len(b)))
 
 
-def oof_scores(model, X, y, groups=None, seed=0):
-    """Out-of-fold predicted probabilities (grouped when `groups` given): used to choose thresholds without touching test data."""
-    cv = StratifiedGroupKFold(5, shuffle=True, random_state=seed) if groups is not None else StratifiedKFold(5, shuffle=True, random_state=seed)
-    kw = dict(groups=groups) if groups is not None else {}
-    return cross_val_predict(clone(model), X, y, cv=cv, method='predict_proba', **kw)[:, 1]
+def oof_scores(model,X,y,groups=None,seed=0):
+    X=np.asarray(X);y=np.asarray(y);g=np.arange(len(y)) if groups is None else np.asarray(groups)
+    cv=StratifiedGroupKFold(min(5,len(np.unique(g))),shuffle=True,random_state=seed)
+    score=np.empty(len(y))
+    for tr,va in cv.split(X,y,g):
+        assert not set(g[tr]) & set(g[va])
+        estimator=clone(model)
+        if 'GroupedSigmoidSVC' in globals() and isinstance(estimator,GroupedSigmoidSVC): estimator.fit(X[tr],y[tr],groups=g[tr])
+        else: estimator.fit(X[tr],y[tr])
+        score[va]=estimator.predict_proba(X[va])[:,1]
+    return score
 
 
 def nuisance_only_audit(nuis, y, groups, name):
@@ -570,11 +741,12 @@ def signflip_p(d, B=20000, seed=0):
 
 
 def holm(pvals):
-    """Holm-Bonferroni adjusted p-values (same order as the input)."""
-    p = np.asarray(pvals, float); o = np.argsort(p); m = len(p); adj = np.empty(m); run = 0.0
-    for r, i in enumerate(o):
-        run = max(run, (m - r) * p[i]); adj[i] = min(run, 1.0)
-    return adj
+    """Holm adjustment over finite tests; undefined small-sample tests remain NaN."""
+    p=np.asarray(pvals,float); out=np.full(len(p),np.nan); valid=np.flatnonzero(np.isfinite(p))
+    order=valid[np.argsort(p[valid])]; running=0.0
+    for rank,i in enumerate(order):
+        running=max(running,(len(order)-rank)*p[i]); out[i]=min(running,1.0)
+    return out
 
 
 def auc_se(auc, n_pos, n_neg):
@@ -1088,6 +1260,16 @@ def eve_loss_manipulation(rho, delta=0.3):
 # (lossy) channel needs before a window has enough sifted bits for the
 # temporal features to mean anything (audit Sec. H.2).
 
+def honest_noise_multiplier(n, detector, rng):
+    detector=detector or {}
+    if detector.get('noise_profile','stationary') != 'bursty': return np.ones(n)
+    factor=np.ones(n); block=max(1,int(detector.get('burst_block',max(n//32,1))))
+    high=False
+    for lo in range(0,n,block):
+        if rng.random()<0.25: high=not high
+        if high: factor[lo:lo+block]=float(detector.get('burst_multiplier',3.0))
+    return factor
+
 def simulate_bb84_decoy(N, distance_km, eve_mode='none', eve_intensity=0.0,
                          profile='iid', pns_strategy=None, rng=None,
                          intensities=(MU_SIGNAL, MU_DECOY, MU_VACUUM),
@@ -1124,6 +1306,9 @@ def simulate_bb84_decoy(N, distance_km, eve_mode='none', eve_intensity=0.0,
     if det['drift_amp'] > 0:          # B8: slow drift of the misalignment error (temperature / polarisation drift), a property of the LINK
         _ph = rng.random() * 2 * np.pi
         edet = np.clip(edet * (1.0 + det['drift_amp'] * np.sin(2 * np.pi * det['drift_cycles'] * np.arange(N) / N + _ph)), 0.0, 0.5)
+
+    if det.get('noise_profile') == 'bursty':
+        edet=np.clip(edet*honest_noise_multiplier(N,det,rng),0,0.5)
 
     # These two draws are made UNCONDITIONALLY (not just inside the
     # matching branch) so every eve_mode consumes the exact same amount of
@@ -1588,6 +1773,10 @@ def simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
         _f = 1.0 + det['drift_amp'] * np.sin(2 * np.pi * det['drift_cycles'] * np.arange(N) / N + rng.random() * 2 * np.pi)
         p_prep, p_meas, p_ret = (np.clip(np.asarray(v) * _f, 0.0, 0.5) for v in (p_prep, p_meas, p_ret))
 
+    if det.get('noise_profile') == 'bursty':
+        _burst=honest_noise_multiplier(N,det,rng)
+        p_prep,p_meas,p_ret=(np.clip(np.asarray(v)*_burst,0,0.5) for v in (p_prep,p_meas,p_ret))
+
     bit_A = rng.integers(0, 2, N)
     basis_A = rng.integers(0, 2, N)
     cur_bit, cur_basis = bit_A.copy(), basis_A.copy()   # the travelling carrier's (bit, basis)
@@ -1662,7 +1851,7 @@ print("simulate_bkm07_batch() defined (Draft 2, item 7).")
 
 # %%
 def run_e91(n_pairs, V=0.95, eve_mode='none', eve_intensity=0.0, lam=0.3,
-            profile='iid', rng=None, mean_burst=2000, drift_amp=0.0, drift_cycles=1.0, n_drift_segments=32):
+            profile='iid', rng=None, mean_burst=2000, drift_amp=0.0, drift_cycles=1.0, n_drift_segments=32, noise_profile='stationary', burst_multiplier=3.0):
     """One E91 run. Outcomes are drawn from the exact Born-rule joint distribution for each (setting pair, channel condition) --
     multinomial sampling from the Born probabilities is identically distributed to shot-by-shot simulation.
 
@@ -1678,7 +1867,11 @@ def run_e91(n_pairs, V=0.95, eve_mode='none', eve_intensity=0.0, lam=0.3,
     ra = np.zeros(n_pairs, dtype=int)
     rb = np.zeros(n_pairs, dtype=int)
 
-    if drift_amp > 0:
+    if noise_profile == 'bursty':
+        edges=np.linspace(0,n_pairs,n_drift_segments+1,dtype=int)
+        _f=honest_noise_multiplier(n_drift_segments,dict(noise_profile='bursty',burst_multiplier=burst_multiplier,burst_block=1),rng)
+        Vs=np.clip(1-(1-V)*_f,0,1)
+    elif drift_amp > 0:
         edges = np.linspace(0, n_pairs, n_drift_segments + 1, dtype=int); _ph = rng.random() * 2 * np.pi
         mids = 0.5 * (edges[:-1] + edges[1:]) / max(n_pairs, 1)
         Vs = np.clip(1.0 - (1.0 - V) * (1.0 + drift_amp * np.sin(2 * np.pi * drift_cycles * mids + _ph)), 0.0, 1.0)
@@ -2359,7 +2552,7 @@ def _truncate_bkm07(b, K):
 def collect_bb84_features(N=None, distance_km=0.0, eve_mode='none', eve_intensity=0.0,
                            profile='iid', pns_strategy=None, n_windows=64,
                            rng=None, target_k_signal_bits=None, k_margin=K_MARGIN,
-                           max_pulses=20_000_000, mean_burst=None, baseline=None, truncate=True, detector=None, **chan):
+                           max_pulses=20_000_000, mean_burst=None, baseline=None, truncate=True, detector=None, return_record=False, **chan):
     '''Run N BB84 pulses through the physical channel (P1/P2) and compress
     into the BB84_FEATURE_NAMES feature vector, via the vectorised
     decoy-state simulator (P5).
@@ -2396,7 +2589,10 @@ def collect_bb84_features(N=None, distance_km=0.0, eve_mode='none', eve_intensit
                                profile=profile, pns_strategy=pns_strategy,
                                rng=rng, mean_burst=_mb, detector=detector, **chan)
 
-    N_gen = int(N)
+    run = _extend_to_k(run, lambda n: simulate_bb84_decoy(n, distance_km, eve_mode, eve_intensity,
+        profile=profile, pns_strategy=pns_strategy, rng=rng, mean_burst=_mb, detector=detector, **chan),
+        lambda r: r['sift'] & (r['k'] == 0), target_k_signal_bits, N)
+    N_gen = int(run['N']); N = N_gen
     if truncate and target_k_signal_bits is not None:
         run, N = _truncate_bb84_run(run, target_k_signal_bits)
     bit_A, bit_B = run['bit_A'], run['bit_B']
@@ -2436,7 +2632,7 @@ def collect_bb84_features(N=None, distance_km=0.0, eve_mode='none', eve_intensit
     ratio = float((run['Q'][mu_d] * np.exp(mu_d)) /
                   max(run['Q'][mu_s] * np.exp(mu_s), 1e-18))
 
-    return {
+    features = {
         'qber_total': qber_total,
         'qber_z': qber_z,
         'qber_x': qber_x,
@@ -2457,15 +2653,24 @@ def collect_bb84_features(N=None, distance_km=0.0, eve_mode='none', eve_intensit
         # review fix B8: z-score against the per-link commissioning baseline.
         'z_qber': _z_vs_baseline(qber_total, int(s.sum()), baseline),
         '_k_achieved': int(s.sum()),   # Draft 2, item 8/6: sifted signal bits actually obtained
-        '_N_used': int(N_gen),
+        '_N_used': int(N),
         '_N_trunc': int(N),
-        '_N_capped': bool(N_capped),   # Draft 2.1: True => max_pulses cut the run short of the requested K
+        '_N_capped': bool(N_capped),   # initial draw hit its batch limit; continuation still supplies exact K
     }
+
+    features['_N_generated'] = N_gen
+    features['_key_yield'] = features['_k_achieved'] / max(int(N), 1)
+    features['_detection_yield'] = float(run['click'].mean())
+    features['_loss_rate'] = 1.0 - features['_detection_yield']
+    if truncate and target_k_signal_bits is not None:
+        assert features['_k_achieved'] == target_k_signal_bits
+    if return_record: features['_record'] = run
+    return features
 
 
 def collect_bkm07_features(N=None, distance_km=0.0, eve_mode='none', eve_fwd=0.0, eve_ret=0.0,
                             n_windows=64, rng=None, target_k_key_rounds=None, k_margin=K_MARGIN,
-                            max_pulses=15_000_000, baseline=None, truncate=True, detector=None, **chan):
+                            max_pulses=15_000_000, baseline=None, truncate=True, detector=None, return_record=False, **chan):
     '''Run N BKM07 round trips and compress into a feature vector.
 
     Alice measures SIFT returns in her OWN preparation basis
@@ -2499,7 +2704,9 @@ def collect_bkm07_features(N=None, distance_km=0.0, eve_mode='none', eve_fwd=0.0
         raise ValueError("collect_bkm07_features needs either N or target_k_key_rounds")
 
     b = simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=rng, detector=detector, **chan)
-    N_gen = int(N)
+    b = _extend_to_k(b, lambda n: simulate_bkm07_batch(n, distance_km, eve_mode, eve_fwd, eve_ret,
+        rng=rng, detector=detector, **chan), lambda r: r['survived'] & (r['round_type'] == 'SIFT_KEY'), target_k_key_rounds, N)
+    N_gen = len(b['survived']); N = N_gen
     if truncate and target_k_key_rounds is not None:
         b, N = _truncate_bkm07(b, target_k_key_rounds)
     surv = b['survived']
@@ -2546,7 +2753,7 @@ def collect_bkm07_features(N=None, distance_km=0.0, eve_mode='none', eve_fwd=0.0
 
     qber_ctrl_avg = (qber_zc + qber_xc) / 2.0
 
-    return {
+    features = {
         'qber_key': qber_key,
         'qber_zs': qber_zs,
         'qber_zsr': qber_zsr,
@@ -2564,10 +2771,19 @@ def collect_bkm07_features(N=None, distance_km=0.0, eve_mode='none', eve_fwd=0.0
         'z_qber_ctrl': _z_vs_baseline(qber_ctrl_avg, z_ctrl_t + x_ctrl_t, baseline),   # review fix B8
         '_qber_ctrl_avg': float(qber_ctrl_avg), '_n_ctrl': int(z_ctrl_t + x_ctrl_t),
         '_k_achieved': int(z_sft_t),   # Draft 2, item 8/6: SIFT_KEY rounds actually obtained
-        '_N_used': int(N_gen),
+        '_N_used': int(N),
         '_N_trunc': int(N),
-        '_N_capped': bool(N_capped),   # Draft 2.1: True => max_pulses cut the run short of the requested K
+        '_N_capped': bool(N_capped),   # initial draw hit its batch limit; continuation still supplies exact K
     }
+
+    features['_N_generated'] = N_gen
+    features['_key_yield'] = features['_k_achieved'] / max(int(N), 1)
+    features['_detection_yield'] = float(b['survived'].mean())
+    features['_loss_rate'] = 1.0 - features['_detection_yield']
+    if truncate and target_k_key_rounds is not None:
+        assert features['_k_achieved'] == target_k_key_rounds
+    if return_record: features['_record'] = b
+    return features
 
 
 def bb84_k_capacity(distance_km, max_pulses=20_000_000, k_margin=K_MARGIN, **chan):
@@ -2684,7 +2900,7 @@ print(f"E91 device-independent SKR: r=0 below V~={_V_critical:.4f} (honest QBER 
 # ---------------------------------------------------------------------
 def extract_e91_features(n_pulses=2000, eve_mode="none", n_windows=20, rng=None,
                           eve_intensity=0.0, lam=0.3, profile='iid', V=None,
-                          target_k_key_pairs=None, k_margin=K_MARGIN, baseline=None, truncate=True, detector=None):
+                          target_k_key_pairs=None, k_margin=K_MARGIN, baseline=None, truncate=True, detector=None, return_record=False):
     """Draft 2, item 8: pass `target_k_key_pairs=K` instead of `n_pulses` to
     size n_pulses so the run nets approximately K key pairs (settings
     a2-b1/a3-b2, which occur with probability 2/9 under the uniform random
@@ -2701,7 +2917,20 @@ def extract_e91_features(n_pulses=2000, eve_mode="none", n_windows=20, rng=None,
                                             eve_intensity=eve_intensity, lam=lam,
                                             profile=profile, rng=rng,
                                             drift_amp=float((detector or {}).get('drift_amp', 0.0)), drift_cycles=float((detector or {}).get('drift_cycles', 1.0)),
-                                            mean_burst=max(2000, int(n_pulses) // int(rng.choice([8, 16, 32, 64]))))
+                                            mean_burst=max(2000, int(n_pulses) // int(rng.choice([8, 16, 32, 64]))),
+                                            noise_profile=(detector or {}).get('noise_profile','stationary'),
+                                            burst_multiplier=float((detector or {}).get('burst_multiplier',3.0)))
+    _rec = dict(a=a_choice, b=b_choice, ra=r_a, rb=r_b)
+    def _more_e91(n):
+        a, b, ra, rb = run_e91(n, V=V, eve_mode=eve_mode, eve_intensity=eve_intensity, lam=lam,
+            profile=profile, rng=rng, drift_amp=float((detector or {}).get('drift_amp', 0)),
+            noise_profile=(detector or {}).get('noise_profile', 'stationary'),
+            burst_multiplier=float((detector or {}).get('burst_multiplier', 3.0)))
+        return dict(a=a, b=b, ra=ra, rb=rb)
+    _rec = _extend_to_k(_rec, _more_e91, lambda r: np.isin(np.char.add(r['a'], r['b']),
+        [a+b for a,b in KEY_PAIRS]), target_k_key_pairs, n_pulses)
+    a_choice, b_choice, r_a, r_b = (_rec[k] for k in ('a', 'b', 'ra', 'rb'))
+    n_pulses = len(a_choice)
     _n_gen = int(n_pulses)
     if truncate and target_k_key_pairs is not None:      # review fix C3: exactly K key pairs
         _km = np.isin(np.char.add(a_choice, b_choice), [_a + _b for _a, _b in KEY_PAIRS]); _cs = np.cumsum(_km)
@@ -2760,8 +2989,13 @@ def extract_e91_features(n_pulses=2000, eve_mode="none", n_windows=20, rng=None,
     }
     _key_mask = np.isin(np.char.add(a_choice, b_choice), [_a + _b for _a, _b in KEY_PAIRS])
     features["_k_achieved"] = int(_key_mask.sum())   # Draft 2, item 8/6: key pairs actually obtained
-    features["_N_used"] = int(_n_gen)
-    features["_N_trunc"] = int(n_pulses)
+    features["_N_used"] = int(n_pulses)
+    features["_N_generated"] = int(_n_gen)
+    features['_N_trunc'] = int(n_pulses)
+    features['_key_yield'] = features['_k_achieved'] / max(n_pulses, 1)
+    features['_detection_yield'] = 1.0; features['_loss_rate'] = 0.0
+    if truncate and target_k_key_pairs is not None: assert features['_k_achieved'] == target_k_key_pairs
+    if return_record: features['_record'] = (a_choice, b_choice, r_a, r_b)
     return features
 
 # %% [markdown]
@@ -3238,10 +3472,10 @@ print("Attack-strength calibration functions defined "
 # longer links yield too few surviving round trips per run to be useful.
 #
 # **Note on this section's data vs. Section 19's:** this is the
-# *uncalibrated* dataset -- distance/`V`/`e_detector` drawn from each
+# *equal-information primary* dataset -- distance/`V`/`e_detector` drawn from each
 # protocol's own realistic range, which is what every classical-ML analysis
-# in Sections 6-17 below uses. Section 19 generates a separate, much smaller
-# dataset at deliberately *matched* operating points using Section 4's
+# in Sections 6-17 below uses. K is equal, but nuisance ranges differ. Section 19 generates a
+# primary cross-protocol comparison at *matched* operating points using Section 4's
 # calibration layer; the two serve different purposes and are not mixed.
 #
 # > **Note on scale/runtime:** the default `samples_per_class=60`,
@@ -3287,7 +3521,7 @@ def _bb84_block(i, N, n_windows, target_k_signal_bits):
     f = collect_bb84_features(N, distance_km, 'none', 0.0, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0, detector=DET,
                               target_k_signal_bits=target_k_signal_bits, baseline=base)
     rows.append([f[k] for k in BB84_FEATURE_NAMES] + [distance_km, 0.0, f['_k_achieved'], f['_N_used'], 0])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, drift_amp=drift_amp, **dict(label=0, profile='iid', strength=0.0)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], N_used=f['_N_used'], N_generated=f['_N_generated'], k_achieved=f['_k_achieved'], key_yield=f['_key_yield'], detection_yield=f['_detection_yield'], loss_rate=f['_loss_rate'], Y0=Y0, drift_amp=drift_amp, **dict(label=0, profile='iid', strength=0.0)))
 
     rng = SEEDS.rng('bb84_ir', i)
     di = log_uniform(rng, 0.005, 1.0)
@@ -3295,14 +3529,14 @@ def _bb84_block(i, N, n_windows, target_k_signal_bits):
     f = collect_bb84_features(N, distance_km, 'intercept_resend', di, profile=profile, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0, detector=DET,
                               target_k_signal_bits=target_k_signal_bits, baseline=base)
     rows.append([f[k] for k in BB84_FEATURE_NAMES] + [distance_km, di, f['_k_achieved'], f['_N_used'], 1])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, drift_amp=drift_amp, **dict(label=1, profile=profile, strength=di)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], N_used=f['_N_used'], N_generated=f['_N_generated'], k_achieved=f['_k_achieved'], key_yield=f['_key_yield'], detection_yield=f['_detection_yield'], loss_rate=f['_loss_rate'], Y0=Y0, drift_amp=drift_amp, **dict(label=1, profile=profile, strength=di)))
 
     rng = SEEDS.rng('bb84_pns', i)
     pi = log_uniform(rng, 0.005, 1.0)   # review fix C6: same strength distribution for every attack class
     f = collect_bb84_features(N, distance_km, 'pns', pi, pns_strategy=strat, n_windows=n_windows, rng=rng, e_detector=e_det, Y0=Y0, detector=DET,
                               target_k_signal_bits=target_k_signal_bits, baseline=base)
     rows.append([f[k] for k in BB84_FEATURE_NAMES] + [distance_km, pi, f['_k_achieved'], f['_N_used'], 2])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], Y0=Y0, drift_amp=drift_amp, **dict(label=2, profile='iid', strength=pi)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], N_used=f['_N_used'], N_generated=f['_N_generated'], k_achieved=f['_k_achieved'], key_yield=f['_key_yield'], detection_yield=f['_detection_yield'], loss_rate=f['_loss_rate'], Y0=Y0, drift_amp=drift_amp, **dict(label=2, profile='iid', strength=pi)))
     return rows, metas
 
 
@@ -3322,14 +3556,14 @@ def _bkm_block(i, N_bkm, n_windows, target_k_key_rounds):
     f = collect_bkm07_features(N_bkm, distance_km, 'none', 0.0, 0.0, n_windows=n_windows, rng=rng, e_detector=e_det, detector=DET,
                                target_k_key_rounds=target_k_key_rounds, baseline=base)
     rows.append([f[k] for k in BKM_FEATURE_NAMES] + [distance_km, 0.0, 0.0, f['_k_achieved'], f['_N_used'], 0])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], drift_amp=drift_amp, **dict(label=0, profile='iid', strength=0.0)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], N_used=f['_N_used'], N_generated=f['_N_generated'], k_achieved=f['_k_achieved'], key_yield=f['_key_yield'], detection_yield=f['_detection_yield'], loss_rate=f['_loss_rate'], drift_amp=drift_amp, **dict(label=0, profile='iid', strength=0.0)))
 
     rng = SEEDS.rng('bkm_sym', i)
     di = log_uniform(rng, 0.005, 0.5)
     f = collect_bkm07_features(N_bkm, distance_km, 'symmetric', di, di, n_windows=n_windows, rng=rng, e_detector=e_det, detector=DET,
                                target_k_key_rounds=target_k_key_rounds, baseline=base)
     rows.append([f[k] for k in BKM_FEATURE_NAMES] + [distance_km, di, di, f['_k_achieved'], f['_N_used'], 1])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], drift_amp=drift_amp, **dict(label=1, profile='iid', strength=di)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], N_used=f['_N_used'], N_generated=f['_N_generated'], k_achieved=f['_k_achieved'], key_yield=f['_key_yield'], detection_yield=f['_detection_yield'], loss_rate=f['_loss_rate'], drift_amp=drift_amp, **dict(label=1, profile='iid', strength=di)))
 
     rng = SEEDS.rng('bkm_asym', i)
     s_asym = log_uniform(rng, 0.005, 0.5)                 # review fix C6: same strength distribution as the symmetric class
@@ -3338,7 +3572,7 @@ def _bkm_block(i, N_bkm, n_windows, target_k_key_rounds):
     f = collect_bkm07_features(N_bkm, distance_km, 'asymmetric', di_fwd, di_ret, n_windows=n_windows, rng=rng, e_detector=e_det, detector=DET,
                                target_k_key_rounds=target_k_key_rounds, baseline=base)
     rows.append([f[k] for k in BKM_FEATURE_NAMES] + [distance_km, di_fwd, di_ret, f['_k_achieved'], f['_N_used'], 2])
-    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], drift_amp=drift_amp, **dict(label=2, profile='iid', strength=s_asym)))
+    metas.append(dict(run_index=i, group_id=i, e_det=e_det, n_capped=f['_N_capped'], n_trunc=f['_N_trunc'], N_used=f['_N_used'], N_generated=f['_N_generated'], k_achieved=f['_k_achieved'], key_yield=f['_key_yield'], detection_yield=f['_detection_yield'], loss_rate=f['_loss_rate'], drift_amp=drift_amp, **dict(label=2, profile='iid', strength=s_asym)))
     return rows, metas
 
 
@@ -3363,13 +3597,11 @@ def generate_datasets(samples_per_class=60, N=2_000_000, N_bkm=20_000, n_windows
     bb84_header = BB84_FEATURE_NAMES + ['distance_km', 'eve_intensity', 'k_achieved', 'N_used', 'label']
     bkm_header = BKM_FEATURE_NAMES + ['distance_km', 'eve_fwd', 'eve_ret', 'k_achieved', 'N_used', 'label']
 
-    with open('data/bb84_dataset.csv', 'w', newline='') as fh:
-        csv.writer(fh).writerows([bb84_header] + bb84_rows)
-    with open('data/bkm07_dataset.csv', 'w', newline='') as fh:
-        csv.writer(fh).writerows([bkm_header] + bkm_rows)
+    _save_csv(pd.DataFrame(bb84_rows, columns=bb84_header), 'data/bb84_dataset.csv', index=False)
+    _save_csv(pd.DataFrame(bkm_rows, columns=bkm_header), 'data/bkm07_dataset.csv', index=False)
 
-    pd.DataFrame(bb84_meta).to_csv('data/bb84_meta.csv', index=False)     # review fix A5
-    pd.DataFrame(bkm_meta).to_csv('data/bkm07_meta.csv', index=False)
+    _save_csv(pd.DataFrame(bb84_meta), 'data/bb84_meta.csv', index=False)     # review fix A5
+    _save_csv(pd.DataFrame(bkm_meta), 'data/bkm07_meta.csv', index=False)
     return (np.array(bb84_rows, dtype=float), np.array(bkm_rows, dtype=float),
             bb84_header, bkm_header)
 
@@ -3398,6 +3630,13 @@ def _try_load_cached_datasets():
         return None
     if list(bb84_c.columns) != _GD_BB84_COLS or list(bkm_c.columns) != _GD_BKM_COLS:
         return None
+    if not all((df['k_achieved'] == K_MAIN_DATASET).all() for df in (bb84_c, bkm_c)): return None
+    for proto in ('bb84','bkm07'):
+        mp=_pathlib.Path(f'data/{proto}_meta.csv'); side=mp.with_suffix('.csv.provenance.json')
+        if not mp.exists() or not side.exists(): return None
+        provenance=_json.loads(side.read_text(encoding='utf-8'))
+        if provenance.get('code_version')!=CODE_VERSION or provenance.get('master_seed')!=MASTER_SEED: return None
+        if provenance.get('artifact_sha256')!=_hashlib.sha256(mp.read_bytes()).hexdigest(): return None
     return (bb84_c.to_numpy(dtype=float), bkm_c.to_numpy(dtype=float),
             _GD_BB84_COLS, _GD_BKM_COLS)
 
@@ -3425,7 +3664,7 @@ print("CSVs saved to data/")
 
 # review C3: equal-information sampling cannot deliver K on the longest BB84 links (max_pulses cap) -- say how often
 _k84 = bb84_arr[:, len(BB84_FEATURE_NAMES) + 2]; _kbk = bkm_arr[:, len(BKM_FEATURE_NAMES) + 3]
-print(f"BB84 runs that did NOT reach K={K_MAIN_DATASET} key bits (pulse cap): {np.mean(_k84 < K_MAIN_DATASET):.1%} (median achieved K {np.median(_k84):.0f}); "
+print(f"BB84 runs below required K={K_MAIN_DATASET} (must be zero): {np.mean(_k84 < K_MAIN_DATASET):.1%} (median achieved K {np.median(_k84):.0f}); "
       f"BKM07: {np.mean(_kbk < K_MAIN_DATASET):.1%}.  Rows are flagged in data/*_meta.csv (n_capped).")
 
 # %% [markdown]
@@ -3452,7 +3691,7 @@ try:
     # Execution-resilience only, same reasoning as generate_datasets() above:
     # generate_e91_dataset() is deterministic given fixed args.
     _e91_c = pd.read_csv(_E91_PATH)
-    if (not FINAL_REGENERATE) and len(_e91_c) == _E91_EXPECTED_ROWS and _E91_REQUIRED_COLS <= set(_e91_c.columns):
+    if (not FINAL_REGENERATE) and len(_e91_c) == _E91_EXPECTED_ROWS and _E91_REQUIRED_COLS <= set(_e91_c.columns) and (_e91_c['_k_achieved']==K_MAIN_DATASET).all():
         _e91_cached = _e91_c
 except Exception:
     pass
@@ -3466,8 +3705,26 @@ else:
     e91_df = generate_e91_dataset(n_runs_per_mode=_E91_N_RUNS_PER_MODE, n_pulses=5000, n_windows=32,
                                    eve_modes=("none", "intercept_resend", "ancilla", "extra_depolarisation"),
                                    target_k_key_pairs=K_MAIN_DATASET)
-    e91_df.to_csv('data/e91_dataset.csv', index=False); e91_df.to_csv(_E91_PATH, index=False)
+    _save_csv(e91_df, 'data/e91_dataset.csv', index=False); _save_csv(e91_df, _E91_PATH, index=False)
 
+assert np.all(bb84_arr[:, bb84_hdr.index('k_achieved')] == K_MAIN_DATASET)
+assert np.all(bkm_arr[:, bkm_hdr.index('k_achieved')] == K_MAIN_DATASET)
+assert (e91_df['_k_achieved'] == K_MAIN_DATASET).all()
+_resource_rows = []
+for _proto, _meta in [('BB84', pd.read_csv('data/bb84_meta.csv')), ('BKM07', pd.read_csv('data/bkm07_meta.csv')),
+                      ('E91', e91_df.rename(columns={c: c[1:] for c in e91_df if c.startswith('_')}))]:
+    _resource_rows.append(dict(protocol=_proto, K=K_MAIN_DATASET, achieved_K=float(_meta.k_achieved.mean()),
+        mean_N_used=float(_meta.N_used.mean()), mean_N_generated=float(_meta.N_generated.mean()),
+        mean_key_yield=float(_meta.key_yield.mean()), mean_detection_yield=float(_meta.detection_yield.mean()),
+        mean_loss_rate=float(_meta.loss_rate.mean()), skr_implemented=_proto != 'BKM07',
+        skr_value=np.nan, attack_detection=True))
+protocol_resource_summary = pd.DataFrame(_resource_rows)
+protocol_resource_summary.loc[protocol_resource_summary.protocol == 'BB84', 'skr_value'] = float(bb84_arr[:, bb84_hdr.index('r_secure')].mean())
+protocol_resource_summary.loc[protocol_resource_summary.protocol == 'E91', 'skr_value'] = float(e91_df.r_secure_di.mean())
+protocol_resource_summary['skr_units'] = ['asymptotic bits per signal pulse', 'unavailable', 'asymptotic bits per key pair']
+assert protocol_resource_summary.achieved_K.nunique() == 1
+_save_csv(protocol_resource_summary, 'data/protocol_resource_summary.csv', index=False)
+print(protocol_resource_summary.to_string(index=False))
 X91 = e91_df[E91_FEATURE_NAMES].to_numpy(dtype=float)
 label91 = e91_df['label'].to_numpy()
 duty91 = e91_df['attack_duty_cycle'].to_numpy(dtype=float)
@@ -3794,11 +4051,8 @@ bkm_X = bkm_arr[:, :N_FEAT_BK].astype(float)
 # structurally-missing value, not a leakage-sensitive statistic).
 
 for _X in (bb84_X, bkm_X):
-    _col_median = np.nanmedian(_X, axis=0)
-    _col_median = np.where(np.isfinite(_col_median), _col_median, 0.0)
-    _nan_mask = ~np.isfinite(_X)
-    if _nan_mask.any():
-        _X[_nan_mask] = np.take(_col_median, np.where(_nan_mask)[1])
+    if not np.isfinite(_X).all():
+        raise ValueError('Primary features contain NaN/inf; investigate the generator before comparing models')
 
 
 # ============================================================
@@ -3880,7 +4134,10 @@ print(f"BKM07 class balance in train: {dict(zip(*np.unique(ybktr, return_counts=
 rng91 = np.random.RandomState(7)
 idx91 = rng91.permutation(len(X91))
 sp91 = int(0.8 * len(X91))
-tr91, te91 = idx91[:sp91], idx91[sp91:]
+e91_groups = e91_df['group_id'].to_numpy()
+tr91, te91 = next(GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=7).split(X91, y91, e91_groups))
+for _name, _g, _tr, _te in [('BB84', bb84_groups, bb84_tr_idx, bb84_te_idx), ('BKM07', bkm_groups, bkm_tr_idx, bkm_te_idx), ('E91', e91_groups, tr91, te91)]:
+    audit_split(_g, _tr, [], _te, _name + ' main outer split')
 
 def e91_cols(names):
     return [E91_FEATURE_NAMES.index(n) for n in names]
@@ -3991,17 +4248,31 @@ def tune_boosted(X, y, seed=0, n_splits=5, groups=None):
     search.fit(X, y)
     return search.best_estimator_, search.best_params_, search.best_score_
 
-def tune_svm_rbf_cv(X, y, seed=0, n_splits=5, groups=None):
-    cv = _inner_cv(X, y, seed, n_splits, groups)
-    pipe = Pipeline([('scaler', StandardScaler()),
-                     ('clf', CalibratedClassifierCV(SVC(kernel='rbf', class_weight='balanced'), method='sigmoid', cv=3))])   # review E7: SVC(probability=True) is deprecated
-    grid = {'clf__estimator__C':     [0.1, 1, 10, 100],
-            'clf__estimator__gamma': ['scale', 0.01, 0.1, 1]}
-    sep = _separable_default(pipe, X, y, cv)
-    if sep is not None: return sep
-    search = GridSearchCV(pipe, grid, scoring='roc_auc', cv=cv, n_jobs=-1)
-    search.fit(X, y)
-    return search.best_estimator_, search.best_params_, search.best_score_
+class GroupedSigmoidSVC(ClassifierMixin, BaseEstimator):
+    """Group-aware OOF Platt map; scaler is refitted inside every calibration fold."""
+    def __init__(self,C=1.0,gamma='scale',seed=0): self.C=C; self.gamma=gamma; self.seed=seed
+    def fit(self,X,y,groups=None):
+        X=np.asarray(X);y=np.asarray(y);g=np.arange(len(y)) if groups is None else np.asarray(groups)
+        cv=StratifiedGroupKFold(min(3,len(np.unique(g))),shuffle=True,random_state=self.seed)
+        base=Pipeline([('scale',StandardScaler()),('svc',SVC(C=self.C,gamma=self.gamma,kernel='rbf',class_weight='balanced'))])
+        score=np.empty(len(y))
+        for tr,va in cv.split(X,y,g):
+            assert not set(g[tr]) & set(g[va])
+            model=clone(base).fit(X[tr],y[tr]);score[va]=model.decision_function(X[va])
+        self.calibrator_=LogisticRegression(C=1e6,max_iter=2000).fit(score.reshape(-1,1),y)
+        self.estimator_=base.fit(X,y);self.classes_=np.unique(y);self.n_features_in_=X.shape[1]
+        return self
+    def decision_function(self,X): return self.estimator_.decision_function(X)
+    def predict_proba(self,X): return self.calibrator_.predict_proba(self.decision_function(X).reshape(-1,1))
+    def predict(self,X): return self.classes_[self.predict_proba(X).argmax(1)]
+
+def tune_svm_rbf_cv(X,y,seed=0,n_splits=5,groups=None):
+    cv=_inner_cv(X,y,seed,n_splits,groups)
+    base=Pipeline([('scale',StandardScaler()),('svc',SVC(kernel='rbf',class_weight='balanced'))])
+    search=GridSearchCV(base,{'svc__C':[.1,1,10,100],'svc__gamma':['scale',.01,.1,1]},scoring='roc_auc',cv=cv,n_jobs=-1)
+    search.fit(X,y); params=search.best_params_
+    model=GroupedSigmoidSVC(C=params['svc__C'],gamma=params['svc__gamma'],seed=seed).fit(X,y,groups=groups)
+    return model,params,search.best_score_
 
 def tune_rf(X, y, seed=0, n_splits=5, groups=None):
     cv = _inner_cv(X, y, seed, n_splits, groups)
@@ -4195,26 +4466,16 @@ FEATURE_GROUPS_BB84 = {
 
 
 def fit_with_val_threshold(X, y, groups=None, seed=0, fpr=0.01, val_frac=0.25):
-    """Fit make_boosted on ~(1-val_frac) of the rows and pick the decision threshold that yields
-    `fpr` false positives on the HELD-OUT validation negatives (Draft 2.1). Draft 2 took the
-    99th percentile of the TEST negatives -- with ~60 of them that is essentially their maximum,
-    chosen using the very data being scored, so FNR@1%FPR was optimistic and not deployable.
-    Returns (model, threshold)."""
-    n = len(y)
-    if groups is not None:
-        fit_i, val_i = next(GroupShuffleSplit(n_splits=1, test_size=val_frac, random_state=seed)
-                            .split(X, y, groups=groups))
-    else:
-        perm = np.random.RandomState(seed).permutation(n)
-        cut = int((1 - val_frac) * n)
-        fit_i, val_i = perm[:cut], perm[cut:]
-    if len(np.unique(y[fit_i])) < 2 or (y[val_i] == 0).sum() < 2:      # degenerate split: fall back
-        fit_i, val_i = np.arange(n), np.arange(n)
-    m = make_boosted(seed=seed)
-    m.fit(X[fit_i], y[fit_i])
-    neg = m.predict_proba(X[val_i][y[val_i] == 0])[:, 1]
-    thr = float(np.quantile(neg, 1.0 - fpr)) if len(neg) else 0.5
-    return m, thr
+    X, y = np.asarray(X), np.asarray(y)
+    groups = np.arange(len(y)) if groups is None else np.asarray(groups)
+    for offset in range(100):
+        fit_i, val_i = next(GroupShuffleSplit(n_splits=1, test_size=val_frac, random_state=seed+offset).split(X,y,groups))
+        if len(np.unique(y[fit_i])) == 2 and (y[val_i] == 0).sum() >= 2: break
+    else: raise ValueError('Not enough independent groups for validation threshold selection')
+    audit_split(groups, fit_i, val_i, [], 'threshold fit')
+    m = make_boosted(seed=seed); m.fit(X[fit_i], y[fit_i])
+    m._review_validation = (val_i, m.predict_proba(X[val_i])[:, 1])
+    return m, fixed_fpr_threshold(m._review_validation[1][y[val_i] == 0], fpr)
 
 
 def run_ablation(X_full, y, feature_names, groups, attack_labels=None,
@@ -4361,7 +4622,7 @@ print(f"\n=== Item 33: reseeding the whole ablation under {3} different master s
 abl_reseed_df, abl_reseed_summary = run_ablation_reseeded(
     bb84_X, bb84_y, BB84_FEATURE_NAMES, FEATURE_GROUPS_BB84,
     attack_labels=bb84_attack_labels, sample_groups=bb84_groups)
-abl_reseed_summary.to_csv('data/ablation_reseeded_summary.csv', index=False)
+_save_csv(abl_reseed_summary, 'data/ablation_reseeded_summary.csv', index=False)
 print()
 print("Range (max-min AUC across the 3 master seeds) per feature group -- small relative")
 print("to the AUC gaps BETWEEN feature groups (compare against the table above) means the")
@@ -4605,7 +4866,9 @@ print("ranking among GROUPS of correlated features, not a precise attribution to
 print("any single column.")
 
 # %% [markdown]
-# ## Section 16 — N × Window Sensitivity
+# ## Section 16 — Supplementary raw-N × window-count sensitivity
+# N is raw transmitted events per run; W here is NUMBER OF WINDOWS, not window length.
+# Section 24 separately varies DL window LENGTH in informative events (96/192/384).
 #
 # This section checks how much data the temporal features need before they become reliable and useful for detecting Eve.
 #
@@ -4693,7 +4956,7 @@ def n_window_sensitivity(N_values=SC['nw_N'],
                 cols = [idx[f] for f in feats]; per_seed[tag] = []
                 for sd in range(SC['nw_seeds']):
                     aucs_ = []
-                    for tr_, te_ in StratifiedKFold(5, shuffle=True, random_state=sd).split(X, y):
+                    for tr_, te_ in StratifiedGroupKFold(min(5,n_per_class),shuffle=True,random_state=sd).split(X,y,np.tile(np.arange(n_per_class),2)[ok]):
                         m = make_boosted(seed=sd); m.fit(X[tr_][:, cols], y[tr_])
                         aucs_.append(roc_auc_score(y[te_], m.predict_proba(X[te_][:, cols])[:, 1]))
                     per_seed[tag].append(float(np.mean(aucs_)))
@@ -4701,7 +4964,10 @@ def n_window_sensitivity(N_values=SC['nw_N'],
             boot_ = np.random.default_rng(0).choice(d_, (1000, len(d_))).mean(1); lo_, hi_ = np.percentile(boot_, [2.5, 97.5])
             dauc = float(d_.mean()); ledger(f'temporal gain dAUC at N={N:,}, W={W}', signflip_p(d_))
             out.append(dict(N=N, W=W, n_w=float(np.mean(nws)), AUC_A=float(np.mean(per_seed['A'])), AUC_B=float(np.mean(per_seed['B'])),
-                             dAUC=dauc, dAUC_lo=float(lo_), dAUC_hi=float(hi_)))
+                             dAUC=dauc, dAUC_lo=float(lo_), dAUC_hi=float(hi_), seeds=SC['nw_seeds'],
+                             AUC_A_lo=mean_ci(per_seed['A'])[1],AUC_A_hi=mean_ci(per_seed['A'])[2],
+                             AUC_B_lo=mean_ci(per_seed['B'])[1],AUC_B_hi=mean_ci(per_seed['B'])[2],
+                             uncertainty_scope='repeated grouped splits on one simulated dataset')) 
             print(f"  N={N:>9,} W={W:>4} n_w={np.mean(nws):8.1f} AUC_A={np.mean(per_seed['A']):.4f} AUC_B={np.mean(per_seed['B']):.4f} "
                   f"dAUC={dauc:+.4f} [{lo_:+.4f},{hi_:+.4f}]")
     return pd.DataFrame(out)
@@ -4763,12 +5029,12 @@ knn91 = make_knn(); knn91.fit(Xe91tr, ye91tr)
 lr91  = make_logreg(); lr91.fit(Xe91tr, ye91tr)
 
 print("Tuning Random Forest for E91 ...")
-rf91_model, rf91_params, rf91_cv = tune_rf(Xe91tr, ye91tr)
+rf91_model, rf91_params, rf91_cv = tune_rf(Xe91tr, ye91tr, groups=e91_groups[tr91])
 print(f"  Best CV-AUC : {rf91_cv:.4f}")
 print(f"  Best params : {rf91_params}")
 
 print("Tuning Boosted Trees for E91 ...")
-boosted91_model, boosted91_params, boosted91_cv = tune_boosted(Xe91tr, ye91tr)
+boosted91_model, boosted91_params, boosted91_cv = tune_boosted(Xe91tr, ye91tr, groups=e91_groups[tr91])
 print(f"  Best CV-AUC : {boosted91_cv:.4f}")
 print(f"  Best params : {boosted91_params}")
 
@@ -4820,7 +5086,7 @@ print(f"  {'Isolation Forest (unsupervised)':<32}ACC= N/A    AUC={auc91_ifo:.4f}
 # conventional single-threshold Bell test would?
 print("Critical baseline -- CHSH-only vs full physics-informed features (same model)")
 print("-" * 70)
-boosted91_chsh_only, chsh_only_params, chsh_only_cv = tune_boosted(Xe91tr_chsh, ye91tr)
+boosted91_chsh_only, chsh_only_params, chsh_only_cv = tune_boosted(Xe91tr_chsh, ye91tr, groups=e91_groups[tr91])
 p91_chsh_only = boosted91_chsh_only.predict_proba(Xe91te_chsh)[:, 1]
 
 fnr_chsh, fpr_chsh, auc_chsh = security_report(
@@ -4840,8 +5106,8 @@ print("  here than in the pre-patch version -- that gap was mostly the leak.")
 # Break the FNR down by attack type -- the direct evidence for the
 # per-attack claim above.
 print("\n  FNR by attack type at a FIXED 5% false-positive rate (review D3; thresholds from out-of-fold TRAINING scores, never test data):")
-_thr_full = float(np.quantile(oof_scores(boosted91_model, Xe91tr, ye91tr)[ye91tr == 0], 0.95))
-_thr_chsh = float(np.quantile(oof_scores(boosted91_chsh_only, Xe91tr_chsh, ye91tr)[ye91tr == 0], 0.95))
+_thr_full = float(np.quantile(oof_scores(boosted91_model, Xe91tr, ye91tr, e91_groups[tr91])[ye91tr == 0], 0.95))
+_thr_chsh = float(np.quantile(oof_scores(boosted91_chsh_only, Xe91tr_chsh, ye91tr, e91_groups[tr91])[ye91tr == 0], 0.95))
 for mode in ("intercept_resend", "ancilla", "extra_depolarisation"):
     m = label91_te == mode
     if m.sum() == 0:
@@ -4887,7 +5153,7 @@ REVIEW_SETS = {
                 oracle=np.array([bb84_arr[i, N_FEAT_84] for i in bb84_te_idx]), te_idx=bb84_te_idx),
   'BKM07': dict(model=boostedbk_model, Xtr=Xbktr, ytr=ybktr, Xte=Xbkte, yte=ybkte, gtr=bkm_groups[bkm_tr_idx], gte=bkm_groups[bkm_te_idx],
                 lab=bkm07_attack_labels[bkm_te_idx], names=BKM_FEATURE_NAMES, q='qber_key', oracle=None, te_idx=bkm_te_idx),
-  'E91':   dict(model=boosted91_model, Xtr=Xe91tr, ytr=ye91tr, Xte=Xe91te, yte=ye91te, gtr=None, gte=None,
+  'E91':   dict(model=boosted91_model, Xtr=Xe91tr, ytr=ye91tr, Xte=Xe91te, yte=ye91te, gtr=e91_groups[tr91], gte=e91_groups[te91],
                 lab=label91_te, names=E91_FEATURE_NAMES, q='qber_key', oracle=None, te_idx=te91)}
 
 def _oracle_score(name, S):
@@ -4907,13 +5173,13 @@ for name, S in REVIEW_SETS.items():
     oof = oof_scores(S['model'], S['Xtr'], S['ytr'], S['gtr'])
     n_hon = int((S['ytr'] == 0).sum())
     for fpr_t in (0.01, 0.05):                                    # D3: threshold from out-of-fold training scores, never from test data
-        thr = float(np.quantile(oof[S['ytr'] == 0], 1 - fpr_t))
+        thr = fixed_fpr_threshold(oof[S['ytr']==0],fpr_t,source='oof_training')
         rec = lambda idx: float((p[idx][y[idx] == 1] > thr).mean()) if (y[idx] == 1).any() else np.nan
         fp_ = lambda idx: float((p[idx][y[idx] == 0] > thr).mean()) if (y[idx] == 0).any() else np.nan
         allidx = np.arange(len(y)); lo, hi = grouped_boot_ci(rec, len(y), S['gte'], B=300)
         review_rows.append(dict(protocol=name, target_fpr=fpr_t, threshold=thr, recall=rec(allidx), recall_lo=lo, recall_hi=hi,
-                                FNR=1 - rec(allidx), test_FPR=fp_(allidx), honest_runs_for_threshold=n_hon))
-    thr1 = float(np.quantile(oof[S['ytr'] == 0], 0.99))
+                                FNR=1 - rec(allidx), test_FPR=fp_(allidx), honest_runs_for_threshold=n_hon, **{k:v for k,v in detection_metrics(y,p,thr,S['gte']).items() if k not in ('threshold','recall','FNR')}))
+    thr1 = fixed_fpr_threshold(oof[S['ytr']==0],.01,source='oof_training')
     for a in sorted(set(lab) - {'none'}):                         # C2: one-vs-clean per attack
         m = (lab == 'none') | (lab == a)
         per_attack_rows.append(dict(protocol=name, attack=a, n_attacked=int((lab == a).sum()),
@@ -4932,7 +5198,7 @@ for name, S in REVIEW_SETS.items():
         a = roc_auc_score(y, sc); lo, hi = grouped_boot_auc(y, sc, S['gte'])
         base_rows.append(dict(protocol=name, model=k, auc=a, auc_lo=lo, auc_hi=hi, n_test=len(y)))
 review_fpr_df, per_attack_df, baselines_df = pd.DataFrame(review_rows), pd.DataFrame(per_attack_rows), pd.DataFrame(base_rows)
-for df_, fn_ in ((review_fpr_df, 'review_fixed_fpr.csv'), (per_attack_df, 'review_per_attack.csv'), (baselines_df, 'review_baselines.csv')): df_.to_csv('data/' + fn_, index=False)
+for df_, fn_ in ((review_fpr_df, 'review_fixed_fpr.csv'), (per_attack_df, 'review_per_attack.csv'), (baselines_df, 'review_baselines.csv')): _save_csv(df_, 'data/' + fn_, index=False)
 print("D3 -- recall (and FNR) at a FIXED false-positive rate; threshold from out-of-fold TRAINING scores (honest runs available shown):")
 print(review_fpr_df.round(3).to_string(index=False))
 print("\nC2 -- one-vs-clean metrics per attack (macro-average at the bottom):")
@@ -4988,7 +5254,7 @@ print("Saved: plots/roc_e91.png")
 # detector-hardware measurement.
 #
 # Three attack mechanisms are modelled (intercept-resend on Bob's arm, an
-# entangling-ancilla probe, and asymmetric arm-loss manipulation), each as a
+# entangling-ancilla probe, and extra isotropic depolarisation), each as a
 # genuine CPTP map on a real two-qubit density matrix. A real E91 deployment
 # would also need to consider collective/coherent attacks, detector-side
 # attacks (blinding, efficiency mismatch — genuinely invisible to a channel
@@ -5159,7 +5425,7 @@ print("DL attack taxonomy:", DL_ATTACKS)
 #
 # | # | channel | BB84 | BKM07 | E91 |
 # |---|---|---|---|---|
-# | 1 | `kept` | sifted (click, bases match, any intensity) | SIFT_KEY round | pair used a key setting (a2-b1 or a3-b2) |
+# | 1 | `kept` | sifted SIGNAL click (bases match, signal intensity) | SIFT_KEY round | pair used a key setting (a2-b1 or a3-b2) |
 # | 2 | `error` | kept and Bob's bit != Alice's | error appropriate to the round type (SIFT_KEY/MONITOR/CTRL) | kept and outcomes not anti-correlated |
 # | 3 | `basis_a` | Alice's basis | Alice's basis | Alice's setting a1/a2/a3 |
 # | 4 | `basis_b` | Bob's basis | Bob's Z basis on SIFT rounds; 0.5 (n/a) on CTRL | Bob's setting b1/b2/b3 |
@@ -5228,9 +5494,14 @@ def make_windows(X, length=256, stride=128):
     session would look like a genuine "everything quiet" window and bias
     the detectors, rather than a lack of data."""
     n = len(X)
+    if length < 1 or stride < 1 or stride > length:
+        raise ValueError('Window length must be positive and 1 <= stride <= length')
     if n < length:
         return np.zeros((0, length, X.shape[1]), dtype=X.dtype)
-    starts = range(0, n - length + 1, stride)
+    starts = list(range(0, n - length + 1, stride))
+    # Include the tail so the K-th key event is actually available to the detector.
+    if starts[-1] != n - length:
+        starts.append(n - length)
     return np.stack([X[s:s + length] for s in starts], axis=0)
 
 
@@ -5321,21 +5592,17 @@ class Session:
     session_id: int
     X: np.ndarray
     x_classical: np.ndarray
+    metadata: dict
 
 
 def _classical_vector(feat_dict, names, width=N_CLASSICAL_FEATURES):
-    """Packs a classical-feature dict (as returned by collect_bb84_features /
-    collect_bkm07_features / extract_e91_features) into a fixed-width vector,
-    in `names` order, zero-padded to `width` so BB84/BKM07/E91's differing
-    native feature counts share one common width for CrossProtocolDetector's
-    shared classical_proj layer. NaNs/infs (e.g. extract_e91_features's
-    s_qber_residual or h_qber_key when chsh_S/qber_key are undefined on a
-    near-empty window) are zeroed rather than propagated into training."""
-    v = np.array([feat_dict[n] for n in names], dtype=np.float32)
-    v = np.nan_to_num(v, nan=0.0, posinf=0.0, neginf=0.0)
-    if len(v) < width:
-        v = np.concatenate([v, np.zeros(width - len(v), dtype=np.float32)])
-    return v
+    """16 engineered slots plus a 16-slot validity mask; missing/padded entries are distinguishable from true zeros."""
+    if len(names)>width: raise ValueError('Classical vector width too small')
+    raw=np.asarray([feat_dict[n] for n in names],np.float32)
+    values=np.zeros(width,np.float32); mask=np.zeros(width,np.float32)
+    values[:len(raw)]=np.nan_to_num(raw,nan=0,posinf=0,neginf=0)
+    mask[:len(raw)]=np.isfinite(raw)
+    return np.concatenate((values,mask))
 
 
 def _rolling_chsh(ak, bk, ra, rb, window=400, step=50):
@@ -5363,41 +5630,28 @@ def _bb84_dl_session(attack, strength, rng, target_events, max_pulses=20_000_000
     pulse, of any intensity -- not just sifted signal clicks) instead of
     one row per raw time slot. N is sized from the closed-form channel
     model, same pattern as collect_bb84_features's target_k_signal_bits
-    (Section 3, item 8), just targeting clicks instead of sifted bits."""
+    (Section 3, item 8). target_events is the exact SIGNAL key-bit budget;
+    retain every click through that K-th key event, including decoy observations."""
     distance_km = float(rng.uniform(*CHANNEL_DISTANCE_RANGE_KM))
     eve_mode = 'none' if attack == 'clean' else attack
     eve_intensity = 0.0 if attack == 'clean' else float(strength)
     profile = 'bursty' if (eve_mode == 'intercept_resend' and rng.random() < 0.5) else 'iid'
 
-    # Feature-expansion patch: classical engineered features from the SAME validated
-    # extractor the gradient-boosted baseline uses, on an independently-seeded child RNG
-    # (a plain np.random.default_rng() draw from `rng`) so this extra simulation never
-    # perturbs the main session's own random stream / reproducibility.
-    _cls_rng = np.random.default_rng(rng.integers(0, 2**31 - 1))
-    x_classical = _classical_vector(
-        collect_bb84_features(distance_km=distance_km, eve_mode=eve_mode, eve_intensity=eve_intensity,
-                              profile=profile, target_k_signal_bits=target_events, rng=_cls_rng),
-        BB84_FEATURE_NAMES)
-
-    ch = channel_model(distance_km)
-    N = min(int(np.ceil(target_events / max(ch['gain'], 1e-12) * margin)), max_pulses)
-    run = simulate_bb84_decoy(N, distance_km, eve_mode=eve_mode,
-                              eve_intensity=eve_intensity, profile=profile, rng=rng,
-                              mean_burst=max(2000, int(N) // 16))   # final draft: bursts must span many events
-    idx = np.flatnonzero(run['click'])
-    if len(idx) == 0:
-        idx = np.array([0])
-    idx = idx[:target_events]
+    f = collect_bb84_features(distance_km=distance_km,eve_mode=eve_mode,eve_intensity=eve_intensity,
+        profile=profile,target_k_signal_bits=target_events,rng=rng,return_record=True,max_pulses=max_pulses)
+    f['_attack_strength']=eve_intensity
+    x_classical=_classical_vector(f,BB84_FEATURE_NAMES)
+    run=f.pop('_record'); idx=np.flatnonzero(run['click'])
     gap = np.diff(np.concatenate([[-1], idx])).astype(np.float64)
 
-    kept = run['sift'][idx].astype(np.float32)
+    kept = (run['sift'][idx] & (run['k'][idx] == 0)).astype(np.float32)
     error = ((run['bit_A'][idx] != run['bit_B'][idx]) & run['sift'][idx]).astype(np.float32)
     basis_a = run['bas_A'][idx].astype(np.float32)
     basis_b = run['bas_B'][idx].astype(np.float32)
     test_flag = (run['k'][idx] != 0).astype(np.float32)        # decoy/vacuum pulse
     event_gap = _normalize_gap(gap)
     aux1 = run['k'][idx].astype(np.float32) / 2.0               # intensity class: 0 sig / 0.5 decoy / 1 vacuum
-    return kept, error, basis_a, basis_b, test_flag, event_gap, aux1, None, 2, x_classical
+    return kept, error, basis_a, basis_b, test_flag, event_gap, aux1, None, 2, x_classical, f
 
 
 def _bkm07_dl_session(attack, strength, rng, target_events, max_pulses=15_000_000, margin=1.6):
@@ -5414,19 +5668,11 @@ def _bkm07_dl_session(attack, strength, rng, target_events, max_pulses=15_000_00
         eve_fwd = float(strength * rng.uniform(0.1, 0.4))
         eve_ret = float(strength * rng.uniform(0.6, 1.0))
 
-    _cls_rng = np.random.default_rng(rng.integers(0, 2**31 - 1))
-    x_classical = _classical_vector(
-        collect_bkm07_features(distance_km=distance_km, eve_mode=eve_mode, eve_fwd=eve_fwd, eve_ret=eve_ret,
-                               target_k_key_rounds=target_events, rng=_cls_rng),
-        BKM_FEATURE_NAMES)
-
-    ch = channel_model(distance_km)
-    N = min(int(np.ceil(target_events / max(ch['eta'] ** 2, 1e-15) * margin)), max_pulses)
-    b = simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=rng)
-    idx = np.flatnonzero(b['survived'])
-    if len(idx) == 0:
-        idx = np.array([0])
-    idx = idx[:target_events]
+    f=collect_bkm07_features(distance_km=distance_km,eve_mode=eve_mode,eve_fwd=eve_fwd,eve_ret=eve_ret,
+        target_k_key_rounds=target_events,rng=rng,return_record=True,max_pulses=max_pulses)
+    f['_attack_strength']=0.0 if attack=='clean' else strength
+    x_classical=_classical_vector(f,BKM_FEATURE_NAMES)
+    b=f.pop('_record'); idx=np.flatnonzero(b['survived'])
     gap = np.diff(np.concatenate([[-1], idx])).astype(np.float64)
 
     rt = b['round_type'][idx]
@@ -5446,13 +5692,13 @@ def _bkm07_dl_session(attack, strength, rng, target_events, max_pulses=15_000_00
     test_flag = (b['bob_mode'][idx] == 'CTRL').astype(np.float32)
     event_gap = _normalize_gap(gap)
     aux1 = np.select([is_key, is_mon, is_cz, is_cx], [0.0, 1 / 3, 2 / 3, 1.0], default=0.0).astype(np.float32)
-    return kept, error, basis_a, basis_b, test_flag, event_gap, aux1, None, 2, x_classical
+    return kept, error, basis_a, basis_b, test_flag, event_gap, aux1, None, 2, x_classical, f
 
 
 def _e91_dl_session(attack, strength, rng, target_events):
     """Draft 2, items 13-18: E91 has no loss channel, so every pulse
-    already IS an informative event -- target_events maps 1:1 to
-    n_pulses, no estimation needed. What changed here is only the
+    already IS an informative event. target_events specifies usable KEY pairs;
+    retain every pair through the K-th key setting. The
     test_flag / aux1 semantics (item 17): test_flag now flags the actual
     CHSH pairs (a1-b1, a1-b3, a3-b1, a3-b3), not Draft 1's basis_a==basis_b
     coincidence (a1-b1/a2-b2/a3-b3), none of which except a1-b1 was ever a
@@ -5462,15 +5708,11 @@ def _e91_dl_session(attack, strength, rng, target_events):
     eve_intensity = 0.0 if attack == 'clean' else float(strength)
     profile = 'bursty' if (eve_mode == 'intercept_resend' and rng.random() < 0.5) else 'iid'
 
-    _cls_rng = np.random.default_rng(rng.integers(0, 2**31 - 1))
-    x_classical = _classical_vector(
-        extract_e91_features(eve_mode=eve_mode, eve_intensity=eve_intensity, profile=profile,
-                             V=V, target_k_key_pairs=target_events, rng=_cls_rng),
-        E91_FEATURE_NAMES)
-
-    n_pulses = target_events
-    ak, bk, ra, rb = run_e91(n_pulses, V=V, eve_mode=eve_mode,
-                             eve_intensity=eve_intensity, profile=profile, rng=rng)
+    f=extract_e91_features(V=V,eve_mode=eve_mode,eve_intensity=eve_intensity,profile=profile,
+        target_k_key_pairs=target_events,rng=rng,return_record=True)
+    f['_attack_strength']=eve_intensity
+    x_classical=_classical_vector(f,E91_FEATURE_NAMES)
+    ak,bk,ra,rb=f.pop('_record'); n_pulses=len(ak)
     a_num = {name: i for i, name in enumerate(ALICE_ANGLES)}
     b_num = {name: i for i, name in enumerate(BOB_ANGLES)}
     basis_a = np.array([a_num[x] for x in ak], dtype=np.float32)
@@ -5495,7 +5737,7 @@ def _e91_dl_session(attack, strength, rng, target_events):
     # its near-zero level is itself informative ("this protocol has no
     # loss channel"), same reasoning as chsh_running being 0 elsewhere.
     event_gap = _normalize_gap(np.ones(n_pulses))
-    return kept, error, basis_a, basis_b, test_flag, event_gap, aux1, chsh_running, 3, x_classical
+    return kept, error, basis_a, basis_b, test_flag, event_gap, aux1, chsh_running, 3, x_classical, f
 
 
 _DL_SESSION_BUILDERS = {"bb84": _bb84_dl_session, "e91": _e91_dl_session, "bkm07": _bkm07_dl_session}
@@ -5503,14 +5745,14 @@ _DL_SESSION_BUILDERS = {"bb84": _bb84_dl_session, "e91": _e91_dl_session, "bkm07
 
 def simulate_session(protocol, attack, session_id, rng, target_events=2000):
     """Draft 2, items 13-18: `target_events` replaces `n_rounds` -- every
-    session now targets a fixed number of INFORMATIVE EVENTS (matching the
-    classical datasets' K, item 8), not a fixed number of raw rounds."""
+    session now targets exactly K usable KEY events, with auxiliary informative
+    events retained through the K-th key event. Raw communication cost varies."""
     strength = log_uniform(rng, 0.01, 1.0)
-    kept, error, basis_a, basis_b, test_flag, event_gap, aux1, chsh_running, n_bases, x_classical = \
+    kept, error, basis_a, basis_b, test_flag, event_gap, aux1, chsh_running, n_bases, x_classical, metadata = \
         _DL_SESSION_BUILDERS[protocol](attack, strength, rng, target_events)
     X = encode_session(kept, error, basis_a, basis_b, test_flag, event_gap, aux1,
                        chsh_running=chsh_running, n_bases=n_bases)
-    return Session(protocol=protocol, attack=attack, session_id=session_id, X=X, x_classical=x_classical)
+    return Session(protocol=protocol, attack=attack, session_id=session_id, X=X, x_classical=x_classical, metadata=metadata)
 
 
 def build_dl_dataset(n_sessions_per_class=40, seed=0, window=96, stride=48, target_events=2000):
@@ -5519,11 +5761,15 @@ def build_dl_dataset(n_sessions_per_class=40, seed=0, window=96, stride=48, targ
     informative, so fewer of them already carry real signal."""
     rng = np.random.default_rng(seed)
     Xs, protos, attacks_fine, is_attacked, groups, Xcls = [], [], [], [], [], []
-    sid = 0
+    sid = 0; session_metadata=[]
     for proto in DL_PROTOCOLS:
         for a_idx, attack in enumerate(DL_ATTACKS[proto]):
             for _ in range(n_sessions_per_class):
                 s = simulate_session(proto, attack, sid, rng, target_events=target_events)
+                assert s.metadata['_k_achieved'] == target_events
+                session_metadata.append(dict(session_id=sid,protocol=proto,attack=attack,attack_strength=s.metadata['_attack_strength'], K=target_events,
+                    N_used=s.metadata['_N_used'],N_generated=s.metadata['_N_generated'],key_yield=s.metadata['_key_yield'],
+                    detection_yield=s.metadata['_detection_yield'],loss_rate=s.metadata['_loss_rate']))
                 win = make_windows(s.X, length=window, stride=stride)
                 Xs.append(win)
                 protos += [proto] * len(win)
@@ -5538,7 +5784,8 @@ def build_dl_dataset(n_sessions_per_class=40, seed=0, window=96, stride=48, targ
             "attack_fine": np.array(attacks_fine, dtype=np.int64),
             "is_attacked": np.array(is_attacked, dtype=np.float32),
             "group": np.array(groups, dtype=np.int64),
-            "X_classical": X_classical}
+            "X_classical": X_classical, "classical_feature_mask": X_classical[:, N_CLASSICAL_FEATURES:],
+            "session_metadata": session_metadata}
 
 
 def session_split(groups, labels=None, test_size=0.2, val_size=0.1, seed=0):
@@ -5572,7 +5819,11 @@ def session_split(groups, labels=None, test_size=0.2, val_size=0.1, seed=0):
     tv_ids, te_ids = _split(uniq, test_size)
     tr_ids, va_ids = _split(tv_ids, val_size / (1 - test_size))
     idx = np.arange(len(groups))
-    return idx[np.isin(groups, tr_ids)], idx[np.isin(groups, va_ids)], idx[np.isin(groups, te_ids)]
+    tr,va,te=idx[np.isin(groups,tr_ids)],idx[np.isin(groups,va_ids)],idx[np.isin(groups,te_ids)]
+    if labels is not None:
+        for g in uniq: assert len(np.unique(np.asarray(labels)[groups==g]))==1, 'Session labels must be constant'
+    audit_split(groups,tr,va,te,'DL session split')
+    return tr,va,te
 
 
 print("Session generation (simulate_session / build_dl_dataset / session_split) defined.")
@@ -5661,9 +5912,11 @@ def supcon_loss(z, labels, temperature=0.2):
 class CrossProtocolDetector(nn.Module):
     def __init__(self, protocols=DL_PROTOCOLS, attack_counts=DL_ATTACK_COUNTS,
                 n_features=N_FEATURES, latent=48, hidden=64, dropout=0.2,
-                n_classical=N_CLASSICAL_FEATURES, classical_latent=16):
+                n_classical=N_CLASSICAL_FEATURES, classical_latent=16, use_classical=True, shared_adapter=False, use_attention=True):
         super().__init__()
         self.protocols = protocols
+        self.use_classical=use_classical; self.use_attention=use_attention; self.shared_adapter=shared_adapter
+        self.shared_input=nn.Linear(n_features,latent) if shared_adapter else None
         self.adapters = nn.ModuleDict({p: nn.Linear(n_features, latent) for p in protocols})
         self.conv = nn.Sequential(
             nn.Conv1d(latent, hidden, 5, padding=2), nn.BatchNorm1d(hidden), nn.ReLU(), nn.Dropout(dropout),
@@ -5681,7 +5934,7 @@ class CrossProtocolDetector(nn.Module):
         # projection suffices, unlike `adapters` above which are per-protocol because the
         # raw per-event feature LAYOUT itself differs across protocols.
         self.n_classical = n_classical
-        self.classical_proj = nn.Linear(n_classical, classical_latent)
+        self.classical_proj = nn.Linear(2*n_classical, classical_latent)
         # review E1: the engineered features differ by orders of magnitude (QBER ~1e-2, jump energy ~1, key rates ~1e-3 ...) and the three protocols
         # fill different columns. Scale them PER PROTOCOL (running mean/var learned on that protocol's training windows) before the projection.
         self.cls_norm = nn.ModuleDict({p: nn.BatchNorm1d(n_classical, momentum=0.05) for p in protocols})
@@ -5697,12 +5950,16 @@ class CrossProtocolDetector(nn.Module):
         self._trunk_frozen = False
 
     def encode(self, x, proto_list):
-        z = torch.stack([self.adapters[p](xi) for xi, p in zip(x, proto_list)])
+        z = self.shared_input(x) if self.shared_adapter else torch.stack([self.adapters[p](xi) for xi, p in zip(x, proto_list)])
         h = self.conv(z.transpose(1, 2)).transpose(1, 2)
         h, _ = self.lstm(h)
+        if not self.use_attention: return h.mean(1), h.new_full((len(h),h.shape[1]),1/h.shape[1])
         return self.pool(h)
 
     def _norm_classical(self, x_classical, proto_list):
+        mask=x_classical[:,self.n_classical:]
+        x_classical=x_classical[:,:self.n_classical]
+        if mask.shape[1]!=self.n_classical: raise ValueError('Explicit classical validity mask is required')
         out = torch.zeros_like(x_classical)
         for p in set(proto_list):
             ix = torch.tensor([i for i, q in enumerate(proto_list) if q == p], device=x_classical.device)
@@ -5711,7 +5968,7 @@ class CrossProtocolDetector(nn.Module):
                 bn.eval(); out[ix] = bn(x_classical[ix]); bn.train()
             else:
                 out[ix] = bn(x_classical[ix])
-        return out.clamp(-6.0, 6.0)
+        return torch.cat((out.clamp(-6.0,6.0)*mask,mask),dim=1)
 
     def _fuse(self, pooled, x_classical, proto_list=None):
         """x_classical is None for callers that never built/passed it (e.g. item 36's
@@ -5719,8 +5976,10 @@ class CrossProtocolDetector(nn.Module):
         BiasFreeSVDDEncoder and so never receives real classical features): falls back to
         a zero vector, so classical_proj contributes only its bias and every call site
         keeps working against one fixed head shape regardless of whether it opts in."""
+        if not self.use_classical:
+            return torch.cat((pooled,pooled.new_zeros(len(pooled),self.classical_proj.out_features)),dim=1)
         if x_classical is None:
-            x_classical = pooled.new_zeros(pooled.shape[0], self.n_classical)
+            x_classical = pooled.new_zeros(pooled.shape[0], 2*self.n_classical)
         if proto_list is not None:
             x_classical = self._norm_classical(x_classical, proto_list)
         return torch.cat([pooled, self.classical_proj(x_classical)], dim=1)
@@ -5926,25 +6185,32 @@ def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, ve
 
 
 @torch.no_grad()
-def evaluate_binary(model, loader, device):
-    model.eval()
-    all_true, all_prob = [], []
-    for batch in loader:
-        xb, pb, yb, *rest = batch
-        xcb = rest[0].to(device) if rest else None
-        logits, _ = model.forward_binary(xb.to(device), list(pb), x_classical=xcb)
-        all_prob.append(torch.sigmoid(logits).cpu().numpy())
-        all_true.append(yb.numpy())
-    if not all_true:     # empty loader: report NaN AUC (train_binary then falls back to F1) instead of crashing
-        return {"f1": 0.0, "recall": 0.0, "auc": float("nan")}
-    y_true, y_prob = np.concatenate(all_true), np.concatenate(all_prob)
-    y_pred = (y_prob >= 0.5).astype(int)
-    out = {"f1": f1_score(y_true, y_pred, zero_division=0),
-          "recall": recall_score(y_true, y_pred, zero_division=0)}
-    try:
-        out["auc"] = roc_auc_score(y_true, y_prob)
-    except ValueError:
-        out["auc"] = float("nan")
+def evaluate_binary(model, loader, device, validation_loader=None, with_ci=False):
+    model.eval(); ys=[]; ps=[]
+    for xb,pb,yb,*rest in loader:
+        logits,_=model.forward_binary(xb.to(device),list(pb),x_classical=rest[0].to(device) if rest else None)
+        ys.append(yb.numpy()); ps.append(torch.sigmoid(logits).cpu().numpy())
+    if not ys: return dict(auc=np.nan,f1=0.0,recall=0.0,y=np.array([]),score=np.array([]))
+    y=np.concatenate(ys); score=np.concatenate(ps)
+    groups=getattr(loader.dataset,'groups',None)
+    if groups is not None:
+        assert not loader.dataset.shuffle, 'Evaluation loaders must preserve session order'
+        u,first,inv=np.unique(groups,return_index=True,return_inverse=True)
+        for g in u: assert len(np.unique(y[groups==g]))==1
+        score=np.bincount(inv,weights=score)/np.bincount(inv); y=y[first]
+    threshold=.5
+    if validation_loader is not None:
+        val=evaluate_binary(model,validation_loader,device)
+        threshold=fixed_fpr_threshold(val['score'][val['y']==0],.01)
+    pred=score>threshold
+    out=dict(auc=float(roc_auc_score(y,score)) if len(np.unique(y))==2 else np.nan,
+        f1=float(f1_score(y,pred,zero_division=0)),recall=float(recall_score(y,pred,zero_division=0)),
+        pr_auc=float(average_precision_score(y,score)) if y.sum() else np.nan,
+        threshold=threshold,unit='session' if groups is not None else 'window',y=y,score=score)
+    if with_ci: out.update(detection_metrics(y,score,threshold))
+    if validation_loader is not None:
+        t5=fixed_fpr_threshold(val['score'][val['y']==0],.05)
+        out.update(tpr_at_1pct_fpr=out['recall'],tpr_at_5pct_fpr=float((score[y==1]>t5).mean()))
     return out
 
 
@@ -6022,7 +6288,7 @@ print("train_binary / evaluate_binary / train_fine / evaluate_fine defined.")
 import os
 import pickle
 
-def make_dl_loader(X, protocol_arr, y, idx, X_classical=None, batch_size=64, shuffle=True):
+def make_dl_loader(X, protocol_arr, y, idx, X_classical=None, batch_size=64, shuffle=True, groups=None):
     class _DS(Dataset):
         def __len__(self):
             return len(idx)
@@ -6043,6 +6309,8 @@ def make_dl_loader(X, protocol_arr, y, idx, X_classical=None, batch_size=64, shu
         return xs, ps, ys, xcs
 
     ds = _DS()
+    ds.groups = None if groups is None else np.asarray(groups)[np.asarray(idx,dtype=int)]
+    ds.shuffle = shuffle
     ds.labels = np.asarray(y)[np.asarray(idx, dtype=np.int64)]   # read by train_binary's pos_weight
     return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, collate_fn=collate)
 
@@ -6074,7 +6342,7 @@ def transfer_vs_scratch(data, device, source_protocols, target_protocol,
     results = []
     done_seeds = set()
     _ckpt_fp = (target_protocol, tuple(source_protocols), tuple(fractions), tuple(seeds),
-                epochs_pretrain, epochs_finetune)
+                epochs_pretrain, epochs_finetune, use_adversarial, use_contrastive, lambda_con, CODE_VERSION, _DL_FP)
     if checkpoint_path is not None and os.path.exists(checkpoint_path) and not FINAL_REGENERATE:
         try:
             with open(checkpoint_path, "rb") as _f:
@@ -6112,10 +6380,10 @@ def transfer_vs_scratch(data, device, source_protocols, target_protocol,
         tgt_val_idx = tgt_idx_all[tgt_val_rel]
         tgt_test_idx = tgt_idx_all[tgt_test_rel]
 
-        src_train_loader = make_dl_loader(X, proto, y, src_train_idx, X_classical=X_classical)
-        src_val_loader = make_dl_loader(X, proto, y, src_val_idx, X_classical=X_classical, shuffle=False)
-        tgt_val_loader = make_dl_loader(X, proto, y, tgt_val_idx, X_classical=X_classical, shuffle=False)
-        tgt_test_loader = make_dl_loader(X, proto, y, tgt_test_idx, X_classical=X_classical, shuffle=False)
+        src_train_loader = make_dl_loader(X, proto, y, src_train_idx, X_classical=X_classical, groups=data["group"])
+        src_val_loader = make_dl_loader(X, proto, y, src_val_idx, X_classical=X_classical, shuffle=False, groups=data["group"])
+        tgt_val_loader = make_dl_loader(X, proto, y, tgt_val_idx, X_classical=X_classical, shuffle=False, groups=data["group"])
+        tgt_test_loader = make_dl_loader(X, proto, y, tgt_test_idx, X_classical=X_classical, shuffle=False, groups=data["group"])
 
         print(f"\n[{'+'.join(source_protocols)} -> {target_protocol}] seed {seed}: pretraining shared trunk "
              f"(adversarial={use_adversarial}, contrastive={use_contrastive}) ...")
@@ -6130,7 +6398,7 @@ def transfer_vs_scratch(data, device, source_protocols, target_protocol,
             n_take = max(1, int(len(uniq_sessions) * frac))
             take_sessions = set(rng.choice(uniq_sessions, size=n_take, replace=False))
             frac_idx = tgt_train_pool[np.isin(groups[tgt_train_pool], list(take_sessions))]
-            frac_train_loader = make_dl_loader(X, proto, y, frac_idx, X_classical=X_classical)
+            frac_train_loader = make_dl_loader(X, proto, y, frac_idx, X_classical=X_classical, groups=data["group"])
 
             transfer_model = _copy.deepcopy(pretrained)
             transfer_model.freeze_trunk()
@@ -6138,12 +6406,12 @@ def transfer_vs_scratch(data, device, source_protocols, target_protocol,
                 transfer_model.freeze_adapter(sp)
             transfer_model = train_binary(transfer_model, frac_train_loader, tgt_val_loader,
                                           device, epochs=epochs_finetune, verbose=False, select_best=False)   # review E5: last epoch, no target-label checkpointing
-            transfer_metrics = evaluate_binary(transfer_model, tgt_test_loader, device)
+            transfer_metrics = evaluate_binary(transfer_model, tgt_test_loader, device, tgt_val_loader, with_ci=True)
 
             scratch_model = CrossProtocolDetector()
             scratch_model = train_binary(scratch_model, frac_train_loader, tgt_val_loader,
                                          device, epochs=epochs_finetune, verbose=False, select_best=False)   # same rule for both arms
-            scratch_metrics = evaluate_binary(scratch_model, tgt_test_loader, device)
+            scratch_metrics = evaluate_binary(scratch_model, tgt_test_loader, device, tgt_val_loader, with_ci=True)
 
             results.append({
                 "target_protocol": target_protocol, "source_protocols": tuple(source_protocols),
@@ -6152,6 +6420,9 @@ def transfer_vs_scratch(data, device, source_protocols, target_protocol,
                 "transfer_auc": transfer_metrics["auc"],
                 "scratch_f1": scratch_metrics["f1"], "scratch_recall": scratch_metrics["recall"],
                 "scratch_auc": scratch_metrics["auc"],
+                "training_protocol_seen": True, "evaluation": "source pretraining + labelled target adaptation vs target scratch",
+                **{f'transfer_{k}':v for k,v in transfer_metrics.items() if k not in ('y','score','auc','f1','recall')},
+                **{f'scratch_{k}':v for k,v in scratch_metrics.items() if k not in ('y','score','auc','f1','recall')},
             })
             print(f"  frac={frac:<5} n_sessions={n_take:<4} "
                  f"transfer F1={transfer_metrics['f1']:.3f} AUC={transfer_metrics['auc']:.3f}  |  "
@@ -6507,7 +6778,7 @@ def make_zero_day_loader(data, target_protocol, held_out_attack, idx, batch_size
     sub = idx[keep]
     y_zd = np.zeros(len(X), dtype=np.float32)
     y_zd[sub] = (attack_fine[sub] == held_idx).astype(np.float32)
-    return make_dl_loader(X, proto, y_zd, sub, batch_size=batch_size, shuffle=False)
+    return make_dl_loader(X, proto, y_zd, sub, batch_size=batch_size, shuffle=False, groups=data["group"])
 
 
 def run_representation_ablation(data, device, target_protocol, source_protocols,
@@ -6522,8 +6793,8 @@ def run_representation_ablation(data, device, target_protocol, source_protocols,
         src_mask = np.isin(proto, source_protocols)
         src_train, src_val, _ = session_split(groups[src_mask], labels=y[src_mask], seed=seed)
         src_idx_all = np.flatnonzero(src_mask)
-        src_train_loader = make_dl_loader(X, proto, y, src_idx_all[src_train])
-        src_val_loader = make_dl_loader(X, proto, y, src_idx_all[src_val], shuffle=False)
+        src_train_loader = make_dl_loader(X, proto, y, src_idx_all[src_train], groups=data["group"])
+        src_val_loader = make_dl_loader(X, proto, y, src_idx_all[src_val], shuffle=False, groups=data["group"])
 
         tgt_mask = proto == target_protocol
         tgt_idx_all = np.flatnonzero(tgt_mask)
@@ -6550,7 +6821,7 @@ def run_representation_ablation(data, device, target_protocol, source_protocols,
             tgt_val_idx = tgt_val_idx[not_held[tgt_val_idx]]
 
         tgt_test_loader = (make_zero_day_loader(data, target_protocol, held_out_attack, tgt_test_idx)
-                           if held_out_attack else make_dl_loader(X, proto, y, tgt_test_idx, shuffle=False))
+                           if held_out_attack else make_dl_loader(X, proto, y, tgt_test_idx, shuffle=False, groups=data["group"]))
 
         supervised_trunk = CrossProtocolDetector()
         supervised_trunk = train_binary(supervised_trunk, src_train_loader, src_val_loader,
@@ -6561,8 +6832,8 @@ def run_representation_ablation(data, device, target_protocol, source_protocols,
             n_take = max(1, int(len(uniq_sessions) * frac))
             take_sessions = set(rng.choice(uniq_sessions, size=n_take, replace=False))
             frac_idx = tgt_train_pool[np.isin(groups[tgt_train_pool], list(take_sessions))]
-            frac_train_loader = make_dl_loader(X, proto, y, frac_idx)
-            tgt_val_loader = make_dl_loader(X, proto, y, tgt_val_idx, shuffle=False)
+            frac_train_loader = make_dl_loader(X, proto, y, frac_idx, groups=data["group"])
+            tgt_val_loader = make_dl_loader(X, proto, y, tgt_val_idx, shuffle=False, groups=data["group"])
 
             model_a = _copy.deepcopy(supervised_trunk)
             model_a.freeze_trunk()
@@ -6755,7 +7026,7 @@ def plot_embedding_diagnostic(model, data, device, save_path="plots/embedding_di
         idx_all.append(take)
     idx_all = np.concatenate(idx_all)
 
-    loader = make_dl_loader(X, proto, y, idx_all, batch_size=128, shuffle=False)
+    loader = make_dl_loader(X, proto, y, idx_all, batch_size=128, shuffle=False, groups=data["group"])
     model.eval()
     embs, protos_out, ys_out = [], [], []
     with torch.no_grad():
@@ -6790,26 +7061,36 @@ def plot_embedding_diagnostic(model, data, device, save_path="plots/embedding_di
     return fig
 
 
-def protocol_probe(model, data, device, n_per_protocol=400, seed=0):
-    """Review E3: does the shared embedding still encode WHICH PROTOCOL a window came from? A cross-validated logistic-regression probe on the
-    pooled embedding predicts the protocol; chance is 1/3. Accuracy well above chance means the adversarial / contrastive training did NOT remove
-    protocol identity (the 2-D PCA plot alone cannot show this)."""
-    from sklearn.model_selection import cross_val_score
-    X, proto, y = data["X"], data["protocol"], data["is_attacked"]; rng = np.random.default_rng(seed); idx = []
-    for p in DL_PROTOCOLS:
-        ip = np.flatnonzero(proto == p); idx.append(rng.choice(ip, size=min(n_per_protocol, len(ip)), replace=False))
-    idx = np.concatenate(idx); loader = make_dl_loader(X, proto, y, idx, batch_size=128, shuffle=False)
-    model.eval(); E, P, Y = [], [], []
+def protocol_probe(model, data, device, n_per_protocol=400, seed=0, indices=None):
+    """Frozen-embedding probe on detector-held-out sessions. Macro OVR AUC chance=.5; accuracy chance=1/3."""
+    if indices is None: raise ValueError('Pass only sessions excluded from detector training and model selection')
+    idx=np.asarray(indices,int); proto=data['protocol']; groups=data['group']; rng=np.random.default_rng(seed)
+    selected=[]
+    for p in np.unique(proto[idx]):
+        ids=np.unique(groups[idx[proto[idx]==p]])
+        take=rng.choice(ids,min(len(ids),n_per_protocol),replace=False)
+        selected.extend(idx[np.isin(groups[idx],take)])
+    idx=np.asarray(selected,int)
+    loader=make_dl_loader(data['X'],proto,data['is_attacked'],idx,shuffle=False,groups=groups)
+    E=[]; model.eval()
     with torch.no_grad():
-        for xb, pb, yb in loader:
-            E.append(model.encode(xb.to(device), list(pb))[0].cpu().numpy()); P += list(pb); Y.append(yb.numpy())
-    E, P, Y = np.concatenate(E), np.array(P), np.concatenate(Y)
-    clf = Pipeline([('s', StandardScaler()), ('c', LogisticRegression(max_iter=2000))])
-    acc_p = float(np.mean(cross_val_score(clf, E, P, cv=5)))
-    acc_y = float(np.mean(cross_val_score(clf, E, Y.astype(int), cv=5)))
-    print(f"  protocol probe accuracy {acc_p:.3f} (chance {1/len(DL_PROTOCOLS):.3f}); attacked-vs-clean probe accuracy {acc_y:.3f} (chance {max(Y.mean(), 1-Y.mean()):.3f})")
-    print("  -> protocol identity " + ("is still strongly encoded: the adversarial/contrastive objective did not remove it" if acc_p > 1/len(DL_PROTOCOLS) + 0.15 else "is close to chance"))
-    return acc_p, acc_y
+        for xb,pb,yb in loader: E.append(model.encode(xb.to(device),list(pb))[0].cpu().numpy())
+    E=np.concatenate(E); g=groups[idx]; u,first,inv=np.unique(g,return_index=True,return_inverse=True)
+    emb=np.vstack([E[inv==j].mean(0) for j in range(len(u))]); labels=proto[idx][first]
+    nfold=min(5,int(np.unique(labels,return_counts=True)[1].min()))
+    if nfold<2:
+        return dict(protocol_probe_auc=np.nan,protocol_probe_accuracy=np.nan,n_probe_sessions=len(u),
+                    chance_auc=.5,chance_accuracy=1/len(np.unique(labels)),
+                    status='insufficient held-out sessions per protocol for probe CV')
+    cv=StratifiedGroupKFold(nfold,shuffle=True,random_state=seed)
+    clf=Pipeline([('scale',StandardScaler()),('lr',LogisticRegression(max_iter=2000))])
+    prob=cross_val_predict(clf,emb,labels,groups=u,cv=cv,method='predict_proba')
+    classes=np.unique(labels)
+    auc=roc_auc_score(labels,prob,multi_class='ovr',average='macro') if len(classes)>2 else roc_auc_score(labels==classes[1],prob[:,1])
+    result=dict(protocol_probe_auc=float(auc),protocol_probe_accuracy=float(np.mean(classes[prob.argmax(1)]==labels)),
+                n_probe_sessions=len(u),chance_auc=.5,chance_accuracy=1/len(classes))
+    print('HELD-OUT PROTOCOL PROBE:',result)
+    return result
 
 
 print("plot_embedding_diagnostic() / protocol_probe() defined.")
@@ -6911,11 +7192,13 @@ if dl_data is None:
     except Exception as _e:
         print(f"  [cache] could not save {_dl_data_cache_path} ({type(_e).__name__}: {_e}) -- continuing uncached")
 
+_save_csv(pd.DataFrame(dl_data['session_metadata']), 'data/dl_session_resources.csv', index=False)
+assert all(m['K']==K_MAIN_DATASET for m in dl_data['session_metadata'])
 print(f"total windows: {len(dl_data['X'])}   feature dim: {dl_data['X'].shape[-1]}")
 # review C5: session length must not depend on the class (else length itself is a label leak) -- windows per session by (protocol, attack)
 _g, _first = np.unique(dl_data['group'], return_index=True); _wps = np.bincount(np.searchsorted(_g, dl_data['group']))
 _tab = pd.DataFrame(dict(protocol=dl_data['protocol'][_first], attack=dl_data['attack_fine'][_first], windows=_wps)).groupby(['protocol', 'attack']).windows.agg(['mean', 'min', 'max'])
-print(_tab.to_string()); print("-> windows per session identical across classes" if (_tab['max'].max() - _tab['min'].min()) <= 1 else "-> WARNING: session length differs between classes (some sessions fell short of target_events); length could leak the label")
+print(_tab.to_string()); print('Exact key-event K is fixed; auxiliary event/window counts remain protocol- and yield-dependent.')
 for p in DL_PROTOCOLS:
     n = (dl_data["protocol"] == p).sum()
     print(f"  {p:6s}: {n} windows across {len(DL_ATTACKS[p])} classes {DL_ATTACKS[p]}")
@@ -7079,7 +7362,9 @@ _diag_model = train_binary(_diag_model,
     DL_DEVICE, epochs=15, verbose=False,
     use_adversarial=True, use_contrastive=True, lambda_con=0.1, log_adversarial=True)
 plot_embedding_diagnostic(_diag_model, dl_data, DL_DEVICE)
-protocol_probe(_diag_model, dl_data, DL_DEVICE)   # review E3
+_diag_used=np.r_[_src_idx_all[_src_tr],_src_idx_all[_src_va],_tgt_idx_all[_tgt_tr],_tgt_idx_all[_tgt_va]]
+_diag_hold=np.flatnonzero(~np.isin(dl_data['group'],np.unique(dl_data['group'][_diag_used])))
+_save_csv(pd.DataFrame([protocol_probe(_diag_model,dl_data,DL_DEVICE,indices=_diag_hold)]),'data/protocol_probe.csv',index=False)
 
 # %% [markdown]
 # > ✨ **NEW (Draft 2, item 22): Session-grouped k-fold CV cross-check (true fold coverage, not repeated holdout)**
@@ -7127,7 +7412,7 @@ def run_grouped_cv_benchmark(data, device, n_folds=5, seeds=(0, 1, 2),
                                         data["X_classical"])
     rows = []
     done_pairs = set()
-    _ckpt_fp = (n_folds, tuple(seeds), epochs, use_adversarial, use_contrastive, lambda_con, val_frac)
+    _ckpt_fp = (n_folds, tuple(seeds), epochs, use_adversarial, use_contrastive, lambda_con, val_frac, CODE_VERSION, _DL_FP)
     if checkpoint_path is not None and os.path.exists(checkpoint_path) and not FINAL_REGENERATE:
         try:
             with open(checkpoint_path, "rb") as _f:
@@ -7149,25 +7434,31 @@ def run_grouped_cv_benchmark(data, device, n_folds=5, seeds=(0, 1, 2),
         rng = np.random.default_rng(seed)
         perm = rng.permutation(len(groups))
         Xp, protop, yp, groupsp, X_classicalp = X[perm], proto[perm], y[perm], groups[perm], X_classical[perm]
+        # Relabel whole groups to randomize tied group ordering; row shuffling alone
+        # cannot change GroupKFold's assignment of sorted session IDs.
+        unique_groups = np.unique(groupsp)
+        fold_ids = dict(zip(unique_groups, rng.permutation(len(unique_groups))))
+        fold_groups = np.array([fold_ids[g] for g in groupsp])
 
         gkf = GroupKFold(n_splits=n_folds)
-        for fold, (trainval_idx, test_idx) in enumerate(gkf.split(Xp, yp, groups=groupsp)):
+        for fold, (trainval_idx, test_idx) in enumerate(gkf.split(Xp, yp, groups=fold_groups)):
             if (seed, fold) in done_pairs:
                 continue
             gss = GroupShuffleSplit(n_splits=1, test_size=val_frac, random_state=seed)
             tr_rel, val_rel = next(gss.split(trainval_idx, groups=groupsp[trainval_idx]))
             train_idx, val_idx = trainval_idx[tr_rel], trainval_idx[val_rel]
 
-            train_loader = make_dl_loader(Xp, protop, yp, train_idx, X_classical=X_classicalp)
-            val_loader = make_dl_loader(Xp, protop, yp, val_idx, X_classical=X_classicalp, shuffle=False)
-            test_loader = make_dl_loader(Xp, protop, yp, test_idx, X_classical=X_classicalp, shuffle=False)
+            audit_split(groupsp,train_idx,val_idx,test_idx,'DL GroupKFold')
+            train_loader = make_dl_loader(Xp, protop, yp, train_idx, X_classical=X_classicalp, groups=groupsp)
+            val_loader = make_dl_loader(Xp, protop, yp, val_idx, X_classical=X_classicalp, shuffle=False, groups=groupsp)
+            test_loader = make_dl_loader(Xp, protop, yp, test_idx, X_classical=X_classicalp, shuffle=False, groups=groupsp)
 
             model = CrossProtocolDetector()
             model = train_binary(model, train_loader, val_loader, device, epochs=epochs,
                                  verbose=False, use_adversarial=use_adversarial,
                                  use_contrastive=use_contrastive, lambda_con=lambda_con,
                                  log_adversarial=True)
-            overall = evaluate_binary(model, test_loader, device)
+            overall = evaluate_binary(model, test_loader, device, val_loader, with_ci=True)
             row = dict(seed=seed, fold=fold, n_test_sessions=len(np.unique(groupsp[test_idx])),
                       overall_auc=overall["auc"], overall_f1=overall["f1"])
             per_proto_str = []
@@ -7176,10 +7467,12 @@ def run_grouped_cv_benchmark(data, device, n_folds=5, seeds=(0, 1, 2),
                 if len(p_test_idx) == 0:
                     row[f"{p}_auc"], row[f"{p}_f1"] = float("nan"), float("nan")
                     continue
-                p_loader = make_dl_loader(Xp, protop, yp, p_test_idx, X_classical=X_classicalp, shuffle=False)
-                pm = evaluate_binary(model, p_loader, device)
-                row[f"{p}_auc"], row[f"{p}_f1"] = pm["auc"], pm["f1"]
+                p_loader = make_dl_loader(Xp, protop, yp, p_test_idx, X_classical=X_classicalp, shuffle=False, groups=groupsp)
+                pm = evaluate_binary(model, p_loader, device, val_loader, with_ci=True)
+                row.update({f'{p}_{k}': v for k, v in pm.items() if k not in ('y', 'score')})
                 per_proto_str.append(f"{p}={pm['auc']:.3f}")
+            row.update({f'overall_{k}': v for k, v in overall.items() if k not in ('y', 'score')})
+            row.update(K=K_MAIN_DATASET, model='pooled_shared_pretraining', training_protocol_seen=True)
             rows.append(row)
             print(f"  seed={seed} fold={fold}  overall AUC={overall['auc']:.4f} F1={overall['f1']:.4f}  "
                  f"[{', '.join(per_proto_str)}]")
@@ -7195,7 +7488,7 @@ print("run_grouped_cv_benchmark() defined.")
 # %%
 print("\n=== RIGOR CHECK: session-grouped 5-fold CV, pooled across all protocols ===")
 cv_df = run_grouped_cv_benchmark(dl_data, DL_DEVICE, n_folds=5, seeds=SC['cv_seeds'], epochs=SC['cv_epochs'], checkpoint_path=f"data/dl_grouped_cv_checkpoint_{_DL_FP}.pkl")
-cv_df.to_csv('data/dl_grouped_cv_benchmark.csv', index=False)
+_save_csv(cv_df, 'data/dl_grouped_cv_benchmark.csv', index=False)
 print()
 print(cv_df.round(3).to_string(index=False))
 print()
@@ -7281,34 +7574,20 @@ print("repeated-holdout numbers there were not an artifact of a lucky split.")
 # self-check, with no downstream dataset generation calling them).
 # ═══════════════════════════════════════════════════════════════════════════
 
-def _cv_auc(X, y, n_splits=5, seeds=(0, 1, 2)):
-    '''Stratified k-fold CV AUC, averaged over several seeds (Draft 2, item
-    34): both the fold assignment (random_state) AND the model's own fit
-    (make_boosted(seed=...)) vary per seed, so the number returned reflects
-    CV-plus-model-init variance, not one lucky/unlucky split -- the same
-    rigor level as the classical-ML ablation's N_REPEATS>=20. Kept as a
-    single float return (not a distribution) so every existing call site
-    across Sections 19/21/22 benefits automatically with no call-site
-    changes needed.'''
-    X = np.asarray(X, dtype=float)
-    col_median = np.nanmedian(X, axis=0)
-    col_median = np.where(np.isfinite(col_median), col_median, 0.0)
-    nan_mask = ~np.isfinite(X)
-    if nan_mask.any():
-        X[nan_mask] = np.take(col_median, np.where(nan_mask)[1])
-    y = np.asarray(y)
-    n_splits = max(2, min(n_splits, int(np.bincount(y).min())))
-    all_aucs = []
+def _cv_auc(X, y, n_splits=5, seeds=(0,1,2), groups=None):
+    X=np.asarray(X,float); y=np.asarray(y,int)
+    groups=np.arange(len(y)) if groups is None else np.asarray(groups)
+    n_splits=min(n_splits, len(np.unique(groups)), int(np.bincount(y).min()))
+    if n_splits < 2: raise ValueError('CV needs at least two independent groups per class')
+    aucs=[]
     for seed in seeds:
-        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
-        for tr, te in cv.split(X, y):
-            if len(np.unique(y[te])) < 2:
-                continue
-            m = make_boosted(seed=seed)
-            m.fit(X[tr], y[tr])
-            p = m.predict_proba(X[te])[:, 1]
-            all_aucs.append(roc_auc_score(y[te], p))
-    return float(np.mean(all_aucs)) if all_aucs else float('nan')
+        cv=StratifiedGroupKFold(n_splits, shuffle=True, random_state=seed)
+        for tr,te in cv.split(X,y,groups):
+            assert not set(groups[tr]) & set(groups[te])
+            if len(np.unique(y[tr]))<2 or len(np.unique(y[te]))<2: continue
+            model=Pipeline([('impute', SimpleImputer(strategy='median')), ('model', make_boosted(seed=seed))])
+            model.fit(X[tr],y[tr]); aucs.append(roc_auc_score(y[te],model.predict_proba(X[te])[:,1]))
+    return float(np.mean(aucs)) if aucs else np.nan
 
 
 def _paired_auc(make_h, make_a, n):
@@ -7317,7 +7596,8 @@ def _paired_auc(make_h, make_a, n):
     for i in range(n):
         f, k = make_h(i); X.append(f); y.append(0); ks.append(k)
         f, k = make_a(i); X.append(f); y.append(1); ks.append(k)
-    return _cv_auc(X, y), float(np.mean(ks))
+    assert len(set(ks)) == 1, 'Cross-protocol calibration requires exact K'
+    return _cv_auc(X, y, groups=np.repeat(np.arange(n),2)), float(np.mean(ks))
 
 
 def run_calibrated_benchmark(target_qbers=(0.034, 0.035, 0.036, 0.037), excess_sigma=2.0, target_excess_qber=None,
@@ -7336,7 +7616,7 @@ def run_calibrated_benchmark(target_qbers=(0.034, 0.035, 0.036, 0.037), excess_s
     rows = []
     for tq in target_qbers:
         d84 = calibrate_bb84(tq)
-        k_row = min(target_k, bb84_k_capacity(d84))
+        k_row = int(target_k)
         tx = target_excess_qber if target_excess_qber is not None else excess_sigma * sigma_K(tq, k_row)
         print(f"\n--- target honest QBER = {tq:.3f}   K = {k_row}   excess = {tx:.4f} ({tx / sigma_K(tq, k_row):.1f} sigma_K) ---")
         if k_row < target_k:
@@ -7376,7 +7656,7 @@ def run_calibrated_benchmark(target_qbers=(0.034, 0.035, 0.036, 0.037), excess_s
 # Draft 2.1: 0.034-0.037 keeps BB84 inside the <=100 km range the channel model is validated for
 # (target 0.037 -> ~97 km) and inside the pulse budget needed to match K across protocols.
 bench_df = run_calibrated_benchmark(target_qbers=(0.034, 0.035, 0.036, 0.037))
-bench_df.to_csv('data/calibrated_benchmark.csv', index=False)
+_save_csv(bench_df, 'data/calibrated_benchmark.csv', index=False)
 print()
 print(bench_df.to_string(index=False))
 
@@ -7401,7 +7681,7 @@ for proto, sub in bench_df[bench_df.primary].groupby('protocol'):   # primary co
     sub = sub.sort_values('target_qber')
     ax.plot(sub['target_qber'], sub['auc'], 'o-', color=colors[proto], linewidth=2, label=proto)
 ax.set_xlabel('Matched honest-channel QBER')
-ax.set_ylabel('AUC (5-fold CV, boosted trees)')
+ax.set_ylabel('AUC (group-aware evaluation, boosted trees)')
 ax.set_title('Calibrated cross-protocol comparison: same attack (intercept-resend), excess = 2 sigma_K,\n'
               'BKM07 matched on its CTRL monitoring baseline, equal key budget')
 ax.set_ylim(0.45, 1.02)
@@ -7445,7 +7725,7 @@ def run_key_rounds_sweep(target_qber=0.035, excess_sigma=2.0, target_excess_qber
     _usable = [tk for tk in target_ks if tk <= _k_cap]
     _dropped = [tk for tk in target_ks if tk > _k_cap]
     if _dropped:
-        print(f"NOTE: BB84 at {d84:.1f} km can deliver at most K={_k_cap}; dropping target_k={_dropped} so all three protocols stay information-matched")
+        print(f"Supplementary sweep uses a single-batch compute budget: skipping K={_dropped} above {int(_k_cap)}. Primary exact-K datasets use continuation.")
     rows = []
     for tk in _usable:
         tx = target_excess_qber if target_excess_qber is not None else excess_sigma * sigma_K(target_qber, tk)
@@ -7465,7 +7745,7 @@ def run_key_rounds_sweep(target_qber=0.035, excess_sigma=2.0, target_excess_qber
 
 # %%
 keyrounds_df = run_key_rounds_sweep()
-keyrounds_df.to_csv('data/auc_vs_key_rounds.csv', index=False)
+_save_csv(keyrounds_df, 'data/auc_vs_key_rounds.csv', index=False)
 print()
 print(keyrounds_df.to_string(index=False))
 
@@ -7476,7 +7756,7 @@ for proto, sub in keyrounds_df.groupby('protocol'):
     ax.plot(sub['k_achieved_mean'], sub['auc'], 'o-', color=colors[proto], linewidth=2, label=proto)
 ax.set_xscale('log')
 ax.set_xlabel('Usable key rounds available to the detector (k_achieved, log scale)')
-ax.set_ylabel('AUC (5-fold CV, boosted trees)')
+ax.set_ylabel('AUC (group-aware evaluation, boosted trees)')
 ax.set_title('AUC vs. usable key rounds (excess = 2 sigma_K at each K, intercept-resend on all protocols)')
 ax.set_ylim(0.45, 1.02)
 ax.legend()
@@ -7583,75 +7863,36 @@ def base_rate_correct(p_model, pi_train, pi_deploy):
 
 
 def calibration_analysis(X, y, protocol_name, target_fprs=(0.01, 0.05, 0.10),
-                          pi_deploy_grid=(0.5, 0.2, 0.1, 0.05, 0.01, 0.001),
-                          test_size=0.3, n_bins=10, seed=0, groups=None):
-    '''Items 24-27 for one protocol's main dataset: calibrate make_boosted's
-    raw scores (24), find operating thresholds at fixed target false-positive
-    rates (25), build reliability-diagram data (26), and compute the
-    base-rate-corrected precision at the tightest threshold across a grid of
-    assumed deployment prevalences (27).'''
-    X = np.nan_to_num(np.asarray(X, dtype=float), nan=0.0, posinf=0.0, neginf=0.0)
-    y = np.asarray(y)
-    # Draft 2.1: BB84/BKM07 rows come in channel-matched triplets (one per class per run index).
-    # A plain stratified train_test_split -- and CalibratedClassifierCV's internal 5-fold -- put
-    # twins on both sides, re-introducing the leak item 2 fixed in Section 7. `groups` (the run
-    # index) keeps them together in both the outer split and the calibration folds.
-    if groups is not None:
-        groups = np.asarray(groups)
-        tr_i, te_i = next(GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
-                          .split(X, y, groups=groups))
-        Xtr, Xte, ytr, yte, gtr = X[tr_i], X[te_i], y[tr_i], y[te_i], groups[tr_i]
-        _cal_cv = list(StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=seed).split(Xtr, ytr, gtr))
-    else:
-        Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=test_size,
-                                              stratify=y, random_state=seed)
-        _cal_cv = 5
-    pi_train = float(ytr.mean())
-
-    calibrated = CalibratedClassifierCV(make_boosted(seed=seed), method='sigmoid', cv=_cal_cv)
-    calibrated.fit(Xtr, ytr)
-    p_test = calibrated.predict_proba(Xte)[:, 1]
-
-    raw = make_boosted(seed=seed)
-    raw.fit(Xtr, ytr)
-    p_raw = raw.predict_proba(Xte)[:, 1]
-
-    frac_pos, mean_pred = calibration_curve(yte, p_test, n_bins=n_bins, strategy='quantile')
-    frac_pos_raw, mean_pred_raw = calibration_curve(yte, p_raw, n_bins=n_bins, strategy='quantile')
-    brier_cal = float(np.mean((p_test - yte) ** 2))
-    brier_raw = float(np.mean((p_raw - yte) ** 2))
-
-    fpr, tpr, thr = roc_curve(yte, p_test)
-    fpr_rows = []
+                         pi_deploy_grid=(0.001, 0.01, 0.05, 0.10), test_size=0.3, n_bins=10, seed=0, groups=None):
+    X, y = np.asarray(X, float), np.asarray(y, int)
+    tr, va, te = grouped_three_way(X, y, groups, seed, test_size=test_size, name=protocol_name+' calibration')
+    raw = make_boosted(seed=seed).fit(X[tr], y[tr])
+    # Platt map is fitted exclusively on validation scores; test labels are never used.
+    logit = lambda z: np.log(np.clip(z, 1e-6, 1-1e-6) / np.clip(1-z, 1e-6, 1-1e-6))
+    pv = raw.predict_proba(X[va])[:,1]; pr = raw.predict_proba(X[te])[:,1]
+    platt = LogisticRegression(C=1e6, max_iter=2000).fit(logit(pv).reshape(-1,1), y[va])
+    pval = platt.predict_proba(logit(pv).reshape(-1,1))[:,1]
+    ptest = platt.predict_proba(logit(pr).reshape(-1,1))[:,1]
+    fpr_rows=[]; precision_rows=[]
+    gte = None if groups is None else np.asarray(groups)[te]
     for target in target_fprs:
-        j = np.searchsorted(fpr, target, side='right') - 1
-        j = max(0, min(j, len(thr) - 1))
-        fpr_rows.append(dict(protocol=protocol_name, target_fpr=target,
-                              achieved_fpr=float(fpr[j]), threshold=float(thr[j]),
-                              recall_at_fpr=float(tpr[j])))
-
-    # Closed-form PPV = TPR*pi / (TPR*pi + FPR*(1-pi)) at the TIGHTEST
-    # (first) target-FPR threshold, swept across assumed deployment
-    # prevalence -- this is the threshold-level analogue of
-    # base_rate_correct's per-probability rescaling above: same idea
-    # (strip the training prior, reapply the deployment prior), applied to
-    # a fixed decision instead of a continuous score.
-    # Final draft: with 0 observed false positives the FPR is not 0 -- use the 'rule of three' upper bound
-    # 3/n_negatives, otherwise precision is 1.0 at every base rate by construction.
-    n_neg = max(int((yte == 0).sum()), 1)
-    tpr0 = fpr_rows[0]['recall_at_fpr']
-    fpr0 = max(fpr_rows[0]['achieved_fpr'], cp_upper(int(round(fpr_rows[0]['achieved_fpr'] * n_neg)), n_neg))   # review D2: exact (Clopper-Pearson) upper bound, not the observed FPR
-    precision_rows = []
-    for pi_dep in pi_deploy_grid:
-        denom = tpr0 * pi_dep + fpr0 * (1 - pi_dep)
-        ppv = float(tpr0 * pi_dep / denom) if denom > 0 else float('nan')
-        precision_rows.append(dict(protocol=protocol_name, pi_deploy=pi_dep, precision_at_threshold=ppv))
-
-    return dict(protocol=protocol_name, pi_train=pi_train,
-                brier_calibrated=brier_cal, brier_raw=brier_raw,
-                ece_calibrated=expected_calibration_error(yte, p_test), ece_raw=expected_calibration_error(yte, p_raw),   # review D9
-                reliability=(mean_pred, frac_pos), reliability_raw=(mean_pred_raw, frac_pos_raw),
-                fpr_table=pd.DataFrame(fpr_rows), precision_table=pd.DataFrame(precision_rows))
+        threshold = fixed_fpr_threshold(pval[y[va]==0], target)
+        m = detection_metrics(y[te], ptest, threshold, gte, seed)
+        fpr_rows.append(dict(protocol=protocol_name, target_fpr=target, achieved_fpr=m['FPR'],
+                             recall_at_fpr=m['recall'], threshold_source='validation', **m))
+    r = fpr_rows[0]
+    for pi in pi_deploy_grid:
+        ppv = lambda fp: r['recall']*pi / max(r['recall']*pi+fp*(1-pi), 1e-15)
+        precision_rows.append(dict(protocol=protocol_name, pi_deploy=pi,
+            precision_at_threshold=ppv(r['FPR']), precision_using_fpr_upper=ppv(r['FPR_hi']),
+            empirical_test_precision=r['precision']))
+    fcal, mcal=calibration_curve(y[te], ptest, n_bins=n_bins, strategy='quantile')
+    fraw, mraw=calibration_curve(y[te], pr, n_bins=n_bins, strategy='quantile')
+    return dict(protocol=protocol_name, pi_train=float(y[tr].mean()),
+        brier_calibrated=float(np.mean((ptest-y[te])**2)), brier_raw=float(np.mean((pr-y[te])**2)),
+        ece_calibrated=expected_calibration_error(y[te],ptest), ece_raw=expected_calibration_error(y[te],pr),
+        reliability=(mcal,fcal), reliability_raw=(mraw,fraw),
+        fpr_table=pd.DataFrame(fpr_rows), precision_table=pd.DataFrame(precision_rows))
 
 
 print("base_rate_correct() / calibration_analysis() defined.")
@@ -7696,7 +7937,7 @@ ybk = (bkm_arr[:, -1] != 0).astype(int)
 cal_results = {}
 cal_results['BB84'] = calibration_analysis(X84, y84, 'BB84', groups=bb84_groups)
 cal_results['BKM07'] = calibration_analysis(Xbk, ybk, 'BKM07', groups=bkm_groups)
-cal_results['E91'] = calibration_analysis(X91, y91, 'E91')
+cal_results['E91'] = calibration_analysis(X91, y91, 'E91', groups=e91_groups)
 
 print("Brier score, raw vs. calibrated (lower is better; 0=perfect, 0.25=random-")
 print("guess-at-p0.5; pi_train = fraction attacked in THIS protocol's training split):")
@@ -7707,7 +7948,7 @@ for p, r in cal_results.items():
 print("\nRecall achieved at fixed target false-positive rates (calibrated model's ROC):")
 fpr_all = pd.concat([r['fpr_table'] for r in cal_results.values()], ignore_index=True)
 print(fpr_all.round(4).to_string(index=False))
-fpr_all.to_csv('data/calibration_fpr_thresholds.csv', index=False)
+_save_csv(fpr_all, 'data/calibration_fpr_thresholds.csv', index=False)
 
 fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 colors = {'BB84': '#DC2626', 'BKM07': '#F59E0B', 'E91': '#6366F1'}
@@ -7740,7 +7981,7 @@ plt.show()
 print("Saved: plots/base_rate_precision.png\n")
 
 precision_all = pd.concat([r['precision_table'] for r in cal_results.values()], ignore_index=True)
-precision_all.to_csv('data/base_rate_precision.csv', index=False)
+_save_csv(precision_all, 'data/base_rate_precision.csv', index=False)
 print(precision_all.round(4).to_string(index=False))
 
 print("\n--- base_rate_correct(): one flagged event's probability at three deployment rates ---")
@@ -7785,8 +8026,22 @@ print("are the right way to choose an operating point for a rare-event security 
 # > strength.
 
 # %%
+def heldout_detection(X, y, groups=None, seed=0):
+    X=np.asarray(X,float); y=np.asarray(y,int)
+    tr,va,te=grouped_three_way(X,y,groups,seed=seed,name='empirical strength sweep')
+    model=make_boosted(seed=seed).fit(X[tr],y[tr])
+    pv=model.predict_proba(X[va])[:,1]; pt=model.predict_proba(X[te])[:,1]
+    gte=None if groups is None else np.asarray(groups)[te]
+    result={}
+    for fpr in (0.01,0.05):
+        m=detection_metrics(y[te],pt,fixed_fpr_threshold(pv[y[va]==0],fpr),gte,seed)
+        if fpr==0.01: result.update(m)
+        result[f'tpr_at_{int(100*fpr)}pct_fpr']=m['recall']
+        result[f'test_fpr_at_{int(100*fpr)}pct_target']=m['FPR']
+    return result
+
 def run_min_detectable_strength(target_qber=0.035,
-                                 strengths=(0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0),   # final draft: extended to the weak end
+                                 strengths=(0.0, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0),   # final draft: extended to the weak end
                                  n_per_class=SC['s21_n'], target_k=K_MAIN_DATASET,
                                  auc_threshold=0.80, n_windows=8, seed_role='min_detect'):
     '''Item 28: at one fixed, calibrated honest operating point per
@@ -7800,7 +8055,7 @@ def run_min_detectable_strength(target_qber=0.035,
     ed_bk = calibrate_bkm07_monitor(target_qber)   # review fix B3
     V91 = calibrate_e91(target_qber)
     # Draft 2.1: one K all three protocols can match (BB84 is capped by max_pulses at long distance).
-    target_k = min(target_k, bb84_k_capacity(d84))
+    target_k = int(target_k)  # exact-K continuation; raw resource counts remain protocol-dependent
     print(f"  matched key-round budget for all three protocols: K={target_k}  (BB84 at {d84:.1f} km)")
 
     rows = []
@@ -7815,7 +8070,7 @@ def run_min_detectable_strength(target_qber=0.035,
             f = collect_bb84_features(distance_km=d84, eve_mode='intercept_resend', eve_intensity=s,
                                        n_windows=n_windows, rng=rng, target_k_signal_bits=target_k)
             X.append([f[k] for k in BB84_FEATURE_NAMES]); y.append(1)
-        rows.append(dict(protocol='BB84', strength=s, auc=_cv_auc(X, y)))
+        rows.append(dict(protocol='BB84', strength=s, K=target_k, split_seed=0, **heldout_detection(X, y, groups=np.repeat(np.arange(n_per_class),2))))
 
         X, y = [], []
         for i in range(n_per_class):
@@ -7829,13 +8084,13 @@ def run_min_detectable_strength(target_qber=0.035,
                                         n_windows=n_windows, rng=rng, e_detector=ed_bk,
                                         target_k_key_rounds=target_k)
             X.append([f[k] for k in BKM_FEATURE_NAMES]); y.append(1)
-        rows.append(dict(protocol='BKM07', strength=s, auc=_cv_auc(X, y)))
+        rows.append(dict(protocol='BKM07', strength=s, K=target_k, split_seed=0, **heldout_detection(X, y, groups=np.repeat(np.arange(n_per_class),2))))
 
         X, y = [], []
         for i in range(n_per_class):                          # review fix B4: E91 intercept-resend (common attack) ...
             f, _ = _e91_row(V91, 'none', 0.0, SEEDS.rng(f'{seed_role}_e91_h_{s}', i), target_k, n_windows); X.append(f); y.append(0)
             f, _ = _e91_row(V91, 'intercept_resend', s, SEEDS.rng(f'{seed_role}_e91_ir_{s}', i), target_k, n_windows); X.append(f); y.append(1)
-        rows.append(dict(protocol='E91', strength=s, auc=_cv_auc(X, y)))
+        rows.append(dict(protocol='E91', strength=s, K=target_k, split_seed=0, **heldout_detection(X, y, groups=np.repeat(np.arange(n_per_class),2))))
         X, y = [], []                                         # ... and the ancilla probe as a separate, labelled series
         for i in range(n_per_class):
             rng = SEEDS.rng(f'{seed_role}_e91_none_{s}', i)
@@ -7847,7 +8102,7 @@ def run_min_detectable_strength(target_qber=0.035,
                                       rng=rng, eve_intensity=1.0, lam=s, V=V91,
                                       target_k_key_pairs=target_k)
             X.append([f[k] for k in E91_FEATURE_NAMES]); y.append(1)
-        rows.append(dict(protocol='E91 (ancilla)', strength=s, auc=_cv_auc(X, y)))
+        rows.append(dict(protocol='E91 (ancilla)', strength=s, K=target_k, split_seed=0, **heldout_detection(X, y, groups=np.repeat(np.arange(n_per_class),2))))
 
         print(f"  strength={s:.3f}   " + "   ".join(f"{r['protocol']}={r['auc']:.3f}" for r in rows[-3:]))
 
@@ -7855,9 +8110,9 @@ def run_min_detectable_strength(target_qber=0.035,
     summary = []
     for p, sub in df.groupby('protocol'):
         sub = sub.sort_values('strength')
-        above = sub[sub['auc'] >= auc_threshold]
+        above = sub[(sub['strength'] > 0) & (sub['auc_lo'] > auc_threshold)]
         min_s = float(above['strength'].iloc[0]) if len(above) else float('nan')
-        summary.append(dict(protocol=p, auc_threshold=auc_threshold, min_detectable_strength=min_s))
+        summary.append(dict(protocol=p, auc_threshold=auc_threshold, criterion='lower 95% grouped-bootstrap AUC bound > threshold; tested grid only', min_detectable_strength=min_s))
     return df, pd.DataFrame(summary)
 
 
@@ -7866,7 +8121,9 @@ print("run_min_detectable_strength() defined.")
 # %%
 print("=== Item 28: minimum detectable attack strength ===")
 min_detect_df, min_detect_summary = run_min_detectable_strength()
-min_detect_df.to_csv('data/min_detectable_strength.csv', index=False)
+_save_csv(min_detect_df, 'data/min_detectable_strength.csv', index=False)
+_save_csv(min_detect_summary, 'data/min_detectable_strength_summary.csv', index=False)
+_save_csv(min_detect_df[(min_detect_df.protocol == 'BKM07') & min_detect_df.strength.isin([0.01,0.02,0.05,0.10])], 'data/bkm07_weak_attack.csv', index=False)
 print()
 print(min_detect_summary.to_string(index=False))
 
@@ -7877,7 +8134,9 @@ for p, sub in min_detect_df.groupby('protocol'):
     ax.plot(sub['strength'], sub['auc'], 'o-', color=colors[p], label=p)
 ax.axhline(0.80, color='gray', linestyle=':', label='AUC=0.80 threshold')
 ax.set_xlabel('Attack strength (raw knob: eve_intensity / eve_fwd=eve_ret / lam)')
-ax.set_ylabel('AUC (5-fold CV, boosted trees)')
+for _p, _sub in min_detect_df.groupby('protocol'):
+    _sub=_sub.sort_values('strength'); ax.fill_between(_sub.strength, _sub.auc_lo, _sub.auc_hi, alpha=0.12)
+ax.set_ylabel('AUC (group-aware evaluation, boosted trees)')
 ax.set_title('Detectability vs. attack strength\n(fixed, calibrated honest operating point per protocol)')
 ax.set_ylim(0.45, 1.02)
 ax.legend(); ax.grid(alpha=0.3)
@@ -7902,7 +8161,7 @@ print("monitor at low attack intensity, at this shared honest operating point.")
 # > pairs -- never raw pulses, since the three protocols' raw-pulse rates differ by
 # > orders of magnitude and would make any raw-pulse-based comparison unfair), and
 # > record how many key rounds elapse between the true change-point and the alarm --
-# > the KEY-COMPROMISE WINDOW, i.e. how much key material an attacker gets before being
+# > the observed key-event delay; it does not measure how much secret key an attacker gets before being
 # > caught. The honest baseline rate is estimated from each session's own pre-attack
 # > burn-in (what a real detector would have to do); the detector's target shift
 # > (detect_delta) is fixed in advance, NOT measured from the attacked data itself, so
@@ -7936,94 +8195,65 @@ def cusum_detect(observations, mu0, mu1, threshold=5.0):
 # Each builder returns (err_before, err_after): the error indicators of the first n_before_keys
 # honest and n_after_keys attacked KEY rounds.
 def _bb84_cusum_stream(distance_km, strength, n_before_keys, n_after_keys, rng, max_pulses=20_000_000):
-    rate = DECOY_PROBS[0] * channel_model(distance_km)['gain'] * 0.5       # signal share x gain x basis match
-
-    def _leg(n_keys, mode, inten):
-        N = min(int(np.ceil(n_keys / max(rate, 1e-15) * K_MARGIN)), max_pulses)
-        r = simulate_bb84_decoy(N, distance_km, mode, inten, rng=rng)
-        kept = r['sift'] & (r['k'] == 0)
-        return (r['bit_A'] != r['bit_B'])[kept][:n_keys].astype(float)
-
-    return _leg(n_before_keys, 'none', 0.0), _leg(n_after_keys, 'intercept_resend', strength)
+    def leg(K,mode,s):
+        f=collect_bb84_features(distance_km=distance_km,eve_mode=mode,eve_intensity=s,
+            target_k_signal_bits=K,rng=rng,return_record=True,max_pulses=max_pulses)
+        r=f['_record']; key=r['sift'] & (r['k']==0)
+        return (r['bit_A'][key]!=r['bit_B'][key]).astype(float)
+    return leg(n_before_keys,'none',0),leg(n_after_keys,'intercept_resend',strength)
 
 
 def _bkm07_cusum_stream(e_detector, strength, n_before_keys, n_after_keys, rng, max_pulses=15_000_000):
-    rate = channel_model(0.0, e_detector=e_detector)['eta'] ** 2 * 0.25    # round-trip survival x SIFT_KEY share
-
-    def _leg(n_keys, mode, s):
-        N = min(int(np.ceil(n_keys / max(rate, 1e-15) * K_MARGIN)), max_pulses)
-        b = simulate_bkm07_batch(N, 0.0, mode, s, s, rng=rng, e_detector=e_detector)
-        kept = b['survived'] & (b['round_type'] == 'SIFT_KEY')
-        return (b['bit_A'] != b['bit_A_final'])[kept][:n_keys].astype(float)
-
-    return _leg(n_before_keys, 'none', 0.0), _leg(n_after_keys, 'symmetric', strength)
+    def leg(K,mode,s):
+        f=collect_bkm07_features(distance_km=0,e_detector=e_detector,eve_mode=mode,eve_fwd=s,eve_ret=s,
+            target_k_key_rounds=K,rng=rng,return_record=True,max_pulses=max_pulses)
+        r=f['_record']; key=r['survived'] & (r['round_type']=='SIFT_KEY')
+        return (r['bit_A'][key]!=r['bit_A_final'][key]).astype(float)
+    return leg(n_before_keys,'none',0),leg(n_after_keys,'symmetric',strength)
 
 
 def _e91_cusum_stream(V, strength, n_before_keys, n_after_keys, rng):
-    key_codes = [a + b for a, b in KEY_PAIRS]
-
-    def _leg(n_keys, mode, lam):
-        N = max(int(np.ceil(n_keys / (2.0 / 9.0) * K_MARGIN)), 500)
-        a, b, ra, rb = run_e91(N, V=V, eve_mode=mode, eve_intensity=(0.0 if mode == 'none' else (lam if mode == 'intercept_resend' else 1.0)),
-                               lam=lam, rng=rng)
-        kept = np.isin(np.char.add(a, b), key_codes)
-        return (ra == rb)[kept][:n_keys].astype(float)     # singlet: a correlated result IS the error
-
-    return _leg(n_before_keys, 'none', 0.0), _leg(n_after_keys, 'intercept_resend', strength)   # review fix B4: common attack
+    def leg(K,mode,s):
+        f=extract_e91_features(V=V,eve_mode=mode,eve_intensity=s,target_k_key_pairs=K,rng=rng,return_record=True)
+        a,b,ra,rb=f['_record']; key=np.isin(np.char.add(a,b),[a+b for a,b in KEY_PAIRS])
+        return (ra[key]==rb[key]).astype(float)
+    return leg(n_before_keys,'none',0),leg(n_after_keys,'intercept_resend',strength)
 
 
 _CUSUM_STREAM_BUILDERS = {'bb84': _bb84_cusum_stream, 'bkm07': _bkm07_cusum_stream, 'e91': _e91_cusum_stream}
 _CUSUM_DISPLAY_NAME = {'bb84': 'BB84', 'bkm07': 'BKM07', 'e91': 'E91'}  # DL_PROTOCOLS is lowercase; plots/tables want the usual uppercase names
 
 
-def run_cusum_experiment(target_qber=0.035, strengths=(0.1, 0.2, 0.4, 0.7),
-                          n_before_keys=300, n_after_keys=600, n_repeats=SC['cusum_rep'],
-                          detect_delta=0.05, threshold=5.0, seed_role='cusum'):
-    '''Item 29: sequential change-point detection via CUSUM, measured in
-    KEY ROUNDS (not raw pulses or wall-clock), for each protocol, at
-    several attack strengths. The honest burn-in and the attacked segment are
-    each sized as a number of KEY rounds (Draft 2.1), so every protocol gets
-    the same amount of usable evidence regardless of its raw-pulse yield.'''
-    d84 = calibrate_bb84(target_qber)
-    ed_bk = calibrate_bkm07_monitor(target_qber)   # review fix B3
-    V91 = calibrate_e91(target_qber)
-    honest_param = {'bb84': d84, 'bkm07': ed_bk, 'e91': V91}
-
-    rows = []
+def run_cusum_experiment(target_qber=0.035, strengths=(0.1,0.2,0.4,0.7),
+        n_before_keys=300, n_after_keys=K_MAIN_DATASET, n_repeats=SC['cusum_rep'],
+        detect_delta=0.05, threshold=5.0, seed_role='cusum'):
+    params={'bb84':calibrate_bb84(target_qber),'bkm07':calibrate_bkm07_monitor(target_qber),'e91':calibrate_e91(target_qber)}
+    rows=[]; detail=[]
     for proto in DL_PROTOCOLS:
-        build = _CUSUM_STREAM_BUILDERS[proto]
-        disp = _CUSUM_DISPLAY_NAME[proto]
-        for s in strengths:
-            delays, false_alarms, misses, burn, exc = [], 0, 0, [], []
+        build=_CUSUM_STREAM_BUILDERS[proto]
+        for strength in (0.0,)+tuple(strengths):
+            delays=[]; misses=0
             for i in range(n_repeats):
-                rng = SEEDS.rng(f'{seed_role}_{proto}_{s}', i)
-                before, after = build(honest_param[proto], s, n_before_keys, n_after_keys, rng)
-                err_kept = np.concatenate([before, after])
-                cp_in_kept = len(before)
-                burn.append(cp_in_kept); exc.append(float(after.mean() - before.mean()))   # review fix B4/8.6: measured excess QBER
-
-                mu0_hat = (float(np.clip(before.mean(), 0.005, 0.499))
-                          if cp_in_kept >= 20 else 0.03)
-                mu1_assumed = min(mu0_hat + detect_delta, 0.499)
-
-                alarm = cusum_detect(err_kept, mu0_hat, mu1_assumed, threshold=threshold)
-                if alarm is None:
-                    misses += 1
-                elif alarm < cp_in_kept:
-                    false_alarms += 1
-                else:
-                    delays.append(alarm - cp_in_kept)
-
-            rows.append(dict(protocol=disp, strength=s,
-                             n_repeats=n_repeats, n_detected=len(delays),
-                             n_missed=misses, n_false_alarm=false_alarms,
-                             mean_burn_in_keys=float(np.mean(burn)), mean_excess_qber=float(np.mean(exc)),
-                             mean_delay_key_rounds=float(np.mean(delays)) if delays else float('nan'),
-                             median_delay_key_rounds=float(np.median(delays)) if delays else float('nan')))
-            warn = "" if np.mean(burn) >= 20 else "  [burn-in < 20 key rounds: baseline fell back to mu0=0.03]"
-            print(f"  {disp:6s} strength={s:.2f}  detected={len(delays)}/{n_repeats}  "
-                 f"mean_delay={rows[-1]['mean_delay_key_rounds']:.1f} key-rounds  "
-                 f"false_alarms={false_alarms}  missed={misses}{warn}")
+                before,after=build(params[proto],strength,n_before_keys,n_after_keys,SEEDS.rng(f'{seed_role}_{proto}_{strength}',i))
+                assert len(before)==n_before_keys and len(after)==n_after_keys
+                mu0=float(np.clip(before.mean(),0.005,0.499)); mu1=min(mu0+detect_delta,0.499)
+                # Baseline is frozen, then a new monitoring stream starts at the change point.
+                alarm=cusum_detect(after,mu0,mu1,threshold)
+                delay=None if alarm is None else alarm+1
+                if delay is None: misses+=1
+                else: delays.append(delay)
+                detail.append(dict(protocol=proto,strength=strength,repeat=i,baseline=mu0,threshold=threshold,
+                    change_point_key=n_before_keys,alarm_point_key=np.nan if delay is None else n_before_keys+delay,
+                    delay_key_events=delay,K=n_after_keys,baseline_source='honest burn-in only'))
+            n_alarm=len(delays); flo,fhi=binomial_ci(n_alarm,n_repeats)
+            rows.append(dict(protocol=proto.upper(),strength=strength,n_repeats=n_repeats,n_detected=n_alarm if strength else 0,
+                n_missed=misses,n_false_alarm=n_alarm if strength==0 else 0,
+                honest_alarm_rate=n_alarm/n_repeats if strength==0 else np.nan,
+                honest_alarm_lo=flo if strength==0 else np.nan,honest_alarm_hi=fhi if strength==0 else np.nan,
+                mean_burn_in_keys=n_before_keys,mean_delay_key_rounds=np.mean(delays) if delays else np.nan,
+                median_delay_key_rounds=np.median(delays) if delays else np.nan,K=n_after_keys,
+                threshold=threshold,interpretation='empirical key-event exposure window, not compromised secret bits'))
+    _save_csv(pd.DataFrame(detail),'data/cusum_trials.csv',index=False)
     return pd.DataFrame(rows)
 
 
@@ -8032,7 +8262,7 @@ print("cusum_detect() / run_cusum_experiment() defined.")
 # %%
 print("\n=== Item 29: sequential CUSUM detection delay (key-compromise window) ===")
 cusum_df = run_cusum_experiment()
-cusum_df.to_csv('data/cusum_detection_delay.csv', index=False)
+_save_csv(cusum_df, 'data/cusum_detection_delay.csv', index=False)
 print()
 print(cusum_df.round(2).to_string(index=False))
 
@@ -8091,13 +8321,14 @@ print("for a real deployment decision.")
 import shap
 
 
-def shap_analysis(X, y, feature_names, protocol_name, seed=0, max_display=15):
+def shap_analysis(X, y, feature_names, protocol_name, seed=0, max_display=15, groups=None):
     '''Item 30: fit make_boosted, explain it with SHAP, plot mean |SHAP
     value| per feature (global importance), and return the full ranking.'''
     X = np.nan_to_num(np.asarray(X, dtype=float))
     # review fix D9: fit on 70 %, explain the held-out 30 % (in-sample SHAP explains memorisation)
     from sklearn.model_selection import train_test_split as _tts
-    X_fit, X_ev, y_fit, _ = _tts(X, np.asarray(y), test_size=0.3, stratify=np.asarray(y), random_state=seed)
+    _tr, _va, _te = grouped_three_way(X, y, groups, seed=seed, test_size=0.3, name=protocol_name + ' SHAP')
+    X_fit, X_ev, y_fit = X[_tr], X[_te], np.asarray(y)[_tr]
     model = make_boosted(seed=seed)
     model.fit(X_fit, y_fit)
     X_full = X
@@ -8111,7 +8342,7 @@ def shap_analysis(X, y, feature_names, protocol_name, seed=0, max_display=15):
             sv = sv[:, :, 1]
     except Exception as e:
         print(f"  TreeExplainer failed ({type(e).__name__}: {e}), falling back to generic Explainer")
-        background = shap.sample(X, min(100, len(X)), random_state=seed)
+        background = shap.sample(X_fit, min(100, len(X_fit)), random_state=seed)
         explainer = shap.Explainer(model.predict_proba, background)
         sv_full = explainer(X)
         sv = sv_full.values[..., 1] if np.ndim(sv_full.values) == 3 else sv_full.values
@@ -8136,14 +8367,14 @@ print("shap_analysis() defined.")
 
 # %%
 print("=== Item 30: SHAP feature attribution ===\n")
-shap_bb84 = shap_analysis(X84, y84, BB84_FEATURE_NAMES, 'BB84')
-shap_bkm = shap_analysis(Xbk, ybk, BKM_FEATURE_NAMES, 'BKM07')
-shap_e91 = shap_analysis(X91, y91, E91_FEATURE_NAMES, 'E91')
+shap_bb84 = shap_analysis(X84, y84, BB84_FEATURE_NAMES, 'BB84', groups=bb84_groups)
+shap_bkm = shap_analysis(Xbk, ybk, BKM_FEATURE_NAMES, 'BKM07', groups=bkm_groups)
+shap_e91 = shap_analysis(X91, y91, E91_FEATURE_NAMES, 'E91', groups=e91_groups)
 
 print("\nTop-5 features per protocol (SHAP):")
 for name, df in [('BB84', shap_bb84), ('BKM07', shap_bkm), ('E91', shap_e91)]:
     print(f"  {name}: " + ", ".join(df['feature'].head(5)))
-    df.to_csv(f'data/shap_{name.lower()}.csv', index=False)
+    _save_csv(df, f'data/shap_{name.lower()}.csv', index=False)
 
 print()
 print("Read: compare this ranking against Section 8's permutation_importance output --")
@@ -8172,58 +8403,35 @@ print("matters than either method alone.")
 # > just not a test of within-session non-stationarity specifically.
 
 # %%
-def run_bursty_honest_robustness(target_qber=0.035, noise_multipliers=(1.0, 1.5, 2.0, 3.0, 5.0),
-                                  n_per_condition=SC['s21b_n'], target_k=K_MAIN_DATASET, n_windows=8,
-                                  seed_role='bursty_honest'):
-    '''Item 31: false-positive rate of the Section-5-trained classifiers on
-    fully honest sessions at increasingly elevated noise (see scope note
-    above the call site for what "elevated" means here).'''
-    d84 = calibrate_bb84(target_qber)
-    ed_bk = calibrate_bkm07_monitor(target_qber)   # review fix B3
-    V91 = calibrate_e91(target_qber)
-
-    clf84 = make_boosted(seed=0); clf84.fit(np.nan_to_num(X84), y84)
-    clfbk = make_boosted(seed=0); clfbk.fit(np.nan_to_num(Xbk), ybk)
-    clf91 = make_boosted(seed=0); clf91.fit(np.nan_to_num(X91), y91)
-
-    rows = []
-    for mult in noise_multipliers:
-        e_det_84 = float(np.clip(0.033 * mult, 0.01, 0.35))
-        X = []
-        for i in range(n_per_condition):
-            rng = SEEDS.rng(f'{seed_role}_bb84_{mult}', i)
-            f = collect_bb84_features(distance_km=d84, eve_mode='none', eve_intensity=0.0,
-                                       n_windows=n_windows, rng=rng, target_k_signal_bits=target_k,
-                                       e_detector=e_det_84)
-            X.append([f[k] for k in BB84_FEATURE_NAMES])
-        fpr84 = float(clf84.predict(np.nan_to_num(np.array(X))).mean())
-        rows.append(dict(protocol='BB84', noise_multiplier=mult, noise_param=e_det_84, false_positive_rate=fpr84))
-
-        e_det_bk = float(np.clip(ed_bk * mult, 0.005, 0.35))
-        X = []
-        for i in range(n_per_condition):
-            rng = SEEDS.rng(f'{seed_role}_bkm_{mult}', i)
-            f = collect_bkm07_features(distance_km=0.0, eve_mode='none', eve_fwd=0.0, eve_ret=0.0,
-                                        n_windows=n_windows, rng=rng, target_k_key_rounds=target_k,
-                                        e_detector=e_det_bk)
-            X.append([f[k] for k in BKM_FEATURE_NAMES])
-        fprbk = float(clfbk.predict(np.nan_to_num(np.array(X))).mean())
-        rows.append(dict(protocol='BKM07', noise_multiplier=mult, noise_param=e_det_bk, false_positive_rate=fprbk))
-
-        # E91: honest noise LOWERS visibility (not a multiplicative scale-up
-        # like the other two's e_detector) -- invert so mult=1.0 still means
-        # "calibrated baseline" and larger mult means "more depolarised".
-        V_mult = float(np.clip(1.0 - (1.0 - V91) * mult, 0.5, 1.0))
-        X = []
-        for i in range(n_per_condition):
-            rng = SEEDS.rng(f'{seed_role}_e91_{mult}', i)
-            f = extract_e91_features(eve_mode='none', n_windows=n_windows, rng=rng, V=V_mult,
-                                      target_k_key_pairs=target_k)
-            X.append([f[k] for k in E91_FEATURE_NAMES])
-        fpr91 = float(clf91.predict(np.nan_to_num(np.array(X))).mean())
-        rows.append(dict(protocol='E91', noise_multiplier=mult, noise_param=V_mult, false_positive_rate=fpr91))
-
-        print(f"  noise_multiplier={mult:.1f}   BB84_FPR={fpr84:.3f}   BKM07_FPR={fprbk:.3f}   E91_FPR={fpr91:.3f}")
+def run_bursty_honest_robustness(target_qber=0.035, noise_multipliers=(1.0,1.5,2.0,3.0,5.0),
+        n_per_condition=SC['s21b_n'], target_k=K_MAIN_DATASET, n_windows=8, seed_role='bursty_honest'):
+    rows=[]
+    d=calibrate_bb84(target_qber); e=calibrate_bkm07_monitor(target_qber); V=calibrate_e91(target_qber)
+    for proto,names in [('BB84',BB84_FEATURE_NAMES),('BKM07',BKM_FEATURE_NAMES),('E91',E91_FEATURE_NAMES)]:
+        def generate(role,n,attack=False,condition='stationary',mult=1):
+            out=[]
+            for i in range(n):
+                rng=SEEDS.rng(f'{seed_role}_{proto}_{role}',i)
+                det={'drift_amp':0.5 if condition=='drift' else 0,
+                     'noise_profile':'bursty' if condition=='bursty' else 'stationary','burst_multiplier':mult}
+                scale=mult if condition=='elevated' else 1.0
+                if proto=='BB84': f=collect_bb84_features(distance_km=d,e_detector=min(.033*scale,.35),eve_mode='intercept_resend' if attack else 'none',eve_intensity=.1 if attack else 0,target_k_signal_bits=target_k,n_windows=n_windows,rng=rng,detector=det)
+                elif proto=='BKM07': f=collect_bkm07_features(distance_km=0,e_detector=min(e*scale,.35),eve_mode='symmetric' if attack else 'none',eve_fwd=.1 if attack else 0,eve_ret=.1 if attack else 0,target_k_key_rounds=target_k,n_windows=n_windows,rng=rng,detector=det)
+                else: f=extract_e91_features(V=max(0,1-(1-V)*scale),eve_mode='intercept_resend' if attack else 'none',eve_intensity=.1 if attack else 0,target_k_key_pairs=target_k,n_windows=n_windows,rng=rng,detector=det)
+                out.append([f[k] for k in names])
+            return np.asarray(out)
+        n=n_per_condition
+        H=generate('train_h',n); A=generate('train_a',n,True)
+        model=make_boosted(seed=0).fit(np.vstack([H,A]),np.r_[np.zeros(n),np.ones(n)])
+        pv=model.predict_proba(generate('validation_h',n))[:,1]
+        threshold=fixed_fpr_threshold(pv,.01)
+        pa=model.predict_proba(generate('test_attack',n,True))[:,1]
+        conditions=[('stationary',1.0),('drift',1.0)]+[(c,m) for c in ('bursty','elevated') for m in noise_multipliers]
+        for condition,mult in conditions:
+            ph=model.predict_proba(generate(f'test_{condition}_{mult}',n,condition=condition,mult=mult))[:,1]
+            metrics=detection_metrics(np.r_[np.zeros(n),np.ones(n)],np.r_[ph,pa],threshold)
+            rows.append(dict(protocol=proto,condition=condition,noise_multiplier=mult,noise_param=mult,
+                false_positive_rate=metrics['FPR'],K=target_k,target_fpr=.01,threshold_source='ordinary honest validation',**metrics))
     return pd.DataFrame(rows)
 
 
@@ -8232,7 +8440,7 @@ print("run_bursty_honest_robustness() defined.")
 # %%
 print("\n=== Item 31: sustained elevated honest noise (review fix F4: the noise is sustained, not bursty) ===")
 bursty_df = run_bursty_honest_robustness()
-bursty_df.to_csv('data/bursty_honest_robustness.csv', index=False)
+_save_csv(bursty_df, 'data/bursty_honest_robustness.csv', index=False)
 print()
 print(bursty_df.round(4).to_string(index=False))
 
@@ -8313,9 +8521,12 @@ def run_mixed_attack_experiment(target_qber=0.035, strengths=(0.15, 0.3, 0.5, 0.
 
         def _vs_clean(label):
             mask = np.isin(y, [0, label])
-            return _cv_auc(X[mask], (y[mask] == label).astype(int))
+            return heldout_detection(X[mask], (y[mask] == label).astype(int), groups=np.repeat(np.arange(n_per_class),4)[mask])
 
-        auc_ir, auc_pns, auc_mixed = _vs_clean(1), _vs_clean(2), _vs_clean(3)
+        ir,pns,mixed=_vs_clean(1),_vs_clean(2),_vs_clean(3)
+        auc_ir,auc_pns,auc_mixed=ir['auc'],pns['auc'],mixed['auc']
+        for _mode,_m in [('IR',ir),('PNS',pns),('PNS+IR',mixed)]:
+            _save_csv(pd.DataFrame([dict(protocol='BB84',attack=_mode,strength=s,K=target_k,strength_definition='same raw knob; mixed activates both mechanisms',**_m)]),f'data/mixed_metrics_{_mode.replace("+","_")}_{s}.csv',index=False)
         rows.append(dict(strength=s, auc_intercept_resend_only=auc_ir,
                          auc_pns_only=auc_pns, auc_mixed=auc_mixed,
                          mixed_minus_best_single=auc_mixed - max(auc_ir, auc_pns)))
@@ -8329,7 +8540,7 @@ print("run_mixed_attack_experiment() defined.")
 # %%
 print("\n=== Item 32: mixed PNS + intercept-resend attack (BB84-only) ===")
 mixed_df = run_mixed_attack_experiment()
-mixed_df.to_csv('data/mixed_attack_experiment.csv', index=False)
+_save_csv(mixed_df, 'data/mixed_attack_experiment.csv', index=False)
 print()
 print(mixed_df.round(4).to_string(index=False))
 
@@ -8430,37 +8641,44 @@ SWEEP_K = SC['s24_K']
 SWEEP_STRENGTHS = (0.005, 0.01, 0.02, 0.04, 0.08, 0.16, 0.32)     # raw knob, log-spaced
 N_HONEST, N_ATT = SC['s24_n_h'], SC['s24_n_att']      # was 100 honest + 40 attacked runs per cell
 
-def detectability_sweep(families=('IR', 'PNS', 'ANC'), ks=SWEEP_K, strengths=SWEEP_STRENGTHS, n_h=N_HONEST, n_a=N_ATT):
-    rows = []
-    for proto in ('bb84', 'bkm07', 'e91'):
+def detectability_sweep(families=('IR','PNS','ANC'),ks=SWEEP_K,strengths=SWEEP_STRENGTHS,n_h=N_HONEST,n_a=N_ATT):
+    rows=[]
+    for proto in ('bb84','bkm07','e91'):
         for K in ks:
-            t0 = time.time()
-            Xh, qh = many_runs(proto, 'IR', 0, K, 'sweep_h', n_h)
+            Xh,qh=many_runs(proto,'IR',0,K,'sweep_h',n_h)
             for fam in families:
                 if proto not in ATTACKS[fam]: continue
-                for s in strengths:
-                    Xa, qa = many_runs(proto, fam, s, K, 'sweep_a', n_a)
-                    excess = float(qa.mean() - qh.mean())
-                    se = float(np.sqrt(qa.var(ddof=1) / len(qa) + qh.var(ddof=1) / len(qh)))
-                    auc = cv_auc_feats(Xh, Xa)
-                    auc_q = float(roc_auc_score(np.r_[np.zeros(len(qh)), np.ones(len(qa))], np.r_[qh, qa]))   # QBER-only threshold detector
-                    rows.append(dict(protocol=proto, family=fam, K=K, strength=s, excess_qber=excess, excess_se=se,
-                                     auc_features=auc, auc_qber_only=auc_q, auc_features_se=auc_se(auc, len(Xa), len(Xh)), auc_qber_only_se=auc_se(auc_q, len(qa), len(qh))))
-            print(f"  {proto:5s} K={K:5d} done in {time.time()-t0:5.0f}s", flush=True)
+                for strength in strengths:
+                    Xa,qa=many_runs(proto,fam,strength,K,'sweep_a',n_a)
+                    X=np.vstack((Xh,Xa));y=np.r_[np.zeros(len(Xh)),np.ones(len(Xa))].astype(int)
+                    tr,va,te=grouped_three_way(X,y,seed=0,name='supplementary K/strength sweep')
+                    model=make_boosted(seed=0).fit(X[tr],y[tr]);pv=model.predict_proba(X[va])[:,1];pt=model.predict_proba(X[te])[:,1]
+                    metrics=detection_metrics(y[te],pt,fixed_fpr_threshold(pv[y[va]==0],.01))
+                    q=np.r_[qh,qa];qm=detection_metrics(y[te],q[te],fixed_fpr_threshold(q[va][y[va]==0],.01),probability=False)
+                    t5=fixed_fpr_threshold(pv[y[va]==0],.05)
+                    rows.append(dict(protocol=proto,family=fam,K=K,strength=strength,excess_qber=float(qa.mean()-qh.mean()),
+                        excess_se=float(np.sqrt(qa.var(ddof=1)/len(qa)+qh.var(ddof=1)/len(qh))),
+                        auc_features=metrics['auc'],auc_features_lo=metrics['auc_lo'],auc_features_hi=metrics['auc_hi'],
+                        auc_features_se=(metrics['auc_hi']-metrics['auc_lo'])/3.92,
+                        auc_qber_only=qm['auc'],auc_qber_only_lo=qm['auc_lo'],auc_qber_only_hi=qm['auc_hi'],
+                        auc_qber_only_se=(qm['auc_hi']-qm['auc_lo'])/3.92,
+                        tpr_at_1pct_fpr=metrics['recall'],tpr_at_5pct_fpr=float((pt[y[te]==1]>t5).mean()),**metrics))
     return pd.DataFrame(rows)
 
 sweep_df = detectability_sweep()
-sweep_df.to_csv('data/final_detectability_sweep.csv', index=False)
+_save_csv(sweep_df, 'data/final_detectability_sweep.csv', index=False)
 print(sweep_df[sweep_df.family == 'IR'].round(4).to_string(index=False))
 
 # %%
 # ── 24.1b minimum detectable excess QBER + plot ──────────────────────────────────────────
-def min_detectable(df, col='auc_features', thr=0.8):
-    out = []
-    for (p, fam, K), g in df.groupby(['protocol', 'family', 'K']):
-        g = g[g.excess_qber > 0].sort_values('excess_qber')
-        out.append(dict(protocol=p, family=fam, K=K, thr=thr, min_excess_qber=interp_cross(g.excess_qber, g[col], thr)))
-    return pd.DataFrame(out)
+def min_detectable(df,col='auc_features',thr=.8):
+    rows=[]
+    for (p,fam,K),g in df.groupby(['protocol','family','K']):
+        qualified=g[(g.strength>0)&(g.excess_qber>0)&(g[col+'_lo']>thr)].sort_values('strength')
+        value=float(qualified.excess_qber.iloc[0]) if len(qualified) else np.nan
+        rows.append(dict(protocol=p,family=fam,K=K,thr=thr,min_excess_qber=value,
+            criterion='lower 95% AUC bound > threshold; first tested raw strength'))
+    return pd.DataFrame(rows)
 
 md80 = min_detectable(sweep_df, 'auc_features', 0.8); md90 = min_detectable(sweep_df, 'auc_features', 0.9)
 mdq = min_detectable(sweep_df, 'auc_qber_only', 0.8)
@@ -8468,7 +8686,7 @@ tab = md80.rename(columns={'min_excess_qber': 'feat_AUC0.8'}).merge(
       md90[['protocol', 'family', 'K', 'min_excess_qber']].rename(columns={'min_excess_qber': 'feat_AUC0.9'}), on=['protocol', 'family', 'K']).merge(
       mdq[['protocol', 'family', 'K', 'min_excess_qber']].rename(columns={'min_excess_qber': 'QBERonly_AUC0.8'}), on=['protocol', 'family', 'K']).drop(columns='thr')
 tab['stat_limit_3SE'] = [3 * np.sqrt(OP_QBER * (1 - OP_QBER) / k) for k in tab.K]
-tab.to_csv('data/final_min_detectable_excess.csv', index=False)
+_save_csv(tab, 'data/final_min_detectable_excess.csv', index=False)
 print("Minimum detectable excess QBER (smallest attack-induced QBER rise reaching the AUC level):")
 print(tab.round(4).to_string(index=False))
 
@@ -8510,7 +8728,7 @@ def noise_robustness(K=500, strengths=(0.08, 0.32), n_tr=SC['s24_noise_tr'], n_t
     return pd.DataFrame(rows)
 
 nr_df = noise_robustness()
-nr_df.to_csv('data/final_noise_robustness.csv', index=False)
+_save_csv(nr_df, 'data/final_noise_robustness.csv', index=False)
 print(nr_df.round(3).to_string(index=False))
 fig, axes = plt.subplots(2, 3, figsize=(15, 7), sharey=True)
 for r_, st_ in enumerate((0.08, 0.32)):
@@ -8542,7 +8760,7 @@ def temporal_test(K=500, strengths=(0.04, 0.08, 0.16), n_h=SC['s24_tt_h'], n_a=S
     return pd.DataFrame(rows)
 
 tt_df = temporal_test()
-tt_df.to_csv('data/final_temporal_test.csv', index=False)
+_save_csv(tt_df, 'data/final_temporal_test.csv', index=False)
 print(tt_df.round(4).to_string(index=False))
 fig, ax = plt.subplots(figsize=(6.5, 4))
 for prof, st in (('iid', 'o-'), ('bursty', 's--')):
@@ -8560,7 +8778,7 @@ plt.tight_layout(); plt.savefig('plots/final_temporal_test.png', dpi=150); plt.s
 import torch, torch.nn as nn, torch.nn.functional as F
 torch.set_num_threads(N_JOBS)
 DL_ATT = {p: [a for a in DL_ATTACKS[p] if a != 'clean'] for p in DL_ATTACKS}
-D_CLS = N_CLASSICAL_FEATURES            # width of the engineered-feature vector (16)
+D_CLS = 2*N_CLASSICAL_FEATURES            # width of the engineered-feature vector (16)
 H_CLS = 16                              # width of its projection
 
 def win_stats(X):
@@ -8608,11 +8826,26 @@ class TransformerNet(nn.Module):
     def forward(s, x, xc=None):
         z = s.enc(s.inp(x) + s.pos[:, :x.shape[1]]); return s.head(s.fuse(z.mean(1), xc)).squeeze(-1)
 
-ARCH = dict(MLP=MLPNet, CNN1D=CNN1D, BiLSTM_attn=LSTMAttn, Transformer=TransformerNet)
+class CNNLSTMNet(nn.Module):
+    def __init__(self,c=8,h=32,d_cls=0):
+        super().__init__(); self.conv=nn.Conv1d(c,h,5,padding=2)
+        self.lstm=nn.LSTM(h,h,batch_first=True,bidirectional=True)
+        self.fuse=_Fuse(2*h,d_cls); self.head=nn.Linear(self.fuse.out,1)
+    def forward(self,x,xc=None):
+        z=F.relu(self.conv(x.transpose(1,2))).transpose(1,2); z,_=self.lstm(z)
+        return self.head(self.fuse(z.mean(1),xc)).squeeze(-1)
+
+class FullSequenceNet(nn.Module):
+    def __init__(self,d_cls=0):
+        super().__init__(); self.protocol='bb84'; self.detector=CrossProtocolDetector(use_classical=bool(d_cls))
+    def forward(self,x,xc=None):
+        return self.detector.forward_binary(x,[self.protocol]*len(x),xc)[0]
+
+ARCH = dict(Full=FullSequenceNet, CNN_LSTM=CNNLSTMNet, MLP=MLPNet, CNN1D=CNN1D, BiLSTM_attn=LSTMAttn, Transformer=TransformerNet)
 MODELS = {}
 for _a in ARCH: MODELS[_a] = (_a, False); MODELS[_a + '+feat'] = (_a, True)
 
-def fit_dl(name, Xtr, Ctr, ytr, Xva, Cva, yva, epochs=10, seed=0, lr=2e-3, bs=128):
+def fit_dl(name, Xtr, Ctr, ytr, Xva, Cva, yva, epochs=10, seed=0, lr=2e-3, bs=128, protocol=None):
     """Train one model variant. Xtr: sequence windows (or win_stats for MLP); Ctr: engineered features per window."""
     arch, use_feat = MODELS[name]
     torch.manual_seed(seed); np.random.seed(seed)
@@ -8620,10 +8853,13 @@ def fit_dl(name, Xtr, Ctr, ytr, Xva, Cva, yva, epochs=10, seed=0, lr=2e-3, bs=12
         mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-6; prep = lambda a: (a - mu) / sd
     else:
         prep = lambda a: a
-    cmu, csd = Ctr.mean(0), Ctr.std(0) + 1e-6; cprep = lambda a: np.clip((a - cmu) / csd, -6, 6)
+    cmu, csd = Ctr[:,:N_CLASSICAL_FEATURES].mean(0), Ctr[:,:N_CLASSICAL_FEATURES].std(0)+1e-6
+    cprep=lambda a: np.concatenate((np.clip((a[:,:N_CLASSICAL_FEATURES]-cmu)/csd,-6,6)*a[:,N_CLASSICAL_FEATURES:],a[:,N_CLASSICAL_FEATURES:]),axis=1)
     T = lambda a: torch.tensor(a, dtype=torch.float32)
     Xt, Xv, Ct, Cv, yt = T(prep(Xtr)), T(prep(Xva)), T(cprep(Ctr)), T(cprep(Cva)), T(ytr)
-    m = ARCH[arch](d_cls=D_CLS if use_feat else 0); opt = torch.optim.AdamW(m.parameters(), lr=lr, weight_decay=1e-4)
+    m = ARCH[arch](d_cls=D_CLS if use_feat else 0)
+    if hasattr(m,'protocol'): m.protocol=protocol
+    opt = torch.optim.AdamW(m.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs); best, best_state = -1, None
     for ep in range(epochs):
         m.train(); perm = torch.randperm(len(Xt))
@@ -8656,8 +8892,8 @@ print("DL models defined:", list(MODELS))
 # ── 24.4b sessions for every protocol (clean vs. attacked, log-uniform strength 0.01-1) ──
 def _dl_job(proto, attack, strength, sid):
     rng = SEEDS.rng(f'dlfinal_sess_{proto}', sid)
-    kept, error, ba, bb, tf, gap, aux, chsh, nbas, xc = _DL_SESSION_BUILDERS[proto](attack, strength, rng, SC['dl_events'])
-    return encode_session(kept, error, ba, bb, tf, gap, aux, chsh_running=chsh, n_bases=nbas), xc
+    kept, error, ba, bb, tf, gap, aux, chsh, nbas, xc, resource = _DL_SESSION_BUILDERS[proto](attack, strength, rng, SC['dl_events'])
+    return encode_session(kept, error, ba, bb, tf, gap, aux, chsh_running=chsh, n_bases=nbas), xc, resource
 
 DL_N_CLEAN, DL_N_ATT = SC['s24_dl_clean'], SC['s24_dl_att']        # sessions per protocol (was 150 + 150)
 DL_SEEDS = SC['s24_dl_seeds']            # independent session splits + weight inits (was a single seed)
@@ -8671,6 +8907,10 @@ def build_sessions(proto, n_clean=DL_N_CLEAN, n_att=DL_N_ATT):
         s = 0.0 if clean else log_uniform(SEEDS.rng(f'dlfinal_strength_{proto}', sid), 0.01, 1.0)
         meta.append(dict(sid=sid, attack=att, strength=s, y=int(not clean))); jobs.append((proto, att, s, sid))
     res = Parallel(n_jobs=N_JOBS)(delayed(_dl_job)(*j) for j in jobs)
+    for m,r in zip(meta,res):
+        assert r[2]['_k_achieved']==SC['dl_events']
+        m.update(K=SC['dl_events'],N_used=r[2]['_N_used'],key_yield=r[2]['_key_yield'],loss_rate=r[2]['_loss_rate'])
+    _save_csv(pd.DataFrame(meta),f'data/dl_sessions_{proto}.csv',index=False)
     return pd.DataFrame(meta), [r[0] for r in res], np.array([r[1] for r in res], float)
 
 t0 = time.time(); SESS = {}
@@ -8694,19 +8934,31 @@ def run_dl(proto, L, epochs=DL_EPOCHS, seed=0, models=tuple(MODELS)):
     for name in models:
         t0 = time.time(); arch = MODELS[name][0]
         f = (lambda a: win_stats(a)) if arch == 'MLP' else (lambda a: a)
-        pred, bv = fit_dl(name, f(W[tr]), C[tr], Y[tr], f(W[va]), C[va], Y[va], epochs=epochs, seed=seed)
+        pred, bv = fit_dl(name, f(W[tr]), C[tr], Y[tr], f(W[va]), C[va], Y[va], epochs=epochs, seed=seed, protocol=proto)
         lg = pred(f(W[te]), C[te]); u, s = session_scores(lg, G[te]); ys = meta.y.values[u]
         lo, hi = boot_auc_ci(ys, s)
         res.append(dict(protocol=proto, window=L, seed=seed, model=name, window_auc=float(roc_auc_score(Y[te], lg)), session_auc=float(roc_auc_score(ys, s)),
                         session_auc_lo=lo, session_auc_hi=hi, n_test_sessions=len(u), secs=round(time.time() - t0)))
+        uv,sv=session_scores(pred(f(W[va]),C[va]),G[va]); yv=meta.y.values[uv]
+        sigmoid=lambda z: 1/(1+np.exp(-np.clip(z,-40,40)))
+        # Frozen operating thresholds from validation SESSION scores; no test-ROC threshold selection.
+        for target in (.01,.05):
+            th=fixed_fpr_threshold(sigmoid(sv)[yv==0],target)
+            mm=detection_metrics(ys,sigmoid(s),th,seed=seed)
+            if target==.01: res[-1].update(mm)
+            res[-1][f'tpr_at_{int(100*target)}pct_fpr']=mm['recall']
+        res[-1].update(K=K_MAIN_DATASET,threshold_source='validation sessions')
         scores[name] = (u, s)
         print(f"  {proto:5s} L={L:3d} seed={seed} {name:18s} window AUC {res[-1]['window_auc']:.3f}  session AUC {res[-1]['session_auc']:.3f} [{lo:.2f},{hi:.2f}]  ({res[-1]['secs']}s)", flush=True)
     # ML engineered features alone (boosted trees) on the SAME sessions and split (apples-to-apples baseline)
-    tr_s, te_s = np.unique(G[np.r_[tr, va]]), np.unique(G[te]); ytr, yte = meta.y.values[tr_s], meta.y.values[te_s]
+    tr_s, va_s, te_s = np.unique(G[tr]), np.unique(G[va]), np.unique(G[te]); ytr, yte = meta.y.values[tr_s], meta.y.values[te_s]
     clf = make_boosted(seed=seed); clf.fit(np.nan_to_num(Xc[tr_s]), ytr); pc = clf.predict_proba(np.nan_to_num(Xc[te_s]))[:, 1]
     lo, hi = boot_auc_ci(yte, pc)
     res.append(dict(protocol=proto, window=L, seed=seed, model='classical_features', window_auc=np.nan, session_auc=float(roc_auc_score(yte, pc)),
                     session_auc_lo=lo, session_auc_hi=hi, n_test_sessions=len(te_s), secs=0))
+    pv=clf.predict_proba(np.nan_to_num(Xc[va_s]))[:,1]
+    res[-1].update(detection_metrics(yte,pc,fixed_fpr_threshold(pv[meta.y.values[va_s]==0],.01),seed=seed))
+    res[-1].update(K=K_MAIN_DATASET,threshold_source='validation sessions')
     scores['classical_features'] = (te_s, pc)
     print(f"  {proto:5s} L={L:3d} seed={seed} classical (ML features only)  session AUC {res[-1]['session_auc']:.3f} [{lo:.2f},{hi:.2f}]", flush=True)
     return res, scores
@@ -8716,11 +8968,11 @@ for p, Ls in (('bb84', (96, 192, 384)), ('bkm07', (96,)), ('e91', (96,))):
     for L in Ls:
         for sd_ in DL_SEEDS:
             r, sc = run_dl(p, L, seed=sd_); DL_RES += r; DL_SCORES[(p, L, sd_)] = sc
-dl_df = pd.DataFrame(DL_RES); dl_df.to_csv('data/final_dl_results.csv', index=False)
+dl_df = pd.DataFrame(DL_RES); _save_csv(dl_df, 'data/final_dl_results.csv', index=False)
 dl_agg = (dl_df.groupby(['protocol', 'window', 'model'], sort=False)
           .agg(session_auc=('session_auc', 'mean'), session_auc_sd=('session_auc', 'std'), window_auc=('window_auc', 'mean'), n_seeds=('seed', 'nunique'),
                n_test_sessions=('n_test_sessions', 'mean')).reset_index())
-dl_agg.to_csv('data/final_dl_results_mean_over_seeds.csv', index=False)
+_save_csv(dl_agg, 'data/final_dl_results_mean_over_seeds.csv', index=False)
 print(f"\nSession AUC, mean +/- sd over {len(DL_SEEDS)} seeds (each seed = a different session split and weight init):")
 print(dl_agg.round(3).to_string(index=False))
 
@@ -8738,9 +8990,9 @@ for (p, L, sd_), sc in DL_SCORES.items():
             if att.sum() >= 3 and clean.sum() >= 3:
                 rows.append(dict(protocol=p, window=L, seed=sd_, model=name, strength_bin=f'{lo}-{hi}', n_att=int(att.sum()),
                                  auc=float(roc_auc_score(np.r_[np.zeros(clean.sum()), np.ones(att.sum())], np.r_[s[clean], s[att]]))))
-bins_seed_df = pd.DataFrame(rows); bins_seed_df.to_csv('data/final_dl_strength_bins_per_seed.csv', index=False)
+bins_seed_df = pd.DataFrame(rows); _save_csv(bins_seed_df, 'data/final_dl_strength_bins_per_seed.csv', index=False)
 bins_df = bins_seed_df.groupby(['protocol', 'window', 'model', 'strength_bin'], sort=False).agg(auc=('auc', 'mean'), auc_sd=('auc', 'std'), n_att=('n_att', 'mean')).reset_index()
-bins_df.to_csv('data/final_dl_strength_bins.csv', index=False)
+_save_csv(bins_df, 'data/final_dl_strength_bins.csv', index=False)
 print(bins_df[bins_df.window == 96].pivot_table(index=['protocol', 'model'], columns='strength_bin', values='auc').round(3).to_string())
 
 fig, axes = plt.subplots(1, 3, figsize=(19, 4.8))
@@ -9164,7 +9416,7 @@ for K in SC['s24_K']:
             a = cv_auc_feats(Xh_p, Xa); aq = float(roc_auc_score(np.r_[np.zeros(len(qh_p)), np.ones(len(qa))], np.r_[qh_p, qa]))
             rows261.append(dict(attacker=f'stealth IR [{proto}]', K=K, z=z, auc_features=a, auc_se=auc_se(a, len(Xa), len(Xh_p)), auc_NP_theory=float(stats.norm.cdf(z / np.sqrt(2))), auc_qber_only=aq))
     print(f"  K={K} done", flush=True)
-adv_df = pd.DataFrame(rows261); adv_df.to_csv('data/adaptive_attackers.csv', index=False)
+adv_df = pd.DataFrame(rows261); _save_csv(adv_df, 'data/adaptive_attackers.csv', index=False)
 print(adv_df.round(3).to_string(index=False))
 fig, axes = plt.subplots(1, len(SC['s24_K']), figsize=(5.2 * len(SC['s24_K']), 4.4), sharey=True, squeeze=False)
 for ax, K in zip(axes[0], SC['s24_K']):
@@ -9200,7 +9452,7 @@ for dist in (5.0, OP['bb84']):
         Th = det_runs(dist, 'none', 0, K, f's26d_t', SC['s24_n_att'], det); Ta = det_runs(dist, 'intercept_resend', 0.16, K, 's26d_ta', SC['s24_n_att'], det)
         ph = mod.predict_proba(np.nan_to_num(Th))[:, 1]; pa = mod.predict_proba(np.nan_to_num(Ta))[:, 1]
         rows262.append(dict(distance_km=round(dist, 1), hardware=name, FPR=float((ph > thr).mean()), FPR_ci_hi=cp_upper(int((ph > thr).sum()), len(ph)), TPR=float((pa > thr).mean())))
-det_df = pd.DataFrame(rows262); det_df.to_csv('data/detector_imperfections.csv', index=False)
+det_df = pd.DataFrame(rows262); _save_csv(det_df, 'data/detector_imperfections.csv', index=False)
 print("Detector trained on IDEAL honest links (threshold = 5% FPR on ideal held-out links), tested on honest links with imperfect hardware:")
 print(det_df.round(3).to_string(index=False))
 print(SCOPE_NOTE)
@@ -9224,7 +9476,7 @@ for prof in ('iid', 'bursty', 'drifting'):
         for g, feats in GROUPS_T.items():
             cols = [idxT[f] for f in feats]; r[g] = cv_auc_feats(Xh[:, cols], Xa[:, cols])
         r['temporal_gain'] = r['B + temporal'] - r['A+ aggregate']; rows263.append(r)
-drift_df = pd.DataFrame(rows263); drift_df.to_csv('data/honest_drift_vs_profile.csv', index=False)
+drift_df = pd.DataFrame(rows263); _save_csv(drift_df, 'data/honest_drift_vs_profile.csv', index=False)
 print(drift_df.round(3).to_string(index=False))
 print("Reading: honest links that drift raise the honest dispersion index, so a dispersion-based temporal feature no longer separates a bursty attack from honest drift; compare temporal_gain across honest_drift.")
 print(SCOPE_NOTE)
@@ -9240,7 +9492,7 @@ for _, r in tab.iterrows():
 print("\n[Deep learning, Section 24.4] session AUC (96-event windows), mean +/- sd over %d seeds, paired comparisons per seed:" % len(DL_SEEDS))
 piv = dl_df[dl_df.window == 96].pivot_table(index=['protocol', 'seed'], columns='model', values='session_auc')
 for proto in ('bb84', 'bkm07', 'e91'):
-    P = piv.loc[proto]; arch_best = max((c for c in P.columns if c != 'classical_features'), key=lambda c: P[c].mean())
+    P = piv.loc[proto]; arch_best = 'Full+feat'  # prespecified comparator; other rankings are descriptive
     d_cls = (P[arch_best] - P['classical_features']).to_numpy(); p_cls = signflip_p(d_cls); ledger(f'DL best ({arch_best}) vs ML features alone [{proto}]', p_cls)
     gains = []
     for a in ARCH:
@@ -9253,10 +9505,206 @@ print("\n[Model ranking] mean session AUC over seeds, protocol x model:"); print
 print("\n" + SCOPE_NOTE)
 
 # %%
+# %%
+# Review checklist: matched-session DL experiments, paired tests and final audit.
+def paired_auc_comparison(y, a, b, groups=None, seed=0, B=1000):
+    y=np.asarray(y); a=np.asarray(a); b=np.asarray(b)
+    groups=np.arange(len(y)) if groups is None else np.asarray(groups)
+    rng=np.random.default_rng(seed); u=np.unique(groups); where={g:np.flatnonzero(groups==g) for g in u}
+    observed=float(roc_auc_score(y,a)-roc_auc_score(y,b)); delta=[]
+    for _ in range(B):
+        ix=np.concatenate([where[g] for g in rng.choice(u,len(u))])
+        if len(np.unique(y[ix]))==2: delta.append(roc_auc_score(y[ix],a[ix])-roc_auc_score(y[ix],b[ix]))
+    delta=np.asarray(delta)
+    if not len(delta): return dict(delta_auc=observed,delta_auc_lo=np.nan,delta_auc_hi=np.nan,paired_bootstrap_p=np.nan)
+    return dict(delta_auc=observed,delta_auc_lo=float(np.quantile(delta,.025)),delta_auc_hi=float(np.quantile(delta,.975)),
+        paired_bootstrap_p=float((1+np.sum(np.abs(delta-observed)>=abs(observed)))/(1+len(delta))))
+
+
+def calibrate_scores_and_report(yval, pval, ytest, ptest, name, seed=0, calibrate=True, return_scores=False):
+    """Validation-only Platt scaling. Test labels only evaluate frozen maps and thresholds."""
+    yval=np.asarray(yval,int); ytest=np.asarray(ytest,int)
+    pval=np.asarray(pval,float); ptest=np.asarray(ptest,float)
+    raw=ptest.copy()
+    if calibrate:
+        logit=lambda p: np.log(np.clip(p,1e-6,1-1e-6)/np.clip(1-p,1e-6,1-1e-6)).reshape(-1,1)
+        mapping=LogisticRegression(C=1e6,max_iter=2000).fit(logit(pval),yval)
+        pval=mapping.predict_proba(logit(pval))[:,1]; ptest=mapping.predict_proba(logit(ptest))[:,1]
+    result={}
+    for fpr in (.01,.05):
+        threshold=fixed_fpr_threshold(pval[yval==0],fpr)
+        metrics=detection_metrics(ytest,ptest,threshold,seed=seed,probability=calibrate)
+        if fpr==.01: result.update(metrics)
+        result[f'tpr_at_{int(fpr*100)}pct_fpr']=metrics['recall']
+        result[f'test_fpr_at_{int(fpr*100)}pct_target']=metrics['FPR']
+    if calibrate:
+        result['brier_raw']=float(np.mean((raw-ytest)**2)); result['ece_raw']=expected_calibration_error(ytest,raw)
+        frac,mean=calibration_curve(ytest,ptest,n_bins=10,strategy='quantile')
+        _save_csv(pd.DataFrame(dict(mean_prediction=mean,observed_attack_fraction=frac)),f'data/reliability_{name}_{seed}.csv',index=False)
+        fig,ax=plt.subplots(figsize=(4,4)); ax.plot([0,1],[0,1],'k--'); ax.plot(mean,frac,'o-')
+        ax.set(xlabel='Predicted attack probability',ylabel='Observed attack frequency',title=name)
+        fig.tight_layout(); fig.savefig(f'plots/reliability_{name}_{seed}.png',dpi=150); plt.close(fig)
+    return (result, ptest) if return_scores else result
+
+
+def _mean_session_values(values, labels, groups):
+    groups=np.asarray(groups); labels=np.asarray(labels); values=np.asarray(values)
+    u,first,inv=np.unique(groups,return_index=True,return_inverse=True)
+    for g in u: assert len(np.unique(labels[groups==g]))==1
+    return labels[first],np.bincount(inv,weights=values)/np.bincount(inv),u
+
+
+def run_review_dl_experiments(data, device, seeds=None):
+    """Primary model comparisons on identical sessions/K/splits, with mandatory protocol probes.
+
+    Scratch sees labelled target training sessions. Transfer uses source pretraining then
+    labelled target adaptation. Source-only uses a shared adapter, source validation and
+    NO target labels for fitting, calibration, or model selection. Target test sessions
+    are identical across all comparisons. Architectural ablations differ by one switch.
+    """
+    seeds=SC['s24_dl_seeds'] if seeds is None else seeds
+    X,proto,y,g,C=(data[k] for k in ('X','protocol','is_attacked','group','X_classical'))
+    rows=[]; comparisons=[]; probe_rows=[]
+    variants={'full':{},'no_DANN':{'dann':False},'no_contrastive':{'contrastive':False},
+              'no_classical':{'use_classical':False},'shared_adapter':{'shared_adapter':True},
+              'no_attention':{'use_attention':False}}
+    for seed in seeds:
+        for target in DL_PROTOCOLS:
+            source=[p for p in DL_PROTOCOLS if p!=target]
+            si=np.flatnonzero(np.isin(proto,source)); ti=np.flatnonzero(proto==target)
+            st,sv,se=session_split(g[si],labels=y[si],seed=seed)
+            tt,tv,te=session_split(g[ti],labels=data['attack_fine'][ti],seed=seed)
+            st,sv,se,tt,tv,te=si[st],si[sv],si[se],ti[tt],ti[tv],ti[te]
+            def loader(ix,train=False,features=True):
+                return make_dl_loader(X,proto,y,ix,X_classical=C if features else None,groups=g,shuffle=train)
+            scores={}; test_y=None
+            def report(model, model_name, val_ix=tv, seen=True, variant='full'):
+                nonlocal test_y
+                va=evaluate_binary(model,loader(val_ix),device); test=evaluate_binary(model,loader(te),device)
+                test_y=test['y']; scores[model_name]=test['score']
+                metrics,scores[model_name]=calibrate_scores_and_report(
+                    va['y'],va['score'],test_y,test['score'],target+'_'+model_name,seed,return_scores=True)
+                rows.append(dict(protocol=target,model=model_name,variant=variant,seed=seed,K=K_MAIN_DATASET,
+                    train_protocols=target if model_name=='scratch' else '+'.join(source)+('+'+target if seen else ''),
+                    training_protocol_seen=seen,calibration_protocol=target if seen else '+'.join(source),
+                    epochs_pretrain=0 if model_name=='scratch' else SC['ep_pre'],epochs_target=SC['ep_ft'] if seen else 0,
+                    n_test_sessions=len(test_y),**metrics))
+            torch.manual_seed(SEEDS.seed('review_scratch',seed))
+            scratch=train_binary(CrossProtocolDetector(),loader(tt,True),loader(tv),device,
+                epochs=SC['ep_ft'],verbose=False,select_best=False)
+            report(scratch,'scratch')
+            for variant,options in variants.items():
+                cfg=dict(options); dann=cfg.pop('dann',True); contrastive=cfg.pop('contrastive',True)
+                torch.manual_seed(SEEDS.seed('review_pretrain',seed))
+                pretrained=train_binary(CrossProtocolDetector(**cfg),loader(st,True),loader(sv),device,
+                    epochs=SC['ep_pre'],verbose=False,use_adversarial=dann,use_contrastive=contrastive)
+                # True unseen-protocol evaluation requires a trained shared input adapter.
+                if variant=='shared_adapter':
+                    # Transfer source normalization statistics; no target statistics are fitted.
+                    with torch.no_grad():
+                        bn=pretrained.cls_norm[target]
+                        bn.running_mean.copy_(torch.stack([pretrained.cls_norm[p].running_mean for p in source]).mean(0))
+                        bn.running_var.copy_(torch.stack([pretrained.cls_norm[p].running_var for p in source]).mean(0))
+                    report(pretrained,'source_only_shared',sv,False,variant)
+                transferred=_copy.deepcopy(pretrained); transferred.freeze_trunk()
+                for sp in source: transferred.freeze_adapter(sp)
+                transferred=train_binary(transferred,loader(tt,True),loader(tv),device,
+                    epochs=SC['ep_ft'],verbose=False,select_best=False)
+                report(transferred,'transfer_'+variant,variant=variant)
+                probe=protocol_probe(transferred,data,device,seed=seed,indices=np.r_[se,te])
+                probe_rows.append(dict(protocol=target,variant=variant,seed=seed,**probe))
+            # Engineered baselines get exactly one row per SAME session, same validation/test sets.
+            first=lambda ix: ix[np.unique(g[ix],return_index=True)[1]]
+            tr1,va1,te1=first(tt),first(tv),first(te)
+            for name,model in [('classical_boosted',make_boosted(seed=seed)),('classical_logistic',make_logreg()),
+                               ('classical_RF',RandomForestClassifier(n_estimators=200,class_weight='balanced',random_state=seed))]:
+                model.fit(C[tr1],y[tr1]); pv=model.predict_proba(C[va1])[:,1]; pt=model.predict_proba(C[te1])[:,1]
+                metrics,scores[name]=calibrate_scores_and_report(y[va1],pv,y[te1],pt,target+'_'+name,seed,return_scores=True)
+                rows.append(dict(protocol=target,model=name,seed=seed,K=K_MAIN_DATASET,training_protocol_seen=True,
+                    **metrics))
+            # Normal-only methods see the same clean target sessions and the same attacked test sessions.
+            clean=tr1[y[tr1]==0]
+            from sklearn.svm import OneClassSVM
+            for name,model in [('isolation_forest',IsolationForest(n_estimators=200,random_state=seed)),
+                ('one_class_SVM',Pipeline([('scale',StandardScaler()),('oneclass',OneClassSVM(nu=.05))]))]:
+                model.fit(C[clean]); pv=-model.score_samples(C[va1]); pt=-model.score_samples(C[te1]); scores[name]=pt
+                rows.append(dict(protocol=target,model=name,seed=seed,K=K_MAIN_DATASET,training_protocol_seen=True,
+                    **calibrate_scores_and_report(y[va1],pv,y[te1],pt,target+'_'+name,seed,calibrate=False)))
+            torch.manual_seed(SEEDS.seed('review_svdd',seed))
+            svdd,center=train_svdd(BiasFreeSVDDEncoder(),loader(tt,True,False),loader(tv,False,False),device,
+                epochs=SC['ep_ft'],verbose=False)
+            pv,yv=anomaly_scores(svdd,center,loader(tv,False,False),device)
+            pt,yt=anomaly_scores(svdd,center,loader(te,False,False),device)
+            yv,pv,_=_mean_session_values(pv,yv,g[tv]); yt,pt,_=_mean_session_values(pt,yt,g[te]); scores['deep_SVDD']=pt
+            rows.append(dict(protocol=target,model='deep_SVDD',seed=seed,K=K_MAIN_DATASET,training_protocol_seen=True,
+                **calibrate_scores_and_report(yv,pv,yt,pt,target+'_deep_SVDD',seed,calibrate=False)))
+            for name,score in scores.items():
+                if name=='transfer_full': continue
+                pair=paired_auc_comparison(test_y,scores['transfer_full'],score,seed=seed,B=200 if RUN_PROFILE=='quick' else 1000)
+                ledger(f'review DL full vs {name} [{target}, seed={seed}]',pair['paired_bootstrap_p'])
+                comparisons.append(dict(protocol=target,seed=seed,model_a='transfer_full',model_b=name,**pair))
+            _save_csv(pd.DataFrame(rows),'data/review_dl_matched_comparisons.csv',index=False)
+            _save_csv(pd.DataFrame(probe_rows),'data/review_dl_ablation_probes.csv',index=False)
+            _save_csv(pd.DataFrame(comparisons),'data/review_dl_paired_tests.csv',index=False)
+    return pd.DataFrame(rows)
+
+
+def primary_classical_report():
+    rows=[]; paired=[]
+    models={'BB84':dict(KNN=knn84,logistic=lr84,RF=rf84_model,SVM=svm84_model,boosted=boosted84_model),
+            'BKM07':dict(KNN=knnbk,logistic=lrbk,RF=rfbk_model,SVM=svmbk_model,boosted=boostedbk_model),
+            'E91':dict(KNN=knn91,logistic=lr91,RF=rf91_model,boosted=boosted91_model)}
+    for proto,S in REVIEW_SETS.items():
+        scores={}
+        for name,model in models[proto].items():
+            oof=oof_scores(model,S['Xtr'],S['ytr'],S['gtr']); pt=model.predict_proba(S['Xte'])[:,1]; scores[name]=pt
+            for target in (.01,.05):
+                threshold=fixed_fpr_threshold(oof[S['ytr']==0],target,source='oof_training')
+                rows.append(dict(protocol=proto,model=name,K=K_MAIN_DATASET,target_fpr=target,split_seed=7,
+                    threshold_source='grouped OOF training',**detection_metrics(S['yte'],pt,threshold,S['gte'])))
+        for name,score in scores.items():
+            if name=='boosted': continue
+            pair=paired_auc_comparison(S['yte'],scores['boosted'],score,S['gte'])
+            paired.append(dict(protocol=proto,model_a='boosted',model_b=name,**pair))
+            ledger(f'primary classical boosted vs {name} [{proto}]',pair['paired_bootstrap_p'])
+    _save_csv(pd.DataFrame(rows),'data/primary_classical_metrics.csv',index=False)
+    _save_csv(pd.DataFrame(paired),'data/primary_classical_paired_comparisons.csv',index=False)
+
+
+primary_classical_report()
+review_dl_results=run_review_dl_experiments(dl_data,DL_DEVICE)
+
+
+def final_review_sanity():
+    assert np.all(bb84_arr[:,bb84_hdr.index('k_achieved')]==K_MAIN_DATASET)
+    assert np.all(bkm_arr[:,bkm_hdr.index('k_achieved')]==K_MAIN_DATASET)
+    assert (e91_df['_k_achieved']==K_MAIN_DATASET).all()
+    assert np.isfinite(bb84_X).all() and np.isfinite(bkm_X).all() and np.isfinite(X91).all()
+    assert np.isfinite(dl_data['X']).all() and np.isfinite(dl_data['X_classical']).all()
+    metadata=dl_data['session_metadata']; ids=[m['session_id'] for m in metadata]
+    assert len(ids)==len(set(ids)), 'Duplicate DL session IDs'
+    assert set(ids)==set(dl_data['group']), 'Missing session IDs in window dataset'
+    assert all(m['K']==K_MAIN_DATASET for m in metadata)
+    assert SPLIT_AUDIT and all(r[k]==0 for r in SPLIT_AUDIT for k in ('train_validation_overlap','train_test_overlap','validation_test_overlap'))
+    assert THRESHOLD_AUDIT and all(r['source'] in ('validation','oof_training') for r in THRESHOLD_AUDIT)
+    assert len(CODE_VERSION)==64 and _GD_FP and _E91_FP and _DL_FP
+    assert not protocol_resource_summary.loc[protocol_resource_summary.protocol=='BKM07','skr_implemented'].any()
+    _save_csv(pd.DataFrame(SPLIT_AUDIT),'data/group_leakage_audit.csv',index=False)
+    _save_csv(pd.DataFrame(THRESHOLD_AUDIT),'data/threshold_source_audit.csv',index=False)
+    checks=dict(K_matched=True,E91_K_matched=True,group_overlap=0,DL_windows_session_disjoint=True,
+        features_finite=True,unique_session_ids=True,thresholds_from_test=False,BKM07_SKR_claimed=False,
+        code_version=CODE_VERSION,master_seed=MASTER_SEED,profile=RUN_PROFILE,
+        dataset_fingerprints=dict(classical=_GD_FP,E91=_E91_FP,DL=_DL_FP),settings=SC,
+        status='completed',artifacts=RESULT_ARTIFACTS)
+    _pathlib.Path('data/final_sanity_and_provenance.json').write_text(_json.dumps(checks,indent=2),encoding='utf-8')
+    print('FINAL AUTOMATED SANITY CHECK:',{k:v for k,v in checks.items() if k not in ('settings','artifacts')})
+
+final_review_sanity()
+
 # ── 26.5 multiple-comparison ledger: every confirmatory test of this run, Holm-corrected as one family (review D10) ──────────
 if P_LEDGER:
     names, ps = zip(*P_LEDGER); led = pd.DataFrame(dict(test=names, p=ps)); led['p_holm'] = holm(led.p.to_numpy()); led['significant_at_0.05_after_Holm'] = led.p_holm < 0.05
-    led.to_csv('data/ledger_holm.csv', index=False); print(f"{len(led)} confirmatory tests registered; Holm-adjusted over the whole family:"); print(led.round(4).to_string(index=False))
+    _save_csv(led, 'data/ledger_holm.csv', index=False); print(f"{len(led)} confirmatory tests registered; Holm-adjusted over the whole family:"); print(led.round(4).to_string(index=False))
 else:
     print("ledger is empty (the experiments that fill it were skipped)")
 # ── provenance (review A1): which saved files were NOT written by this run? ───────────────────────────────────────────────
