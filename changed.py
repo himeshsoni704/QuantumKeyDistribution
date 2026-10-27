@@ -430,14 +430,14 @@ SC = dict(
     nw_per_class=_P(6, 100, 200), nw_N=_P((100_000, 200_000), (200_000, 1_000_000, 2_000_000), (200_000, 1_000_000, 2_000_000)),
     nw_W=_P((16, 32), (16, 32, 64), (16, 32, 64)), nw_seeds=_P(2, 20, 20),
     dl_sessions=_P(10, 100, 300, 400), dl_events=2000, loo_seeds=_P((0,), (0, 1, 2, 3, 4), tuple(range(5)), tuple(range(5))),
-    loo_fractions=_P((0.5, 1.0), (0.05, 0.1, 0.25, 0.5, 1.0), (0.05, 0.1, 0.25, 0.5, 1.0)), ep_pre=_P(1, 20, 20, 30), ep_ft=_P(1, 15, 15, 20),
-    cv_seeds=_P((0,), (0, 1, 2), tuple(range(5)), tuple(range(10))), cv_epochs=_P(1, 10, 15, 20),
+    loo_fractions=_P((0.5, 1.0), (0.05, 0.1, 0.25, 0.5, 1.0), (0.05, 0.1, 0.25, 0.5, 1.0)), ep_pre=_P(3, 60, 80, 120), ep_ft=_P(3, 30, 40, 60),
+    cv_seeds=_P((0,), (0, 1, 2), tuple(range(5)), tuple(range(10))), cv_epochs=_P(3, 40, 60, 80),
     abl_seeds=_P((0,), (0, 1, 2), tuple(range(5)), tuple(range(10))),
     s19_n=_P(6, 30, 100), s21_n=_P(6, 25, 80), s21b_n=_P(6, 40, 100), s21c_n=_P(6, 30, 100), cusum_rep=_P(3, 20, 50),
     s24_n_h=_P(10, 100, 400), s24_n_att=_P(6, 40, 200), s24_K=_P((200, 500), (200, 500, 2000), (200, 500, 2000)),
     s24_noise_tr=_P(4, 30, 80), s24_noise_te=_P(6, 40, 150), s24_tt_h=_P(10, 100, 400), s24_tt_a=_P(6, 60, 200),
     s24_dl_clean=_P(14, 150, 600, 1000), s24_dl_att=_P(14, 150, 600, 1000), s24_dl_seeds=_P((0, 1), (0, 1, 2), tuple(range(5)), tuple(range(10))),
-    s24_dl_epochs=_P(1, 10, 20, 30),
+    s24_dl_epochs=_P(3, 60, 80, 120),
 )
 # Any single value can be overridden without editing the notebook, e.g.  QKD_SC_OVERRIDE='{"s24_dl_clean": 300, "s24_dl_seeds": [0, 1, 2]}' python changed.py
 import json as _json
@@ -5909,11 +5909,139 @@ def supcon_loss(z, labels, temperature=0.2):
     return -mean_log_prob_pos[valid].mean()
 
 
+def dl_training_config():
+    """Validated training controls; optional JSON overrides via QKD_DL_CONFIG."""
+    cfg = dict(dropout=0.2, fusion_dropout=0.15, layer_norm=True,
+               l1=1e-4, weight_decay=1e-4, patience=10, min_epochs=10,
+               min_delta=1e-4, balanced_sessions=True, log_history=True)
+    overrides = _json.loads(os.environ.get('QKD_DL_CONFIG', '{}'))
+    if not isinstance(overrides, dict) or set(overrides) - set(cfg):
+        raise ValueError('QKD_DL_CONFIG must be an object containing known training settings')
+    cfg.update(overrides)
+    for key in ('dropout', 'fusion_dropout'):
+        if not 0 <= cfg[key] < 1: raise ValueError(key + ' must be in [0, 1)')
+    for key in ('l1', 'weight_decay', 'min_delta'):
+        if not np.isfinite(cfg[key]) or cfg[key] < 0: raise ValueError(key + ' must be finite and nonnegative')
+    for key in ('patience', 'min_epochs'):
+        if not isinstance(cfg[key], int) or isinstance(cfg[key], bool) or cfg[key] < 1:
+            raise ValueError(key + ' must be a positive integer')
+    for key in ('layer_norm', 'balanced_sessions', 'log_history'):
+        if not isinstance(cfg[key], bool): raise ValueError(key + ' must be boolean')
+    return cfg
+
+
+def _dl_optimizer(model, lr, weight_decay=None):
+    """Decay matrix weights, excluding biases and normalization scales."""
+    cfg = dl_training_config()
+    decay, no_decay = [], []
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            (decay if param.ndim > 1 and 'weight' in name else no_decay).append(param)
+    if not decay and not no_decay: raise ValueError('Model has no trainable parameters')
+    return torch.optim.AdamW([
+        dict(params=decay, weight_decay=cfg['weight_decay'] if weight_decay is None else weight_decay),
+        dict(params=no_decay, weight_decay=0.0)], lr=lr)
+
+
+def _dl_l1(model):
+    """Mean absolute Linear/Conv weight; exclude recurrent gates, biases and norms."""
+    weights = [m.weight for m in model.modules()
+               if isinstance(m, (nn.Linear, nn.Conv1d)) and m.weight.requires_grad]
+    if not weights: return next(model.parameters()).new_zeros(())
+    return sum(w.abs().sum() for w in weights) / sum(w.numel() for w in weights)
+
+
+def _dl_session_weights(groups, n):
+    """Every independent session contributes the same expected training weight."""
+    if groups is None: return np.ones(n, dtype=np.float32)
+    groups = np.asarray(groups)
+    if len(groups) != n: raise ValueError('Session IDs must match observations')
+    _, inv, counts = np.unique(groups, return_inverse=True, return_counts=True)
+    return (n / (len(counts) * counts[inv])).astype(np.float32)
+
+
+def _dl_label_weights(loader):
+    y = _loader_labels(loader)
+    if y is None: return None, None
+    groups = getattr(loader.dataset, 'groups', None)
+    w = _dl_session_weights(groups, len(y)) if dl_training_config()['balanced_sessions'] else np.ones(len(y))
+    return np.asarray(y), w
+
+
+class DLTrainingMonitor:
+    """Session metric checkpointing with validation-loss tie breaking and patience."""
+    def __init__(self, enabled=True):
+        self.cfg = dl_training_config()
+        self.enabled = enabled
+        self.best_score = -float('inf')
+        self.best_loss = float('inf')
+        self.best_state = None
+        self.best_epoch = 0
+        self.bad_epochs = 0
+        self.history = []
+
+    def update(self, model, epoch, train_loss, score=None, val_loss=None, lr=None):
+        row = dict(epoch=epoch, train_loss=float(train_loss), lr=float(lr or 0.0))
+        if not np.isfinite(train_loss): raise FloatingPointError('Nonfinite DL training loss')
+        if self.enabled:
+            if score is None or not np.isfinite(score):
+                raise ValueError('Validation metric is undefined; provide adequate independent validation sessions')
+            row.update(val_score=float(score), val_loss=None if val_loss is None else float(val_loss))
+            delta = self.cfg['min_delta']
+            improvement = score > self.best_score + delta
+            tie = abs(score - self.best_score) <= delta
+            if improvement or (tie and val_loss is not None and val_loss < self.best_loss - delta):
+                self.best_score, self.best_loss = float(score), float(val_loss) if val_loss is not None else float('inf')
+                self.best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+                self.best_epoch, self.bad_epochs = epoch, 0
+            else:
+                self.bad_epochs += 1
+        self.history.append(row)
+        return self.enabled and epoch >= self.cfg['min_epochs'] and self.bad_epochs >= self.cfg['patience']
+
+    def finish(self, model, trainer):
+        if self.enabled and self.best_state is not None: model.load_state_dict(self.best_state)
+        model.training_history_ = self.history
+        model.training_summary_ = dict(trainer=trainer, epochs_run=len(self.history),
+            selected_epoch=self.best_epoch if self.enabled else len(self.history),
+            validation_selection=self.enabled, config=self.cfg)
+        if self.cfg['log_history']:
+            import uuid
+            path = _pathlib.Path('data/dl_training_history')
+            path.mkdir(parents=True, exist_ok=True)
+            dest = path / (trainer + '_' + uuid.uuid4().hex[:12] + '.json')
+            dest.write_text(_json.dumps(dict(model.training_summary_, history=self.history,
+                code_version=globals().get('CODE_VERSION')), indent=2), encoding='utf-8')
+            model.training_summary_['history_file'] = str(dest)
+        return model
+
+
+def _dl_binary_summary(y, scores, groups=None, logits=False):
+    """Aggregate within sessions before computing checkpoint metrics."""
+    y, scores = np.asarray(y), np.asarray(scores)
+    if groups is not None:
+        u, first, inv = np.unique(groups, return_index=True, return_inverse=True)
+        if any(len(np.unique(y[np.asarray(groups) == g])) != 1 for g in u):
+            raise ValueError('Each session must have a single label')
+        scores = np.bincount(inv, weights=scores) / np.bincount(inv)
+        y = y[first]
+    p = 1 / (1 + np.exp(-np.clip(scores, -40, 40))) if logits else scores
+    p = np.clip(p, 1e-7, 1-1e-7)
+    loss = float(-(y*np.log(p)+(1-y)*np.log1p(-p)).mean())
+    auc = float(roc_auc_score(y, scores)) if len(np.unique(y)) == 2 else np.nan
+    return auc, loss
+
+
 class CrossProtocolDetector(nn.Module):
     def __init__(self, protocols=DL_PROTOCOLS, attack_counts=DL_ATTACK_COUNTS,
-                n_features=N_FEATURES, latent=48, hidden=64, dropout=0.2,
+                n_features=N_FEATURES, latent=48, hidden=64, dropout=None,
                 n_classical=N_CLASSICAL_FEATURES, classical_latent=16, use_classical=True, shared_adapter=False, use_attention=True):
         super().__init__()
+        cfg = dl_training_config()
+        dropout = cfg['dropout'] if dropout is None else dropout
+        self.embedding_norm = nn.LayerNorm(2*hidden) if cfg['layer_norm'] else nn.Identity()
+        self.embedding_dropout = nn.Dropout(cfg['fusion_dropout'])
+        self.feature_dropout = nn.Dropout(cfg['fusion_dropout'])
         self.protocols = protocols
         self.use_classical=use_classical; self.use_attention=use_attention; self.shared_adapter=shared_adapter
         self.shared_input=nn.Linear(n_features,latent) if shared_adapter else None
@@ -5953,8 +6081,11 @@ class CrossProtocolDetector(nn.Module):
         z = self.shared_input(x) if self.shared_adapter else torch.stack([self.adapters[p](xi) for xi, p in zip(x, proto_list)])
         h = self.conv(z.transpose(1, 2)).transpose(1, 2)
         h, _ = self.lstm(h)
-        if not self.use_attention: return h.mean(1), h.new_full((len(h),h.shape[1]),1/h.shape[1])
-        return self.pool(h)
+        if not self.use_attention:
+            pooled, attn = h.mean(1), h.new_full((len(h),h.shape[1]),1/h.shape[1])
+        else:
+            pooled, attn = self.pool(h)
+        return self.embedding_dropout(self.embedding_norm(pooled)), attn
 
     def _norm_classical(self, x_classical, proto_list):
         mask=x_classical[:,self.n_classical:]
@@ -5982,7 +6113,7 @@ class CrossProtocolDetector(nn.Module):
             x_classical = pooled.new_zeros(pooled.shape[0], 2*self.n_classical)
         if proto_list is not None:
             x_classical = self._norm_classical(x_classical, proto_list)
-        return torch.cat([pooled, self.classical_proj(x_classical)], dim=1)
+        return torch.cat([pooled, self.feature_dropout(self.classical_proj(x_classical))], dim=1)
 
     def forward_binary(self, x, proto_list, x_classical=None):
         pooled, attn = self.encode(x, proto_list)
@@ -6010,7 +6141,7 @@ class CrossProtocolDetector(nn.Module):
         return self.binary_head(fused).squeeze(-1), adv_logits, pooled, attn
 
     def freeze_trunk(self):
-        for module in (self.conv, self.lstm, self.pool):
+        for module in (self.conv, self.lstm, self.pool, self.embedding_norm, self.embedding_dropout):
             for p in module.parameters():
                 p.requires_grad = False
         # cuDNN RNN backward only works in train mode, and gradients must still flow back through the
@@ -6025,7 +6156,7 @@ class CrossProtocolDetector(nn.Module):
         # to the target protocol. Keep the frozen modules in eval mode whenever the model is trained.
         super().train(mode)
         if mode and getattr(self, '_trunk_frozen', False):
-            for module in (self.conv, self.pool):   # not self.lstm: see freeze_trunk
+            for module in (self.conv, self.pool, self.embedding_norm, self.embedding_dropout):   # not self.lstm: see freeze_trunk
                 module.eval()
         return self
 
@@ -6042,7 +6173,7 @@ print("CrossProtocolDetector defined (Draft 2, items 19-20: + protocol_head / fo
 # %% [markdown]
 # > 🔧 **CHANGED (Draft 2, item 21): train_binary: AUC-based checkpointing + optional DANN/SupCon training**
 # >
-# > Checkpoint selection now uses validation AUC (falls back to F1 only when AUC is undefined), and two new optional flags (use_adversarial, use_contrastive) turn on the item-19/20 losses during protocol-mixed pretraining.
+# > Checkpoint selection uses validation session AUC with loss tie-breaking and early stopping. Undefined validation AUC is an explicit error. Optional use_adversarial/use_contrastive flags control protocol-mixed objectives.
 
 # %%
 _PROTO_TO_IDX = {p: i for i, p in enumerate(DL_PROTOCOLS)}
@@ -6077,7 +6208,8 @@ def _binary_pos_weight(loader, device):
     y = _loader_labels(loader)
     if y is None:
         return None
-    n_pos = float(np.sum(y == 1)); n_neg = float(np.sum(y == 0))
+    y, weights = _dl_label_weights(loader)
+    n_pos = float(weights[y == 1].sum()); n_neg = float(weights[y == 0].sum())
     if n_pos == 0 or n_neg == 0:
         return None
     return torch.tensor(n_neg / n_pos, dtype=torch.float32, device=device)
@@ -6089,12 +6221,13 @@ def _class_weights(loader, n_classes, device):
     y = _loader_labels(loader)
     if y is None:
         return None
-    counts = np.bincount(np.asarray(y, dtype=np.int64), minlength=n_classes).astype(np.float64)
+    y, weights = _dl_label_weights(loader)
+    counts = np.bincount(np.asarray(y, dtype=np.int64), weights=weights, minlength=n_classes).astype(np.float64)
     w = np.where(counts > 0, counts.sum() / (n_classes * np.maximum(counts, 1)), 0.0)
     return torch.tensor(w, dtype=torch.float32, device=device)
 
 
-def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, verbose=True,
+def train_binary(model, train_loader, val_loader, device, epochs=60, lr=1e-3, verbose=True,
                   use_adversarial=False, use_contrastive=False, lambda_con=0.1, dann_gamma=10.0,
                   log_adversarial=False, select_best=True):
     """Draft 2, items 19-21.
@@ -6111,8 +6244,8 @@ def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, ve
     Checkpointing now selects on validation AUC, not F1 (item 21): with
     67-80% of windows attacked, F1 is maximised by the trivial
     always-predict-attacked model, so a val_F1-selected checkpoint could
-    be exactly that (falls back to F1 only if AUC is undefined, e.g. a
-    single-class validation batch).
+    be exactly that. Validation must contain both clean and attacked sessions;
+    an undefined AUC is reported explicitly instead of silently changing metrics.
 
     Feature-expansion patch: each training batch now optionally carries a
     4th element (the precomputed classical feature vector), threaded into
@@ -6129,11 +6262,14 @@ def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, ve
     """
     model.to(device)
     params = [p for p in model.parameters() if p.requires_grad]
-    opt = torch.optim.AdamW(params, lr=lr, weight_decay=1e-4)
+    opt = _dl_optimizer(model, lr)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(epochs, 1))
     pos_weight = _binary_pos_weight(train_loader, device)
-    best_score, best_state = -1.0, None
+    if epochs < 1: raise ValueError('epochs must be positive')
+    monitor = DLTrainingMonitor(enabled=select_best)
+    cfg = dl_training_config()
     for ep in range(epochs):
+        loss_sum, n_seen = 0.0, 0
         model.train()
         _keep_frozen_lstm_trainable(model)
         lambd = dann_lambda(ep, epochs, gamma=dann_gamma) if use_adversarial else 0.0
@@ -6157,12 +6293,17 @@ def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, ve
             else:
                 logits, _ = model.forward_binary(xb, list(pb), x_classical=xcb)
                 loss = F.binary_cross_entropy_with_logits(logits, yb, pos_weight=pos_weight)
+            loss = loss + cfg['l1'] * _dl_l1(model)
+            if not torch.isfinite(loss): raise FloatingPointError('Nonfinite DL loss; check input features')
+            loss_sum += float(loss.detach()) * len(xb); n_seen += len(xb)
             opt.zero_grad(); loss.backward()
             nn.utils.clip_grad_norm_(params, 1.0)
             opt.step()
         sched.step()
-        if not select_best and not verbose and not (use_adversarial and log_adversarial):
-            continue          # review E5: no per-epoch evaluation / checkpointing when the last epoch is used
+        if not select_best:
+            monitor.update(model, ep+1, loss_sum/max(n_seen,1), lr=opt.param_groups[0]['lr'])
+            if verbose: print(f'  epoch {ep+1:3d} train_loss {loss_sum/max(n_seen,1):.4f} (fixed budget)')
+            continue  # Preserve target-label budgets: no validation-based stopping or selection.
         metrics = evaluate_binary(model, val_loader, device)
         if verbose or (use_adversarial and log_adversarial):
             line = f"  epoch {ep+1:3d}"
@@ -6176,12 +6317,11 @@ def train_binary(model, train_loader, val_loader, device, epochs=25, lr=1e-3, ve
                 line += (f"  |  discriminator_acc {adv_correct / adv_total:.4f} (chance {chance:.3f})"
                         f"  discriminator_loss {adv_loss_sum / adv_total:.4f}")
             print(line)
-        score = metrics["auc"] if np.isfinite(metrics["auc"]) else metrics["f1"]
-        if select_best and score > best_score:
-            best_score, best_state = score, _copy.deepcopy(model.state_dict())
-    if best_state is not None:
-        model.load_state_dict(best_state)
-    return model
+        score = metrics["auc"]
+        _, val_loss = _dl_binary_summary(metrics['y'], metrics['score'])
+        if monitor.update(model, ep+1, loss_sum/max(n_seen,1), score, val_loss, opt.param_groups[0]['lr']):
+            break
+    return monitor.finish(model, 'binary')
 
 
 @torch.no_grad()
@@ -6214,48 +6354,60 @@ def evaluate_binary(model, loader, device, validation_loader=None, with_ci=False
     return out
 
 
-def train_fine(model, protocol, train_loader, val_loader, device, epochs=25, lr=1e-3, verbose=True):
+def train_fine(model, protocol, train_loader, val_loader, device, epochs=60, lr=1e-3, verbose=True):
     model.to(device)
     params = [p for p in model.parameters() if p.requires_grad]
-    opt = torch.optim.AdamW(params, lr=lr, weight_decay=1e-4)
+    opt = _dl_optimizer(model, lr)
     class_w = _class_weights(train_loader, len(DL_ATTACKS[protocol]), device)
-    best_f1, best_state = -1.0, None
+    if epochs < 1: raise ValueError('epochs must be positive')
+    monitor = DLTrainingMonitor()
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
     for ep in range(epochs):
+        loss_sum, n_seen = 0.0, 0
         model.train()
         _keep_frozen_lstm_trainable(model)
         for batch in train_loader:
             xb, pb, yb, *rest = batch
-            xb, yb = xb.to(device), yb.to(device)
+            xb, yb = xb.to(device), yb.to(device, dtype=torch.long)
             xcb = rest[0].to(device) if rest else None
             logits, _ = model.forward_fine(xb, list(pb), x_classical=xcb)
             loss = F.cross_entropy(logits, yb, weight=class_w)
+            loss = loss + dl_training_config()['l1'] * _dl_l1(model)
+            if not torch.isfinite(loss): raise FloatingPointError('Nonfinite DL loss; check input features')
+            loss_sum += float(loss.detach()) * len(xb); n_seen += len(xb)
             opt.zero_grad(); loss.backward()
             nn.utils.clip_grad_norm_(params, 1.0)
             opt.step()
-        macro_f1, _ = evaluate_fine(model, protocol, val_loader, device)
+        macro_f1, _, val_loss = evaluate_fine(model, protocol, val_loader, device, return_loss=True)
         if verbose:
             print(f"  [{protocol}] epoch {ep+1:3d}  val_macroF1 {macro_f1:.4f}")
-        if macro_f1 > best_f1:
-            best_f1, best_state = macro_f1, _copy.deepcopy(model.state_dict())
-    if best_state is not None:
-        model.load_state_dict(best_state)
-    return model
+        sched.step()
+        if monitor.update(model, ep+1, loss_sum/max(n_seen,1), macro_f1, val_loss, opt.param_groups[0]['lr']): break
+    return monitor.finish(model, 'fine_' + protocol)
 
 
 @torch.no_grad()
-def evaluate_fine(model, protocol, loader, device):
+def evaluate_fine(model, protocol, loader, device, return_loss=False):
     model.eval()
     all_true, all_pred = [], []
     for batch in loader:
         xb, pb, yb, *rest = batch
         xcb = rest[0].to(device) if rest else None
         logits, _ = model.forward_fine(xb.to(device), list(pb), x_classical=xcb)
-        all_pred.append(logits.argmax(1).cpu().numpy())
+        all_pred.append(torch.softmax(logits, dim=1).cpu().numpy())
         all_true.append(yb.numpy())
-    y_true, y_pred = np.concatenate(all_true), np.concatenate(all_pred)
+    y_true, probabilities = np.concatenate(all_true), np.concatenate(all_pred)
+    groups = getattr(loader.dataset, 'groups', None)
+    if groups is not None:
+        if getattr(loader.dataset, 'shuffle', False): raise ValueError('Evaluation loader must preserve session order')
+        unique, first, inv = np.unique(groups, return_index=True, return_inverse=True)
+        probabilities = np.stack([probabilities[inv == i].mean(0) for i in range(len(unique))])
+        y_true = y_true[first]
+    y_pred = probabilities.argmax(1)
     macro_f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
     cm = confusion_matrix(y_true, y_pred, labels=list(range(len(DL_ATTACKS[protocol]))))
-    return macro_f1, cm
+    val_loss = float(-np.log(np.clip(probabilities[np.arange(len(y_true)), y_true.astype(int)], 1e-7, 1)).mean())
+    return (macro_f1, cm, val_loss) if return_loss else (macro_f1, cm)
 
 
 print("train_binary / evaluate_binary / train_fine / evaluate_fine defined.")
@@ -6312,7 +6464,10 @@ def make_dl_loader(X, protocol_arr, y, idx, X_classical=None, batch_size=64, shu
     ds.groups = None if groups is None else np.asarray(groups)[np.asarray(idx,dtype=int)]
     ds.shuffle = shuffle
     ds.labels = np.asarray(y)[np.asarray(idx, dtype=np.int64)]   # read by train_binary's pos_weight
-    return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, collate_fn=collate)
+    sampler = None
+    if shuffle and ds.groups is not None and dl_training_config()['balanced_sessions']:
+        sampler = torch.utils.data.WeightedRandomSampler(_dl_session_weights(ds.groups, len(ds)), len(ds), replacement=True)
+    return DataLoader(ds, batch_size=batch_size, shuffle=shuffle if sampler is None else False, sampler=sampler, collate_fn=collate)
 
 
 def transfer_vs_scratch(data, device, source_protocols, target_protocol,
@@ -6342,7 +6497,7 @@ def transfer_vs_scratch(data, device, source_protocols, target_protocol,
     results = []
     done_seeds = set()
     _ckpt_fp = (target_protocol, tuple(source_protocols), tuple(fractions), tuple(seeds),
-                epochs_pretrain, epochs_finetune, use_adversarial, use_contrastive, lambda_con, CODE_VERSION, _DL_FP)
+                epochs_pretrain, epochs_finetune, use_adversarial, use_contrastive, lambda_con, CODE_VERSION, _DL_FP, _json.dumps(dl_training_config(), sort_keys=True))
     if checkpoint_path is not None and os.path.exists(checkpoint_path) and not FINAL_REGENERATE:
         try:
             with open(checkpoint_path, "rb") as _f:
@@ -6704,13 +6859,15 @@ def compute_center(model, loader, device, eps=0.1):
     return torch.tensor(c, dtype=torch.float32, device=device)
 
 
-def train_svdd(model, clean_train_loader, clean_val_loader, device, epochs=25, lr=1e-3, verbose=True):
+def train_svdd(model, clean_train_loader, clean_val_loader, device, epochs=60, lr=1e-3, verbose=True):
+    if epochs < 1: raise ValueError('epochs must be positive')
     model.to(device)
     center = compute_center(model, clean_train_loader, device)
     params = [p for p in model.parameters() if p.requires_grad]
-    opt = torch.optim.AdamW(params, lr=lr, weight_decay=1e-5)
-    best_loss, best_state = float("inf"), None
+    opt = _dl_optimizer(model, lr, weight_decay=1e-5)
+    monitor = DLTrainingMonitor()
     for ep in range(epochs):
+        loss_sum, n_seen = 0.0, 0
         model.train()
         for xb, pb, yb in clean_train_loader:
             mask = yb.numpy() == 0.0
@@ -6718,17 +6875,16 @@ def train_svdd(model, clean_train_loader, clean_val_loader, device, epochs=25, l
                 continue
             pooled, _ = model.encode(xb[mask].to(device), [p for p, m in zip(pb, mask) if m])
             loss = ((pooled - center) ** 2).sum(dim=1).mean()
+            if not torch.isfinite(loss): raise FloatingPointError('Nonfinite DL loss; check input features')
+            loss_sum += float(loss.detach()) * int(mask.sum()); n_seen += int(mask.sum())
             opt.zero_grad(); loss.backward()
             nn.utils.clip_grad_norm_(params, 1.0)
             opt.step()
         val_loss = svdd_loss(model, center, clean_val_loader, device)
         if verbose:
             print(f"  SVDD epoch {ep+1:3d}  val_dist {val_loss:.4f}")
-        if val_loss < best_loss:
-            best_loss, best_state = val_loss, _copy.deepcopy(model.state_dict())
-    if best_state is not None:
-        model.load_state_dict(best_state)
-    return model, center
+        if monitor.update(model, ep+1, loss_sum/max(n_seen,1), -val_loss, val_loss, lr): break
+    return monitor.finish(model, 'svdd'), center
 
 
 @torch.no_grad()
@@ -7225,12 +7381,17 @@ for p in DL_PROTOCOLS:
             xcs = torch.from_numpy(np.stack([b[3] for b in batch])).float()
             return xs, ps, ys, xcs
         ds = _DS()
-        ds.labels = dl_data["attack_fine"][idx]   # read by train_fine's class weights
-        return DataLoader(ds, batch_size=64, shuffle=shuffle, collate_fn=_collate)
+        ds.labels = dl_data['attack_fine'][idx]
+        ds.groups = dl_data['group'][idx]
+        ds.shuffle = shuffle
+        sampler = None
+        if shuffle and dl_training_config()['balanced_sessions']:
+            sampler = torch.utils.data.WeightedRandomSampler(_dl_session_weights(ds.groups, len(ds)), len(ds), replacement=True)
+        return DataLoader(ds, batch_size=64, shuffle=shuffle if sampler is None else False, sampler=sampler, collate_fn=_collate)
 
     model_p = CrossProtocolDetector()
     model_p = train_fine(model_p, p, _loader_fine(tr_idx, True), _loader_fine(va_idx, False),
-                         DL_DEVICE, epochs=15, verbose=False)
+                         DL_DEVICE, epochs=SC['cv_epochs'], verbose=False)
     macro_f1, cm = evaluate_fine(model_p, p, _loader_fine(te_idx, False), DL_DEVICE)
     print(f"[{p}] TEST macro-F1: {macro_f1:.4f}")
     print(f"[{p}] confusion matrix (rows=true, cols=pred, order={DL_ATTACKS[p]}):\n{cm}")
@@ -7242,7 +7403,7 @@ for p in DL_PROTOCOLS:
 # so nothing drifts) and only force conv/pool into eval. Patching the class here makes this work even if
 # the model-definition cell was not re-run.
 def _freeze_trunk(self):
-    for module in (self.conv, self.lstm, self.pool):
+    for module in (self.conv, self.lstm, self.pool, self.embedding_norm, self.embedding_dropout):
         for p in module.parameters():
             p.requires_grad = False
     self.lstm.dropout = 0.0
@@ -7251,7 +7412,7 @@ def _freeze_trunk(self):
 def _train(self, mode=True):
     super(CrossProtocolDetector, self).train(mode)
     if mode and getattr(self, '_trunk_frozen', False):
-        for module in (self.conv, self.pool):
+        for module in (self.conv, self.pool, self.embedding_norm, self.embedding_dropout):
             module.eval()
     return self
 
@@ -7345,7 +7506,7 @@ _diag_model = train_binary(_diag_model,
                    X_classical=dl_data["X_classical"]),
     make_dl_loader(dl_data["X"], dl_data["protocol"], dl_data["is_attacked"], _src_idx_all[_src_va],
                    X_classical=dl_data["X_classical"], shuffle=False),
-    DL_DEVICE, epochs=15, verbose=False,
+    DL_DEVICE, epochs=SC['cv_epochs'], verbose=False,
     use_adversarial=True, use_contrastive=True, lambda_con=0.1, log_adversarial=True)
     # Bug fix: these two calls previously omitted use_adversarial/use_contrastive entirely, so
     # train_binary's defaults (both False) applied -- this diagnostic's embedding was never actually
@@ -7359,7 +7520,7 @@ _diag_model = train_binary(_diag_model,
                    X_classical=dl_data["X_classical"]),
     make_dl_loader(dl_data["X"], dl_data["protocol"], dl_data["is_attacked"], _tgt_idx_all[_tgt_va],
                    X_classical=dl_data["X_classical"], shuffle=False),
-    DL_DEVICE, epochs=15, verbose=False,
+    DL_DEVICE, epochs=SC['cv_epochs'], verbose=False,
     use_adversarial=True, use_contrastive=True, lambda_con=0.1, log_adversarial=True)
 plot_embedding_diagnostic(_diag_model, dl_data, DL_DEVICE)
 _diag_used=np.r_[_src_idx_all[_src_tr],_src_idx_all[_src_va],_tgt_idx_all[_tgt_tr],_tgt_idx_all[_tgt_va]]
@@ -7412,7 +7573,7 @@ def run_grouped_cv_benchmark(data, device, n_folds=5, seeds=(0, 1, 2),
                                         data["X_classical"])
     rows = []
     done_pairs = set()
-    _ckpt_fp = (n_folds, tuple(seeds), epochs, use_adversarial, use_contrastive, lambda_con, val_frac, CODE_VERSION, _DL_FP)
+    _ckpt_fp = (n_folds, tuple(seeds), epochs, use_adversarial, use_contrastive, lambda_con, val_frac, CODE_VERSION, _DL_FP, _json.dumps(dl_training_config(), sort_keys=True))
     if checkpoint_path is not None and os.path.exists(checkpoint_path) and not FINAL_REGENERATE:
         try:
             with open(checkpoint_path, "rb") as _f:
@@ -8791,15 +8952,15 @@ class _Fuse(nn.Module):
     """Optional ML-feature branch: Linear -> ReLU on the engineered vector, concatenated to the sequence embedding."""
     def __init__(s, d_emb, d_cls):
         super().__init__(); s.d_cls = d_cls
-        s.proj = nn.Sequential(nn.Linear(d_cls, H_CLS), nn.ReLU()) if d_cls else None
+        s.proj = nn.Sequential(nn.Linear(d_cls, H_CLS), nn.ReLU(), nn.Dropout(dl_training_config()['fusion_dropout'])) if d_cls else None
         s.out = d_emb + (H_CLS if d_cls else 0)
     def forward(s, z, xc):
         return torch.cat([z, s.proj(xc)], 1) if s.d_cls else z
 
 class MLPNet(nn.Module):
     def __init__(s, d_in=18, h=64, d_cls=0):
-        super().__init__(); s.body = nn.Sequential(nn.Linear(d_in, h), nn.ReLU(), nn.Dropout(.2), nn.Linear(h, h), nn.ReLU())
-        s.fuse = _Fuse(h, d_cls); s.head = nn.Sequential(nn.Dropout(.2), nn.Linear(s.fuse.out, 1))
+        super().__init__(); s.body = nn.Sequential(nn.Linear(d_in, h), nn.ReLU(), nn.Dropout(dl_training_config()['dropout']), nn.Linear(h, h), nn.ReLU())
+        s.fuse = _Fuse(h, d_cls); s.head = nn.Sequential(nn.Dropout(dl_training_config()['dropout']), nn.Linear(s.fuse.out, 1))
     def forward(s, x, xc=None): return s.head(s.fuse(s.body(x), xc)).squeeze(-1)
 
 class CNN1D(nn.Module):
@@ -8807,30 +8968,30 @@ class CNN1D(nn.Module):
         super().__init__()
         s.f = nn.Sequential(nn.Conv1d(c, h, 5, padding=2), nn.BatchNorm1d(h), nn.ReLU(), nn.Conv1d(h, h, 5, padding=4, dilation=2),
                             nn.BatchNorm1d(h), nn.ReLU(), nn.Conv1d(h, h, 3, padding=4, dilation=4), nn.BatchNorm1d(h), nn.ReLU())
-        s.fuse = _Fuse(2 * h, d_cls); s.head = nn.Sequential(nn.Dropout(.2), nn.Linear(s.fuse.out, 1))
+        s.fuse = _Fuse(2 * h, d_cls); s.head = nn.Sequential(nn.Dropout(dl_training_config()['dropout']), nn.Linear(s.fuse.out, 1))
     def forward(s, x, xc=None):
         z = s.f(x.transpose(1, 2)); return s.head(s.fuse(torch.cat([z.mean(2), z.amax(2)], 1), xc)).squeeze(-1)
 
 class LSTMAttn(nn.Module):
     def __init__(s, c=8, h=32, d_cls=0):
         super().__init__(); s.lstm = nn.LSTM(c, h, batch_first=True, bidirectional=True); s.pool = AttentionPool(2 * h, attn_dim=32)
-        s.fuse = _Fuse(2 * h, d_cls); s.head = nn.Linear(s.fuse.out, 1)
+        s.fuse = _Fuse(2 * h, d_cls); s.head = nn.Sequential(nn.LayerNorm(s.fuse.out) if dl_training_config()['layer_norm'] else nn.Identity(), nn.Dropout(dl_training_config()['fusion_dropout']), nn.Linear(s.fuse.out, 1))
     def forward(s, x, xc=None):
         h, _ = s.lstm(x); p, _ = s.pool(h); return s.head(s.fuse(p, xc)).squeeze(-1)
 
 class TransformerNet(nn.Module):
     def __init__(s, c=8, d=48, max_len=512, d_cls=0):
         super().__init__(); s.inp = nn.Linear(c, d); s.pos = nn.Parameter(torch.zeros(1, max_len, d))
-        s.enc = nn.TransformerEncoder(nn.TransformerEncoderLayer(d, 4, 96, dropout=.1, batch_first=True), num_layers=2)
-        s.fuse = _Fuse(d, d_cls); s.head = nn.Linear(s.fuse.out, 1)
+        s.enc = nn.TransformerEncoder(nn.TransformerEncoderLayer(d, 4, 96, dropout=dl_training_config()['dropout'], batch_first=True), num_layers=2)
+        s.fuse = _Fuse(d, d_cls); s.head = nn.Sequential(nn.Dropout(dl_training_config()['fusion_dropout']), nn.Linear(s.fuse.out, 1))
     def forward(s, x, xc=None):
         z = s.enc(s.inp(x) + s.pos[:, :x.shape[1]]); return s.head(s.fuse(z.mean(1), xc)).squeeze(-1)
 
 class CNNLSTMNet(nn.Module):
     def __init__(self,c=8,h=32,d_cls=0):
-        super().__init__(); self.conv=nn.Conv1d(c,h,5,padding=2)
+        super().__init__(); self.conv=nn.Sequential(nn.Conv1d(c,h,5,padding=2),nn.BatchNorm1d(h),nn.ReLU(),nn.Dropout(dl_training_config()['dropout']))
         self.lstm=nn.LSTM(h,h,batch_first=True,bidirectional=True)
-        self.fuse=_Fuse(2*h,d_cls); self.head=nn.Linear(self.fuse.out,1)
+        self.fuse=_Fuse(2*h,d_cls); self.head=nn.Sequential(nn.LayerNorm(self.fuse.out) if dl_training_config()['layer_norm'] else nn.Identity(),nn.Dropout(dl_training_config()['fusion_dropout']),nn.Linear(self.fuse.out,1))
     def forward(self,x,xc=None):
         z=F.relu(self.conv(x.transpose(1,2))).transpose(1,2); z,_=self.lstm(z)
         return self.head(self.fuse(z.mean(1),xc)).squeeze(-1)
@@ -8845,35 +9006,75 @@ ARCH = dict(Full=FullSequenceNet, CNN_LSTM=CNNLSTMNet, MLP=MLPNet, CNN1D=CNN1D, 
 MODELS = {}
 for _a in ARCH: MODELS[_a] = (_a, False); MODELS[_a + '+feat'] = (_a, True)
 
-def fit_dl(name, Xtr, Ctr, ytr, Xva, Cva, yva, epochs=10, seed=0, lr=2e-3, bs=128, protocol=None):
-    """Train one model variant. Xtr: sequence windows (or win_stats for MLP); Ctr: engineered features per window."""
+def fit_dl(name, Xtr, Ctr, ytr, Xva, Cva, yva, epochs=60, seed=0, lr=1e-3, bs=128,
+           protocol=None, train_groups=None, val_groups=None, device=None):
+    """Train on session-balanced windows; select by validation session AUC.
+
+    CPU tensors are batched onto the chosen device, including validation and
+    inference. The optional groups preserve compatibility with window-only callers.
+    """
+    if epochs < 1 or bs < 1 or len(Xtr) == 0 or len(Xva) == 0:
+        raise ValueError('Positive epochs/batch size and nonempty train/validation sets are required')
+    if len(np.unique(ytr)) != 2 or len(np.unique(yva)) != 2:
+        raise ValueError('Binary DL training and validation each require clean and attacked sessions')
+    if train_groups is not None and val_groups is not None and set(train_groups) & set(val_groups):
+        raise ValueError('Training and validation session IDs overlap')
+    for a in (Xtr, Ctr, Xva, Cva):
+        if not np.isfinite(a).all(): raise ValueError('DL inputs must be finite')
     arch, use_feat = MODELS[name]
-    torch.manual_seed(seed); np.random.seed(seed)
+    torch.manual_seed(seed)
+    cfg = dl_training_config()
+    device = torch.device(device or globals().get('DL_DEVICE', 'cpu'))
+    w = _dl_session_weights(train_groups, len(Xtr)) if cfg['balanced_sessions'] else np.ones(len(Xtr))
+    def mean_std(a):
+        mu = np.average(a, axis=0, weights=w)
+        sd = np.sqrt(np.average((a-mu)**2, axis=0, weights=w)) + 1e-6
+        return mu, sd
     if arch == 'MLP':
-        mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-6; prep = lambda a: (a - mu) / sd
+        mu, sd = mean_std(Xtr)
+        prep = lambda a: (a-mu)/sd
     else:
         prep = lambda a: a
-    cmu, csd = Ctr[:,:N_CLASSICAL_FEATURES].mean(0), Ctr[:,:N_CLASSICAL_FEATURES].std(0)+1e-6
-    cprep=lambda a: np.concatenate((np.clip((a[:,:N_CLASSICAL_FEATURES]-cmu)/csd,-6,6)*a[:,N_CLASSICAL_FEATURES:],a[:,N_CLASSICAL_FEATURES:]),axis=1)
-    T = lambda a: torch.tensor(a, dtype=torch.float32)
-    Xt, Xv, Ct, Cv, yt = T(prep(Xtr)), T(prep(Xva)), T(cprep(Ctr)), T(cprep(Cva)), T(ytr)
-    m = ARCH[arch](d_cls=D_CLS if use_feat else 0)
-    if hasattr(m,'protocol'): m.protocol=protocol
-    opt = torch.optim.AdamW(m.parameters(), lr=lr, weight_decay=1e-4)
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs); best, best_state = -1, None
+    cmu, csd = mean_std(Ctr[:,:N_CLASSICAL_FEATURES])
+    cprep = lambda a: np.concatenate((np.clip((a[:,:N_CLASSICAL_FEATURES]-cmu)/csd,-6,6)*a[:,N_CLASSICAL_FEATURES:], a[:,N_CLASSICAL_FEATURES:]),axis=1)
+    T = lambda a: torch.as_tensor(np.ascontiguousarray(a),dtype=torch.float32)
+    Xt, Ct, yt = T(prep(Xtr)), T(cprep(Ctr)), T(ytr)
+    Xv, Cv = T(prep(Xva)), T(cprep(Cva))
+    m = ARCH[arch](d_cls=D_CLS if use_feat else 0).to(device)
+    if hasattr(m, 'protocol'): m.protocol = protocol or 'bb84'
+    opt = _dl_optimizer(m, lr)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
+    pos_weight = torch.tensor(w[np.asarray(ytr)==0].sum()/w[np.asarray(ytr)==1].sum(),dtype=torch.float32,device=device)
+    monitor = DLTrainingMonitor()
+    weights = torch.as_tensor(w,dtype=torch.double)
+    def infer(x, c):
+        m.eval()
+        with torch.no_grad():
+            return np.concatenate([m(x[i:i+bs].to(device),c[i:i+bs].to(device)).detach().cpu().numpy() for i in range(0,len(x),bs)])
     for ep in range(epochs):
-        m.train(); perm = torch.randperm(len(Xt))
-        for i in range(0, len(perm), bs):
-            b = perm[i:i + bs]
-            loss = F.binary_cross_entropy_with_logits(m(Xt[b], Ct[b]), yt[b]); opt.zero_grad(); loss.backward(); nn.utils.clip_grad_norm_(m.parameters(), 1.0); opt.step()
-        sched.step(); m.eval()
-        with torch.no_grad(): pv = m(Xv, Cv).numpy()
-        a = roc_auc_score(yva, pv) if len(np.unique(yva)) > 1 else 0.5
-        if a > best: best, best_state = a, {k: v.clone() for k, v in m.state_dict().items()}
-    m.load_state_dict(best_state); m.eval()
-    def predict(X, C):
-        with torch.no_grad(): return np.concatenate([m(T(prep(X[i:i + 512])), T(cprep(C[i:i + 512]))).numpy() for i in range(0, len(X), 512)])
-    return predict, best
+        m.train()
+        perm = torch.multinomial(weights,len(Xt),replacement=True) if cfg['balanced_sessions'] and train_groups is not None else torch.randperm(len(Xt))
+        loss_sum = 0.0
+        for i in range(0,len(perm),bs):
+            b = perm[i:i+bs]
+            loss = F.binary_cross_entropy_with_logits(m(Xt[b].to(device),Ct[b].to(device)),yt[b].to(device),pos_weight=pos_weight)
+            loss = loss + cfg['l1']*_dl_l1(m)
+            if not torch.isfinite(loss): raise FloatingPointError('Nonfinite DL loss')
+            opt.zero_grad(set_to_none=True); loss.backward()
+            nn.utils.clip_grad_norm_(m.parameters(),1.0); opt.step()
+            loss_sum += float(loss.detach())*len(b)
+        auc, val_loss = _dl_binary_summary(yva,infer(Xv,Cv),val_groups,logits=True)
+        if monitor.update(m,ep+1,loss_sum/len(Xt),auc,val_loss,opt.param_groups[0]['lr']): break
+        sched.step()
+    monitor.finish(m,'benchmark_'+name.replace('+','_'))
+    m.eval()
+    def predict(X,C):
+        if not len(X): return np.empty(0,dtype=np.float32)
+        # Preprocess in batches to bound host memory as well as accelerator memory.
+        return np.concatenate([infer(T(prep(X[i:i+bs])),T(cprep(C[i:i+bs]))) for i in range(0,len(X),bs)])
+    predict.training_history_ = m.training_history_
+    predict.training_summary_ = m.training_summary_
+    return predict, monitor.best_score
 
 def session_scores(logits, groups):
     """Mean logit over each session's windows -> {session id: score}."""
@@ -8927,14 +9128,35 @@ def make_window_set(proto, L):
         if len(w): W.append(w); G += [sid] * len(w); Y += [meta.y[sid]] * len(w); C.append(np.tile(np.nan_to_num(Xc[sid]), (len(w), 1)))
     return np.concatenate(W).astype(np.float32), np.array(G), np.array(Y), np.concatenate(C).astype(np.float32)
 
+def dl_attack_diagnostics(meta, session_ids, probabilities, threshold, model, protocol, window, seed):
+    """Describe failures by attack and strength, using an already-frozen threshold."""
+    frame = meta.iloc[np.asarray(session_ids, dtype=int)].copy()
+    frame['score'] = probabilities
+    clean = frame.y.to_numpy() == 0
+    rows = []
+    for attack in sorted(frame.loc[~clean, 'attack'].unique()):
+        for band, lo, hi in (('all', -np.inf, np.inf), ('weak', 0., .1), ('moderate', .1, .4), ('strong', .4, np.inf)):
+            selected = (frame.attack.to_numpy() == attack) & (frame.strength.to_numpy() > lo) & (frame.strength.to_numpy() <= hi)
+            if not selected.any(): continue
+            subset = selected | clean
+            y = frame.y.to_numpy()[subset]; score = frame.score.to_numpy()[subset]
+            rows.append(dict(protocol=protocol, model=model, window=window, seed=seed, attack=attack, strength_band=band,
+                n_attacked=int(selected.sum()), n_clean=int(clean.sum()),
+                auc=float(roc_auc_score(y,score)) if clean.any() else np.nan,
+                recall=float((frame.score.to_numpy()[selected] > threshold).mean()),
+                FPR=float((frame.score.to_numpy()[clean] > threshold).mean()) if clean.any() else np.nan,
+                threshold=float(threshold),threshold_source='validation sessions'))
+    return rows
+
+
 def run_dl(proto, L, epochs=DL_EPOCHS, seed=0, models=tuple(MODELS)):
     meta, Xs, Xc = SESS[proto]; W, G, Y, C = make_window_set(proto, L)
     tr, va, te = session_split(G, labels=Y, seed=seed)
-    res, scores = [], {}
+    res, scores, diagnostics = [], {}, []
     for name in models:
         t0 = time.time(); arch = MODELS[name][0]
         f = (lambda a: win_stats(a)) if arch == 'MLP' else (lambda a: a)
-        pred, bv = fit_dl(name, f(W[tr]), C[tr], Y[tr], f(W[va]), C[va], Y[va], epochs=epochs, seed=seed, protocol=proto)
+        pred, bv = fit_dl(name, f(W[tr]), C[tr], Y[tr], f(W[va]), C[va], Y[va], epochs=epochs, seed=seed, protocol=proto, train_groups=G[tr], val_groups=G[va])
         lg = pred(f(W[te]), C[te]); u, s = session_scores(lg, G[te]); ys = meta.y.values[u]
         lo, hi = boot_auc_ci(ys, s)
         res.append(dict(protocol=proto, window=L, seed=seed, model=name, window_auc=float(roc_auc_score(Y[te], lg)), session_auc=float(roc_auc_score(ys, s)),
@@ -8945,9 +9167,12 @@ def run_dl(proto, L, epochs=DL_EPOCHS, seed=0, models=tuple(MODELS)):
         for target in (.01,.05):
             th=fixed_fpr_threshold(sigmoid(sv)[yv==0],target)
             mm=detection_metrics(ys,sigmoid(s),th,seed=seed)
-            if target==.01: res[-1].update(mm)
+            if target==.01:
+                res[-1].update(mm)
+                res[-1]['accuracy'] = float(((sigmoid(s)>th)==ys).mean())
+                diagnostics.extend(dl_attack_diagnostics(meta,u,sigmoid(s),th,name,proto,L,seed))
             res[-1][f'tpr_at_{int(100*target)}pct_fpr']=mm['recall']
-        res[-1].update(K=K_MAIN_DATASET,threshold_source='validation sessions')
+        res[-1].update(K=K_MAIN_DATASET,threshold_source='validation sessions', epochs_run=pred.training_summary_['epochs_run'], selected_epoch=pred.training_summary_['selected_epoch'], regularization=_json.dumps(dl_training_config(),sort_keys=True))
         scores[name] = (u, s)
         print(f"  {proto:5s} L={L:3d} seed={seed} {name:18s} window AUC {res[-1]['window_auc']:.3f}  session AUC {res[-1]['session_auc']:.3f} [{lo:.2f},{hi:.2f}]  ({res[-1]['secs']}s)", flush=True)
     # ML engineered features alone (boosted trees) on the SAME sessions and split (apples-to-apples baseline)
@@ -8961,6 +9186,7 @@ def run_dl(proto, L, epochs=DL_EPOCHS, seed=0, models=tuple(MODELS)):
     res[-1].update(K=K_MAIN_DATASET,threshold_source='validation sessions')
     scores['classical_features'] = (te_s, pc)
     print(f"  {proto:5s} L={L:3d} seed={seed} classical (ML features only)  session AUC {res[-1]['session_auc']:.3f} [{lo:.2f},{hi:.2f}]", flush=True)
+    _save_csv(pd.DataFrame(diagnostics),f'data/dl_attack_diagnostics_{proto}_L{L}_seed{seed}.csv',index=False)
     return res, scores
 
 DL_RES, DL_SCORES = [], {}

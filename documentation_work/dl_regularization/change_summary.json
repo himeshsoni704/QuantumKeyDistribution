@@ -1,0 +1,41 @@
+{
+  "code_sha256": "17124eac323ff00ebc884744a6aa3e279cd41bddba169e5fb17b2af2d4cf7597",
+  "baseline_sha256": "e2d5352bb3faac976c96e7de7b86ee12b2bc249cb4ea8c9d0cae2f4a361bbc8b",
+  "functions_modified": [
+    "CrossProtocolDetector",
+    "_binary_pos_weight",
+    "_class_weights",
+    "train_binary",
+    "train_fine",
+    "evaluate_fine",
+    "make_dl_loader",
+    "transfer_vs_scratch",
+    "train_svdd",
+    "_freeze_trunk",
+    "_train",
+    "run_grouped_cv_benchmark",
+    "_Fuse",
+    "MLPNet",
+    "CNN1D",
+    "LSTMAttn",
+    "TransformerNet",
+    "CNNLSTMNet",
+    "fit_dl",
+    "run_dl"
+  ],
+  "functions_added": [
+    "dl_training_config",
+    "_dl_optimizer",
+    "_dl_l1",
+    "_dl_session_weights",
+    "_dl_label_weights",
+    "DLTrainingMonitor",
+    "_dl_binary_summary",
+    "dl_attack_diagnostics"
+  ],
+  "focused_checks": 26,
+  "existing_checks": 43,
+  "synthetic_learnability_auc": 1.0,
+  "diagnostic_results": "benchmark_results.json",
+  "limitation": "CPU checks and a small two-seed diagnostic only; expanded production study not run; gains mixed by protocol"
+}
