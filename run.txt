@@ -1,0 +1,34 @@
+Run qkd_pipeline.py from the repository folder.
+
+First, get the branch and install dependencies:
+git fetch origin
+git switch codex/standalone-qkd-dl
+
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+Then run these commands in order:
+# 1. Check the installation and pipeline
+python qkd_pipeline.py selftest
+
+# 2. Generate a small dataset
+python qkd_pipeline.py gen --smoke --out out_smoke
+
+# 3. Train the autoencoder + LSTM
+python qkd_pipeline.py train --smoke --out out_smoke
+
+# 4. Calibrate probabilities and decision thresholds
+python qkd_pipeline.py calibrate --smoke --out out_smoke
+
+# 5. Evaluate on test and stress data
+python qkd_pipeline.py evaluate --smoke --out out_smoke
+This runs all three protocols with two seeds and three training epochs. Results appear under out_smoke/results/, with summary CSVs under out_smoke/tables/.
+
+For the Transformer, repeat steps 3–5 with --backbone transformer added to each command. It reuses the generated dataset.
+
+Start with smoke mode. The full experiment suite is:
+python qkd_pipeline.py all --out out_full
+That trains many models and requires substantially more computation.
+
+
+12:47 PM
