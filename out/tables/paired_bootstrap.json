@@ -1,0 +1,392 @@
+[
+  {
+    "protocol": "bb84",
+    "backbone": "lstm",
+    "seed": 0,
+    "metric": "macro_f1_difference",
+    "estimate": -0.020341589429375695,
+    "ci95": [
+      -0.07182467240096656,
+      0.03285730517305201
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "lstm",
+    "seed": 1,
+    "metric": "macro_f1_difference",
+    "estimate": -0.0375820544529869,
+    "ci95": [
+      -0.07993395102858428,
+      0.0019780097472370337
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "lstm",
+    "seed": 2,
+    "metric": "macro_f1_difference",
+    "estimate": -0.02274031901780066,
+    "ci95": [
+      -0.08266539286995424,
+      0.03960770126242672
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "lstm",
+    "seed": 3,
+    "metric": "macro_f1_difference",
+    "estimate": 0.010602931744262911,
+    "ci95": [
+      -0.05811818482915338,
+      0.07099706219490014
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "lstm",
+    "seed": 4,
+    "metric": "macro_f1_difference",
+    "estimate": 0.05127381496015765,
+    "ci95": [
+      -0.015406924833730075,
+      0.11084870465453339
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "transformer",
+    "seed": 0,
+    "metric": "macro_f1_difference",
+    "estimate": -0.06572097404930527,
+    "ci95": [
+      -0.12917621102253424,
+      -0.0033101928349267423
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "transformer",
+    "seed": 1,
+    "metric": "macro_f1_difference",
+    "estimate": 0.006044570793048931,
+    "ci95": [
+      -0.056596087462298245,
+      0.0647416449124478
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "transformer",
+    "seed": 2,
+    "metric": "macro_f1_difference",
+    "estimate": -0.014997866448413388,
+    "ci95": [
+      -0.07864603764844476,
+      0.05687280159901727
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "transformer",
+    "seed": 3,
+    "metric": "macro_f1_difference",
+    "estimate": 0.06724339077959551,
+    "ci95": [
+      -0.009573121223558202,
+      0.14502735577207776
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bb84",
+    "backbone": "transformer",
+    "seed": 4,
+    "metric": "macro_f1_difference",
+    "estimate": -0.08896714256667232,
+    "ci95": [
+      -0.14648491405446792,
+      -0.025647849507772505
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "lstm",
+    "seed": 0,
+    "metric": "macro_f1_difference",
+    "estimate": -0.022733688430077503,
+    "ci95": [
+      -0.11038520389778399,
+      0.060805907258495925
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "lstm",
+    "seed": 1,
+    "metric": "macro_f1_difference",
+    "estimate": -0.023524580679312956,
+    "ci95": [
+      -0.06780097712922192,
+      0.017087285427848608
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "lstm",
+    "seed": 2,
+    "metric": "macro_f1_difference",
+    "estimate": -0.05315612996772423,
+    "ci95": [
+      -0.15367405830200115,
+      0.053405335188897785
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "lstm",
+    "seed": 3,
+    "metric": "macro_f1_difference",
+    "estimate": -0.01295360999232742,
+    "ci95": [
+      -0.07902837299960684,
+      0.054348941540442
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "lstm",
+    "seed": 4,
+    "metric": "macro_f1_difference",
+    "estimate": -0.0024758594651066446,
+    "ci95": [
+      -0.06635290429152518,
+      0.054793181641657696
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "transformer",
+    "seed": 0,
+    "metric": "macro_f1_difference",
+    "estimate": -0.07295482295482303,
+    "ci95": [
+      -0.16330747591386227,
+      0.004979533040871035
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "transformer",
+    "seed": 1,
+    "metric": "macro_f1_difference",
+    "estimate": -0.06434942040333114,
+    "ci95": [
+      -0.1579768859232909,
+      0.016351301072236285
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "transformer",
+    "seed": 2,
+    "metric": "macro_f1_difference",
+    "estimate": -0.03177151096056585,
+    "ci95": [
+      -0.13537900471233796,
+      0.07258951591605066
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "transformer",
+    "seed": 3,
+    "metric": "macro_f1_difference",
+    "estimate": -0.02130489321991802,
+    "ci95": [
+      -0.12613327926397128,
+      0.07759946437515437
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "bkm07",
+    "backbone": "transformer",
+    "seed": 4,
+    "metric": "macro_f1_difference",
+    "estimate": -0.04950975683286429,
+    "ci95": [
+      -0.13585374741254685,
+      0.03429674179638959
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "lstm",
+    "seed": 0,
+    "metric": "macro_f1_difference",
+    "estimate": -0.035992102543275284,
+    "ci95": [
+      -0.11203905090574162,
+      0.034944070349215435
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "lstm",
+    "seed": 1,
+    "metric": "macro_f1_difference",
+    "estimate": 0.03392707790874805,
+    "ci95": [
+      -0.05364728802957716,
+      0.11679019265882584
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "lstm",
+    "seed": 2,
+    "metric": "macro_f1_difference",
+    "estimate": 0.08052555327456923,
+    "ci95": [
+      0.008483471008014472,
+      0.15189738513622522
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "lstm",
+    "seed": 3,
+    "metric": "macro_f1_difference",
+    "estimate": -0.08122448405339205,
+    "ci95": [
+      -0.1560723326901591,
+      -0.00988133256627109
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "lstm",
+    "seed": 4,
+    "metric": "macro_f1_difference",
+    "estimate": -0.06506521841788099,
+    "ci95": [
+      -0.14449432435252738,
+      0.016495674566104894
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "transformer",
+    "seed": 0,
+    "metric": "macro_f1_difference",
+    "estimate": -0.0152899830790455,
+    "ci95": [
+      -0.08357275997695972,
+      0.053512202751405946
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "transformer",
+    "seed": 1,
+    "metric": "macro_f1_difference",
+    "estimate": -0.06815256559159,
+    "ci95": [
+      -0.14354801221386473,
+      0.012163293977593196
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "transformer",
+    "seed": 2,
+    "metric": "macro_f1_difference",
+    "estimate": -0.052548101111050405,
+    "ci95": [
+      -0.12413688206352233,
+      0.021284108424787247
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "transformer",
+    "seed": 3,
+    "metric": "macro_f1_difference",
+    "estimate": -0.023076152654129878,
+    "ci95": [
+      -0.09775176358168501,
+      0.04967536820789055
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  },
+  {
+    "protocol": "e91",
+    "backbone": "transformer",
+    "seed": 4,
+    "metric": "macro_f1_difference",
+    "estimate": -0.0172629039766396,
+    "ci95": [
+      -0.09446140442679461,
+      0.05390252522202108
+    ],
+    "resamples": 1000,
+    "unit": "test_group"
+  }
+]

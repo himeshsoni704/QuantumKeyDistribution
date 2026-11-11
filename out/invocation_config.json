@@ -1,0 +1,74 @@
+{
+  "out": "out",
+  "data_seed": 20260913,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "protocols": [
+    "bb84",
+    "bkm07",
+    "e91"
+  ],
+  "classes": {
+    "bb84": [
+      "honest",
+      "intercept_resend",
+      "pns",
+      "blocking",
+      "loss_manipulation"
+    ],
+    "e91": [
+      "honest",
+      "intercept_resend",
+      "ancilla",
+      "extra_depolarisation"
+    ],
+    "bkm07": [
+      "honest",
+      "symmetric_attack",
+      "asymmetric_attack"
+    ]
+  },
+  "runs_per_class": 300,
+  "stress_per_class": 30,
+  "key_events": 2000,
+  "windows": 50,
+  "latent": 8,
+  "hidden": 64,
+  "ff_width": 128,
+  "transformer_layers": 2,
+  "dropout": 0.0,
+  "pool_pairs": false,
+  "feature_set": "full",
+  "backbone": "lstm",
+  "epochs": 100,
+  "patience": 10,
+  "min_delta": 0.0001,
+  "batch_size": 32,
+  "lr": 0.001,
+  "pretrained_lr": 0.0001,
+  "weight_decay": 0.0001,
+  "folds": 5,
+  "crossfit": true,
+  "alpha": 0.05,
+  "beta": 0.02,
+  "holdout_attack": null,
+  "train_shuffle": false,
+  "device": "auto",
+  "threads": 2,
+  "bootstrap": 1000,
+  "smoke": false,
+  "label_budgets": [
+    5,
+    20,
+    100,
+    -1
+  ],
+  "shared_features": [
+    "qber_key"
+  ]
+}

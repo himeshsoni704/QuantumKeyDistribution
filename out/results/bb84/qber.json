@@ -1,0 +1,13 @@
+{
+  "config_hash": "782fadca0e603eed",
+  "threshold": 0.045,
+  "metrics": {
+    "auc": 0.6372222222222222,
+    "pr_auc": 0.8871195265688296,
+    "honest_false_alert_rate": 0.03333333333333333,
+    "attack_recall": 0.175,
+    "honest_support": 30,
+    "attack_support": 120
+  },
+  "binary_only": true
+}
