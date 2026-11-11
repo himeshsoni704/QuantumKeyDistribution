@@ -694,6 +694,8 @@ def run_e91(
     n_drift_segments=32,
     noise_profile="stationary",
     burst_multiplier=3.0,
+    optical_efficiency=1.0,
+    dark_count=0.0,
 ):
     """One E91 run. Outcomes are drawn from the exact Born-rule joint distribution for each (setting pair, channel condition) --
     multinomial sampling from the Born probabilities is identically distributed to shot-by-shot simulation.
@@ -766,13 +768,22 @@ def run_e91(
                     outs = np.array(keys)[idx]
                     ra[m], rb[m] = outs[:, 0], outs[:, 1]
 
+    # Threshold detectors: no click is encoded as outcome zero. Dark-only
+    # detections receive independent random outcomes; coincidences are selected
+    # by extractors, never silently counted as perfect correlations.
+    for outcome in (ra, rb):
+        signal = rng.random(n_pairs) < optical_efficiency
+        dark = rng.random(n_pairs) < dark_count
+        background_only = dark & ~signal
+        outcome[background_only] = rng.choice([-1, 1], size=background_only.sum())
+        outcome[~(signal | dark)] = 0
     return ak, bk, ra, rb
 
 
 def window_qber(a_choice, b_choice, r_a, r_b, start, end):
     key_a, key_b = [], []
     for ac, bc in KEY_PAIRS:
-        m = (a_choice[start:end] == ac) & (b_choice[start:end] == bc)
+        m = (a_choice[start:end] == ac) & (b_choice[start:end] == bc) & (r_a[start:end] != 0) & (r_b[start:end] != 0)
         key_a.extend(r_a[start:end][m])
         key_b.extend(-r_b[start:end][m])  # flip: singlet -> anti-correlated
     if len(key_a) == 0:
@@ -784,7 +795,7 @@ def window_qber(a_choice, b_choice, r_a, r_b, start, end):
 def window_chsh(a_choice, b_choice, r_a, r_b, start, end):
     corrs = []
     for ac, bc in CHSH_PAIRS:
-        m = (a_choice[start:end] == ac) & (b_choice[start:end] == bc)
+        m = (a_choice[start:end] == ac) & (b_choice[start:end] == bc) & (r_a[start:end] != 0) & (r_b[start:end] != 0)
         if m.sum() == 0:
             return np.nan
         corrs.append(np.mean(r_a[start:end][m] * r_b[start:end][m]))
@@ -1438,11 +1449,19 @@ def extract_e91_features(
     rng = rng or _fallback_rng()
     if target_k_key_pairs is not None:
         n_pulses = max(int(np.ceil(target_k_key_pairs / (2.0 / 9.0) * k_margin)), 500)
+    efficiency = float((detector or {}).get("optical_efficiency", 1.0))
+    dark_count = float((detector or {}).get("dark_count", 0.0))
+    if not (0 < efficiency <= 1 and 0 <= dark_count <= 1):
+        raise ValueError("Invalid E91 optical parameters")
+    if target_k_key_pairs is not None:
+        click_probability = efficiency + (1-efficiency)*dark_count
+        n_pulses = int(np.ceil(n_pulses / click_probability**2))
     V = sample_e91_channel(rng) if V is None else V
 
     a_choice, b_choice, r_a, r_b = run_e91(
         n_pulses,
         V=V,
+        optical_efficiency=efficiency, dark_count=dark_count,
         eve_mode=eve_mode,
         eve_intensity=eve_intensity,
         lam=lam,
@@ -1460,6 +1479,7 @@ def extract_e91_features(
         a, b, ra, rb = run_e91(
             n,
             V=V,
+            optical_efficiency=efficiency, dark_count=dark_count,
             eve_mode=eve_mode,
             eve_intensity=eve_intensity,
             lam=lam,
@@ -1474,7 +1494,7 @@ def extract_e91_features(
     _rec = _extend_to_k(
         _rec,
         _more_e91,
-        lambda r: np.isin(np.char.add(r["a"], r["b"]), [a + b for a, b in KEY_PAIRS]),
+        lambda r: np.isin(np.char.add(r["a"], r["b"]), [a + b for a, b in KEY_PAIRS]) & (r["ra"] != 0) & (r["rb"] != 0),
         target_k_key_pairs,
         n_pulses,
     )
@@ -1487,6 +1507,7 @@ def extract_e91_features(
         _km = np.isin(
             np.char.add(a_choice, b_choice), [_a + _b for _a, _b in KEY_PAIRS]
         )
+        _km &= (r_a != 0) & (r_b != 0)
         _cs = np.cumsum(_km)
         if _cs[-1] >= target_k_key_pairs:
             _cut = int(np.searchsorted(_cs, target_k_key_pairs)) + 1
@@ -1502,6 +1523,7 @@ def extract_e91_features(
     # per-window (errors, key pairs) counts so the binomial floor is known; the CHSH-trace jump energy is kept as a separate feature.
     _edges = np.linspace(0, n_pulses, n_windows + 1, dtype=int)
     _kp = np.isin(np.char.add(a_choice, b_choice), [_a + _b for _a, _b in KEY_PAIRS])
+    _kp &= (r_a != 0) & (r_b != 0)
     _err = _kp & (r_a != -r_b)
     _wc = np.array([int(_kp[lo:hi].sum()) for lo, hi in zip(_edges[:-1], _edges[1:])])
     _we = np.array([int(_err[lo:hi].sum()) for lo, hi in zip(_edges[:-1], _edges[1:])])
@@ -1511,7 +1533,7 @@ def extract_e91_features(
 
     corrs = []
     for ac, bc in CHSH_PAIRS:
-        m = (a_choice == ac) & (b_choice == bc)
+        m = (a_choice == ac) & (b_choice == bc) & (r_a != 0) & (r_b != 0)
         corrs.append(np.mean(r_a[m] * r_b[m]) if m.sum() else np.nan)
     per_pair_corr_spread = float(np.nanmax(corrs) - np.nanmin(corrs))
 
@@ -1570,6 +1592,7 @@ def extract_e91_features(
     _key_mask = np.isin(
         np.char.add(a_choice, b_choice), [_a + _b for _a, _b in KEY_PAIRS]
     )
+    _key_mask &= (r_a != 0) & (r_b != 0)
     features["_k_achieved"] = int(
         _key_mask.sum()
     )  # Draft 2, item 8/6: key pairs actually obtained
@@ -1577,8 +1600,9 @@ def extract_e91_features(
     features["_N_generated"] = int(_n_gen)
     features["_N_trunc"] = int(n_pulses)
     features["_key_yield"] = features["_k_achieved"] / max(n_pulses, 1)
-    features["_detection_yield"] = 1.0
-    features["_loss_rate"] = 0.0
+    features["_detection_yield"] = float(np.mean((r_a != 0) & (r_b != 0)))
+    features["_loss_rate"] = 1.0 - features["_detection_yield"]
+    features["sifted_rate"] = float(_key_mask.mean())
     if truncate and target_k_key_pairs is not None:
         assert features["_k_achieved"] == target_k_key_pairs
     if return_record:
@@ -1643,6 +1667,9 @@ class Config:
     )
     runs_per_class: int = 300
     stress_per_class: int = 30
+    calibration_extra_per_class: int = 185
+    stress_suite: str = "combined"
+    hardware_effects: bool = False
     key_events: int = 2000
     windows: int = 50
     latent: int = 8
@@ -1824,12 +1851,16 @@ def window_features(
             key = np.zeros(hi - lo, dtype=bool)
             for a, b in KEY_PAIRS:
                 key |= (r["a"] == a) & (r["b"] == b)
+            detected = (r["ra"] != 0) & (r["rb"] != 0)
+            key &= detected
+            put("detection_rate", detected.sum(), hi - lo)
+            put("accepted_fraction", key.sum(), detected.sum())
             # Original singlet convention: Bob's outcome is flipped for key comparison.
             error("qber_key", key, r["ra"] != -r["rb"])
             put("key_count", key.sum(), 1)
             for a in ALICE_ANGLES:
                 for b in BOB_ANGLES:
-                    pair = (r["a"] == a) & (r["b"] == b)
+                    pair = (r["a"] == a) & (r["b"] == b) & detected
                     put(
                         f"correlation_{a}_{b}",
                         (r["ra"][pair] * r["rb"][pair]).sum(),
@@ -1843,7 +1874,7 @@ def window_features(
                     for sign, j in zip(CHSH_SIGNS, pair_ids)
                 )
                 put("chsh_S", value * support, support)
-            # There is no optical loss/detector model for E91: those masks stay zero.
+            # Optical coincidence support is recorded above, including ideal-mode counts.
     return num, den, edges
 
 
@@ -1869,11 +1900,21 @@ def simulate_observations(
         else 0.0
     )
     if stress:
-        drift = float(rng.uniform(0.6, 1.0))
-        visibility = float(rng.uniform(0.78, 0.85))
-        if attack != "honest":
+        if cfg.stress_suite in ("combined", "drift"):
+            drift = float(rng.uniform(0.6, 1.0))
+        if cfg.stress_suite in ("combined", "visibility"):
+            visibility = float(rng.uniform(0.78, 0.85))
+        if cfg.stress_suite in ("combined", "strength") and attack != "honest":
             strength = float(rng.uniform(0.01, 0.05))
+        if cfg.stress_suite == "distance":
+            distance += 5.0 if protocol == "bkm07" else 25.0
     detector = dict(drift_amp=drift)
+    if cfg.hardware_effects and protocol == "bb84":
+        detector.update(afterpulse=0.01, dead_pulses=2)
+    if cfg.hardware_effects and protocol == "e91":
+        detector.update(optical_efficiency=0.2, dark_count=1e-5)
+    if stress and cfg.stress_suite == "bursty":
+        detector.update(noise_profile="bursty", burst_multiplier=3.0)
     mode = "none" if attack == "honest" else attack
     profile = "bursty" if mode == "intercept_resend" and rng.random() < 0.5 else "iid"
     common = dict(rng=rng, detector=detector, return_record=True)
@@ -2032,15 +2073,17 @@ def generate(cfg: Config) -> None:
         path.mkdir(parents=True, exist_ok=True)
         numerators, denominators, edges_all, rows, evaluation = [], [], [], [], []
         classes = cfg.known_classes(protocol)
-        for stress, count in (
-            (False, cfg.runs_per_class),
-            (True, cfg.stress_per_class),
+        for scenario, stress, count in (
+            ("main", False, cfg.runs_per_class),
+            ("stress", True, cfg.stress_per_class),
+            ("cal_A", False, cfg.calibration_extra_per_class),
+            ("cal_B", False, cfg.calibration_extra_per_class),
         ):
             for attack in cfg.classes[protocol]:
                 for i in range(count):
                     index = len(rows)
                     seed = SeedBook(cfg.data_seed).seed(
-                        f"{protocol}/{stress}/{attack}", i
+                        f"{protocol}/{scenario}/{attack}", i
                     )
                     record, meta, original = simulate_observations(
                         cfg, protocol, attack, seed, stress
@@ -2058,7 +2101,7 @@ def generate(cfg: Config) -> None:
                             run_id=run_id,
                             protocol=protocol,
                             group_id=run_id,
-                            scenario_group="stress" if stress else "main",
+                            scenario_group=scenario,
                             seed=seed,
                             label=classes.index(attack) if attack in classes else -1,
                         )
@@ -2088,6 +2131,12 @@ def generate(cfg: Config) -> None:
             ]
         )
         splits["stress"] = np.flatnonzero(runs.scenario_group == "stress")
+        for calibration in ("cal_A", "cal_B"):
+            extra = np.flatnonzero((runs.scenario_group == calibration) & (runs.label >= 0))
+            splits[calibration] = np.concatenate([splits[calibration], extra])
+        # Unknown families never enter calibration; retain them as evaluation data.
+        extras_unknown = np.flatnonzero(runs.scenario_group.isin(["cal_A", "cal_B"]) & (runs.label < 0))
+        splits["test"] = np.concatenate([splits["test"], extras_unknown])
         num, den = np.array(numerators), np.array(denominators)
         normalizer = Normalizer.fit(
             num[splits["train"]],
@@ -2132,7 +2181,7 @@ def load_data(cfg: Config, protocol: str) -> DataBundle:
     saved = json.loads((root / "config.json").read_text())
     if saved.get("source_sha256") != hashlib.sha256(Path(__file__).read_bytes()).hexdigest():
         raise ValueError("Simulator source changed since generation; regenerate using a fresh --out")
-    for name in ("data_seed", "key_events", "windows", "holdout_attack", "runs_per_class", "stress_per_class"):
+    for name in ("data_seed", "key_events", "windows", "holdout_attack", "runs_per_class", "stress_per_class", "calibration_extra_per_class", "stress_suite", "hardware_effects"):
         if saved[name] != getattr(cfg, name):
             raise ValueError(
                 f"Data/config mismatch for {name}; use matching flags or a new --out."
@@ -2230,6 +2279,8 @@ class HonestAE(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
         width = len(FEATURES)
+        self.jepa = cfg.feature_set == "jepa"
+        self.predictor = nn.GRU(cfg.latent, cfg.latent, batch_first=True) if self.jepa else None
         self.adapters = nn.ModuleDict(
             {
                 p: nn.Sequential(nn.Linear(3 * width, 32), nn.ReLU())
@@ -2253,6 +2304,8 @@ class HonestAE(nn.Module):
     ) -> dict[str, torch.Tensor]:
         x, m, c = batch["x"], batch["m"], batch["c"]
         z = self.encoder(self.adapters[protocol](torch.cat((x, m, c), dim=-1)))
+        if self.jepa:
+            return dict(z=z, r=torch.zeros_like(x), E=x.new_zeros(x.shape[:2]))
         reconstruction = self.decoders[protocol](z)
         residual = m * (x - reconstruction)
         error = residual.square().sum(-1) / m.sum(-1).clamp_min(1)
@@ -2472,6 +2525,9 @@ def fit_phase(
     history = []
     start = time.perf_counter()
     generator = torch.Generator().manual_seed(seed)
+    teacher = copy.deepcopy(model.ae).eval() if phase == "honest" and model.ae.jepa else None
+    if teacher is not None:
+        set_trainable(teacher, False)
 
     def loss_for(batch: dict, protocol: str, training: bool) -> torch.Tensor:
         batch = {k: v.to(device) for k, v in batch.items()}
@@ -2480,6 +2536,22 @@ def fit_phase(
         if phase == "honest":
             batch = model.raw_inputs(batch)
             aux = model.ae(batch, protocol)
+            if teacher is not None:
+                valid = batch["w"]
+                if training:
+                    masked = torch.rand(valid.shape, device=device) < 0.25
+                else:
+                    masked = (torch.arange(valid.shape[1], device=device)[None] % 4 == 3).expand_as(valid)
+                masked = masked & valid
+                masked[:, 0] = False
+                context = aux["z"].masked_fill(masked[..., None], 0)
+                predicted, _ = model.ae.predictor(context)
+                with torch.no_grad():
+                    target = teacher(batch, protocol)["z"]
+                prediction_loss = ((predicted - target).square().mean(-1) * masked).sum() / masked.sum().clamp_min(1)
+                values = aux["z"][valid]
+                variance_loss = F.relu(1 - torch.sqrt(values.var(0, unbiased=False) + 1e-4)).mean()
+                return prediction_loss + 0.1 * variance_loss
             return reconstruction_loss(aux["E"], batch["w"])
         output = model(batch, protocol, use_cache=training and cache is not None)
         valid = output["valid"].any(1)
@@ -2505,6 +2577,10 @@ def fit_phase(
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             optimizer.step()
+            if teacher is not None:
+                with torch.no_grad():
+                    for target, online in zip(teacher.parameters(), model.ae.parameters()):
+                        target.mul_(0.99).add_(online, alpha=0.01)
             losses.append(float(loss.detach()))
         model.eval()
         validation = []
@@ -2569,6 +2645,8 @@ def pretrain_crossfit(
         for p in bundles:
             set_trainable(m.ae.adapters[p], True)
             set_trainable(m.ae.decoders[p], True)
+        if m.ae.predictor is not None:
+            set_trainable(m.ae.predictor, True)
         if not target_only:
             set_trainable(m.ae.encoder, True)
 
@@ -2825,7 +2903,7 @@ def lock_calibration(
     checkpoint = model_path(cfg, protocol, model_id, seed) / "best.pt"
     value = dict(
         temperature=temperature,
-        anomaly_available=model.feature_set != "none",
+        anomaly_available=model.feature_set not in ("none", "jepa"),
         classifier_available=model_id != "ae_only",
         anomaly_threshold=high_anomaly,
         t_low=low,
@@ -2875,6 +2953,8 @@ MODEL_MATRIX = {
     "noae_mean": ("none", "mean"),
     "ae_lstm": ("full", "lstm"),
     "ae_transformer": ("full", "transformer"),
+    "jepa_lstm": ("jepa", "lstm"),
+    "jepa_transformer": ("jepa", "transformer"),
 }
 
 
@@ -4177,8 +4257,8 @@ def selftest() -> None:
         check("source parity: " + protocol + " key error", np.isclose(qber, expected))
         if protocol == "e91":
             check(
-                "E91 optics are unavailable",
-                not den[:, FEATURE_INDEX["detection_rate"]].any(),
+                "E91 ideal coincidence rate is one",
+                np.all(num[:, FEATURE_INDEX["detection_rate"]] == den[:, FEATURE_INDEX["detection_rate"]]),
             )
             all_num, all_den, _ = window_features(protocol, record, 1)
             j = FEATURE_INDEX["chsh_S"]
@@ -4240,6 +4320,9 @@ def parse_args() -> tuple[Config, argparse.Namespace]:
     )
     parser.add_argument("--seeds", nargs="+", type=int)
     parser.add_argument("--data-seed", type=int, default=20260913)
+    parser.add_argument("--calibration-extra-per-class", type=int, default=185)
+    parser.add_argument("--stress-suite", choices=("combined", "drift", "visibility", "strength", "distance", "bursty"), default="combined")
+    parser.add_argument("--hardware-effects", action="store_true")
     parser.add_argument("--runs-per-class", type=int)
     parser.add_argument("--key-events", type=int)
     parser.add_argument("--epochs", type=int)
@@ -4250,7 +4333,7 @@ def parse_args() -> tuple[Config, argparse.Namespace]:
     )
     parser.add_argument(
         "--feature-set",
-        choices=("none", "latent", "latent_score", "full"),
+        choices=("none", "latent", "latent_score", "full", "jepa"),
         default="full",
     )
     parser.add_argument("--latent", type=int, default=8)
@@ -4267,6 +4350,9 @@ def parse_args() -> tuple[Config, argparse.Namespace]:
     args = parser.parse_args()
     cfg = Config(
         out=args.out,
+        calibration_extra_per_class=args.calibration_extra_per_class,
+        stress_suite=args.stress_suite,
+        hardware_effects=args.hardware_effects,
         protocols=tuple(args.protocols),
         data_seed=args.data_seed,
         device=args.device,
@@ -4284,6 +4370,7 @@ def parse_args() -> tuple[Config, argparse.Namespace]:
             cfg,
             runs_per_class=40,
             stress_per_class=2,
+            calibration_extra_per_class=2,
             key_events=64,
             epochs=3,
             seeds=(0, 1),
