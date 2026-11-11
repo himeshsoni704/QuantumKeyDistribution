@@ -1720,9 +1720,8 @@ def simulate_bkm07_pulse(distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
         _, state = measure_qubit(state, basis_now, 1.0, rng=rng)    # forward-leg noise on the reflected carrier
     if bob_mode == 'SIFT':
         bit_B, _ = measure_qubit(state, 0, 2 * p_err_leg, rng=rng)
-        if rng.random() < p_prep:
-            bit_B = 1 - bit_B
-        state = prepare_state(bit_B, 0)
+        sent_bit = 1 - bit_B if rng.random() < p_prep else bit_B
+        state = prepare_state(sent_bit, 0)
         basis_now = 0
 
     if eve_mode != 'none' and rng.random() < eve_ret:
@@ -1800,8 +1799,8 @@ def simulate_bkm07_batch(N, distance_km, eve_mode, eve_fwd, eve_ret, rng=None,
     meas_B = np.where(noisy_B, rng.integers(0, 2, N), meas_B)
     bit_B = np.where(bob_sift, meas_B, 0)
     flip_prep = rng.random(N) < p_prep
-    bit_B = np.where(bob_sift & flip_prep, 1 - bit_B, bit_B)   # Bob's re-preparation flip
-    cur_bit = np.where(bob_sift, bit_B, cur_bit)     # SIFT: carrier becomes Bob's re-sent bit
+    sent_bit = np.where(bob_sift & flip_prep, 1 - bit_B, bit_B)
+    cur_bit = np.where(bob_sift, sent_bit, cur_bit)  # preserve Bob's classical record
     cur_basis = np.where(bob_sift, 0, cur_basis)     # ... re-prepared in Z
     if ctrl_fwd_noise:
         # B7/B3 physics fix: the forward-leg misalignment acts on the photon BEFORE Bob decides what to do with it. For SIFT rounds it is
@@ -2721,13 +2720,9 @@ def collect_bkm07_features(N=None, distance_km=0.0, eve_mode='none', eve_fwd=0.0
     z_ctrl_t, x_ctrl_t = int(z_ctrl.sum()), int(x_ctrl.sum())
 
     qber_zs = float((bit_A[z_sft] != bit_B[z_sft]).mean()) if z_sft_t else 0.0
-    # True end-to-end round-trip key error (bit_A vs bit_A_final): the
-    # quantity a real BKM07 deployment reports as key QBER. qber_zs above
-    # is NOT this -- it's a 2-flip composite (Bob's measurement noise +
-    # his re-preparation flip) because `bit_B` is the POST-re-preparation
-    # value. This was missing before.
-    qber_key = float((bit_A[z_sft] != bit_Af[z_sft]).mean()) if z_sft_t else 0.0
-    qber_zsr = float((bit_B[z_sft] != bit_Af[z_sft]).mean()) if z_sft_t else 0.0
+    # Operational SIFT-key QBER compares Bob's retained bit with Alice's return.
+    qber_key = float((bit_B[z_sft] != bit_Af[z_sft]).mean()) if z_sft_t else 0.0
+    qber_zsr = qber_key  # retained compatibility alias
     ret_monitor = float((bit_B[x_sft] != bit_Af[x_sft]).mean()) if x_sft_t else 0.0  # was qber_xsr
     qber_zc = float((bit_A[z_ctrl] != bit_Af[z_ctrl]).mean()) if z_ctrl_t else 0.0
     qber_xc = float((bit_A[x_ctrl] != bit_Af[x_ctrl]).mean()) if x_ctrl_t else 0.0
