@@ -633,14 +633,10 @@ def simulate_bkm07_batch(
     same0 = cur_basis == 0
     meas_B = np.where(same0, cur_bit, rng.integers(0, 2, N))
     meas_B = np.where(noisy_B, rng.integers(0, 2, N), meas_B)
-    bit_B = np.where(bob_sift, meas_B, 0)
+    bit_B = np.where(bob_sift, meas_B, 0)  # Bob's retained classical SIFT bit
     flip_prep = rng.random(N) < p_prep
-    bit_B = np.where(
-        bob_sift & flip_prep, 1 - bit_B, bit_B
-    )  # Bob's re-preparation flip
-    cur_bit = np.where(
-        bob_sift, bit_B, cur_bit
-    )  # SIFT: carrier becomes Bob's re-sent bit
+    sent_bit = np.where(bob_sift & flip_prep, 1 - bit_B, bit_B)
+    cur_bit = np.where(bob_sift, sent_bit, cur_bit)
     cur_basis = np.where(bob_sift, 0, cur_basis)  # ... re-prepared in Z
     if ctrl_fwd_noise:
         # B7/B3 physics fix: the forward-leg misalignment acts on the photon BEFORE Bob decides what to do with it. For SIFT rounds it is
@@ -1294,13 +1290,10 @@ def collect_bkm07_features(
     z_ctrl_t, x_ctrl_t = int(z_ctrl.sum()), int(x_ctrl.sum())
 
     qber_zs = float((bit_A[z_sft] != bit_B[z_sft]).mean()) if z_sft_t else 0.0
-    # True end-to-end round-trip key error (bit_A vs bit_A_final): the
-    # quantity a real BKM07 deployment reports as key QBER. qber_zs above
-    # is NOT this -- it's a 2-flip composite (Bob's measurement noise +
-    # his re-preparation flip) because `bit_B` is the POST-re-preparation
-    # value. This was missing before.
-    qber_key = float((bit_A[z_sft] != bit_Af[z_sft]).mean()) if z_sft_t else 0.0
-    qber_zsr = float((bit_B[z_sft] != bit_Af[z_sft]).mean()) if z_sft_t else 0.0
+    # SIFT key agreement is between Bob's retained measurement and Alice's
+    # returned measurement. Alice's original preparation is a separate monitor.
+    qber_key = float((bit_B[z_sft] != bit_Af[z_sft]).mean()) if z_sft_t else 0.0
+    qber_zsr = qber_key  # compatibility alias; do not count as independent evidence
     ret_monitor = (
         float((bit_B[x_sft] != bit_Af[x_sft]).mean()) if x_sft_t else 0.0
     )  # was qber_xsr
@@ -1816,7 +1809,7 @@ def window_features(
                 for branch in ("SIFT_KEY", "SIFT_MONITOR", "CTRL_Z", "CTRL_X")
             }
             key = masks["SIFT_KEY"]
-            error("qber_key", key, r["bit_A"] != r["bit_A_final"])
+            error("qber_key", key, r["bit_B"] != r["bit_A_final"])
             error("qber_zs", key, r["bit_A"] != r["bit_B"])
             error("qber_zsr", key, r["bit_B"] != r["bit_A_final"])
             error("ret_monitor", masks["SIFT_MONITOR"], r["bit_B"] != r["bit_A_final"])
@@ -2107,8 +2100,16 @@ def generate(cfg: Config) -> None:
         save_json(path / "normalizer.json", asdict(normalizer))
         save_json(path / "splits.json", splits)
         save_json(path / "eval_meta.json", evaluation)
-        save_json(path / "config.json", asdict(cfg))
+        save_json(path / "config.json", dict(**asdict(cfg), source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()))
         runs.to_csv(path / "runs.csv", index=False)
+        hashes = [hashlib.sha256(num[i].tobytes() + den[i].tobytes()).hexdigest() for i in range(len(runs))]
+        save_json(path / "audit_manifest.json", dict(
+            source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            arrays_sha256=hashlib.sha256((path / "arrays.npz").read_bytes()).hexdigest(),
+            run_count=len(runs), unique_observation_hashes=len(set(hashes)),
+            duplicate_observation_hashes=len(hashes)-len(set(hashes)),
+            split_groups={name: runs.group_id.iloc[ids].tolist() for name, ids in splits.items()},
+        ))
     save_json(root / "feature_schema.json", dict(names=FEATURES, groups=FEATURE_GROUPS))
 
 
@@ -2129,17 +2130,27 @@ class DataBundle:
 def load_data(cfg: Config, protocol: str) -> DataBundle:
     root = Path(cfg.out) / "data" / protocol
     saved = json.loads((root / "config.json").read_text())
-    for name in ("data_seed", "key_events", "windows", "holdout_attack"):
+    if saved.get("source_sha256") != hashlib.sha256(Path(__file__).read_bytes()).hexdigest():
+        raise ValueError("Simulator source changed since generation; regenerate using a fresh --out")
+    for name in ("data_seed", "key_events", "windows", "holdout_attack", "runs_per_class", "stress_per_class"):
         if saved[name] != getattr(cfg, name):
             raise ValueError(
                 f"Data/config mismatch for {name}; use matching flags or a new --out."
             )
     raw = np.load(root / "arrays.npz", allow_pickle=False)
+    manifest = json.loads((root / "audit_manifest.json").read_text())
+    if manifest["arrays_sha256"] != hashlib.sha256((root / "arrays.npz").read_bytes()).hexdigest():
+        raise ValueError("Generated arrays differ from audit manifest")
     runs = pd.read_csv(root / "runs.csv")
     splits = {
         k: np.array(v, dtype=int)
         for k, v in json.loads((root / "splits.json").read_text()).items()
     }
+    split_ids = [set(runs.group_id.iloc[v]) for v in splits.values()]
+    if sum(map(len, split_ids)) != len(set.union(*split_ids)):
+        raise ValueError("A simulation run appears in multiple splits")
+    if manifest["run_count"] != len(runs) or set.union(*split_ids) != set(runs.group_id):
+        raise ValueError("Audit manifest or split coverage does not match run records")
     norm = json.loads((root / "normalizer.json").read_text())
     normalizer = Normalizer(
         np.array(norm["mean"]),
@@ -3116,6 +3127,7 @@ def save_baseline_result(
     training: dict,
 ) -> None:
     a, b, te = (data.splits[k] for k in ("cal_A", "cal_B", "test"))
+    stress = data.splits["stress"]
     logits = np.log(np.clip(prob, 1e-12, 1))
     temperature = fit_temperature(logits[a], data.labels[a])
     calibrated = probabilities(logits, temperature)
@@ -3145,6 +3157,11 @@ def save_baseline_result(
             classification=classification_metrics(data.labels[te], calibrated[te]),
             binary=binary_metrics(
                 data.labels[te], 1 - calibrated[te, 0], 1 - calibrated[te, 0] > high
+            ),
+            stress=dict(
+                classification=classification_metrics(data.labels[stress], calibrated[stress]),
+                binary=binary_metrics(data.labels[stress], 1 - calibrated[stress, 0],
+                                      1 - calibrated[stress, 0] > high),
             ),
         ),
     )
@@ -4169,6 +4186,19 @@ def selftest() -> None:
                 "E91 CHSH exact signs/order",
                 np.isclose(all_num[0, j] / all_den[0, j], original["chsh_S"]),
             )
+    # With perfect measurement/return and faulty re-preparation, Bob keeps
+    # Alice's bit while Alice receives the flipped carrier on about half the rounds.
+    b = simulate_bkm07_batch(
+        10000, 0.0, "none", 0.0, 0.0,
+        rng=np.random.default_rng(19), eta_bob=1.0, e_detector=0.0,
+        p_meas=0.0, p_ret=0.0, p_prep=0.5,
+    )
+    key = b["round_type"] == "SIFT_KEY"
+    check("BKM Bob retains measured bit", bool(np.all(b["bit_B"][key] == b["bit_A"][key])))
+    key_error = np.mean(b["bit_B"][key] != b["bit_A_final"][key])
+    check("BKM preparation faults affect shared key", 0.45 < key_error < 0.55)
+    num, den, _ = window_features("bkm07", b, 50)
+    check("BKM key QBER matches disclosed bits", np.isclose(num[:, q].sum() / den[:, q].sum(), key_error))
     print(f"SELFTEST: {len(passed)} checks passed", flush=True)
 
 
