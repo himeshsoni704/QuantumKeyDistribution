@@ -205,3 +205,15 @@ matrix, latent sweep, all six transfer directions, joint training, and compact
 experiments with two seeds. A separate E91 ancilla holdout run verified exclusion
 from training/calibration, unknown-attack reporting, diagnosis, and empty-input
 handling. These runs validate execution, not full-scale research conclusions.
+
+
+## Strict cross-protocol binary study
+
+The separate [`run_transfer_study.py`](run_transfer_study.py) runner adds source-only zero-shot transfer, leave-one-protocol-out evaluation, explicit few-shot adaptation, shared binary joint training, representation probes, feature ablations, group-level statistics and optional frozen-source shift evaluation. It reuses existing sufficient-statistic arrays without rewriting datasets or changing the legacy simulator. See [TRANSFER_STUDY.md](TRANSFER_STUDY.md) for the experiment contracts, limitations and commands.
+
+```bash
+bash run_full.sh out out_transfer_final plan
+bash run_full.sh out out_transfer_final run
+```
+
+The new `run_full.sh` never calls the legacy dataset-generation command. The primary cap is 100 epochs with early stopping. Old results remain tied to their generating simulator version; new code does not correct old data retrospectively.
