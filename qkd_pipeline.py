@@ -558,6 +558,29 @@ def simulate_bb84_decoy(
     )
 
 
+def detector_events(signal, rng, dark_probability=0.0, dead_slots=0, afterpulse=0.0, eligible=None):
+    """Gated threshold detector; dark/afterpulse-only clicks are distinguishable.
+
+    Afterpulse probability applies to the slot after an accepted click. Dead
+    slots suppress all events. State restarts at independent batch boundaries.
+    """
+    if not (0 <= dark_probability <= 1 and 0 <= afterpulse <= 1 and dead_slots >= 0):
+        raise ValueError("Invalid detector parameters")
+    signal = np.asarray(signal, bool)
+    eligible = np.ones(len(signal), bool) if eligible is None else np.asarray(eligible, bool)
+    candidates = signal | (rng.random(len(signal)) < dark_probability)
+    clicks = candidates & eligible
+    if dead_slots or afterpulse:
+        after_draw = rng.random(len(signal)) < afterpulse
+        last = -int(dead_slots)-2
+        for i in range(len(clicks)):
+            clicks[i] = bool(eligible[i] and i-last > dead_slots and
+                             (candidates[i] or (i-last == 1 and after_draw[i])))
+            if clicks[i]:
+                last = i
+    return clicks, clicks & signal
+
+
 def simulate_bkm07_batch(
     N,
     distance_km,
@@ -616,7 +639,15 @@ def simulate_bkm07_batch(
         basis_A.copy(),
     )  # the travelling carrier's (bit, basis)
 
-    alive = rng.random(N) < eta  # survived the forward leg
+    optical = det.get("optical_model") == "two_way"
+    eta_b = float(det.get("eta_bob_detector", 0.045))
+    eta_a = float(det.get("eta_alice_detector", 0.045))
+    reflection = float(det.get("reflection_efficiency", 0.98))
+    source = float(det.get("resend_efficiency", 0.95))
+    if optical and not all(0 <= v <= 1 for v in (eta_b, eta_a, reflection, source)):
+        raise ValueError("Optical efficiencies must lie in [0, 1]")
+    fibre = ch["transmittance"]
+    alive = rng.random(N) < (fibre if optical else eta)
 
     if eve_mode != "none":
         eve_fwd_hit = alive & (rng.random(N) < eve_fwd)
@@ -626,13 +657,23 @@ def simulate_bkm07_batch(
         cur_bit = np.where(eve_fwd_hit, meas_bit, cur_bit)
         cur_basis = np.where(eve_fwd_hit, basis_Ef, cur_basis)
 
-    bob_sift = alive & (rng.random(N) < 0.5)
-    bob_ctrl = alive & ~bob_sift
+    choice = rng.random(N) < 0.5
+    bob_sift = choice if optical else alive & choice
+    bob_ctrl = ~choice if optical else alive & ~bob_sift
+    if optical:
+        bob_click, bob_signal = detector_events(
+            alive & (rng.random(N) < eta_b), rng,
+            det.get("bob_dark", 1.7e-6), det.get("bob_dead_slots", 0),
+            det.get("bob_afterpulse", 0.0), eligible=bob_sift)
+    else:
+        bob_click = bob_signal = bob_sift
 
     noisy_B = rng.random(N) < (2 * p_meas)
     same0 = cur_basis == 0
     meas_B = np.where(same0, cur_bit, rng.integers(0, 2, N))
     meas_B = np.where(noisy_B, rng.integers(0, 2, N), meas_B)
+    if optical:
+        meas_B = np.where(bob_click & ~bob_signal, rng.integers(0, 2, N), meas_B)
     bit_B = np.where(bob_sift, meas_B, 0)  # Bob's retained classical SIFT bit
     flip_prep = rng.random(N) < p_prep
     sent_bit = np.where(bob_sift & flip_prep, 1 - bit_B, bit_B)
@@ -644,15 +685,26 @@ def simulate_bkm07_batch(
         noisy_fwd_ctrl = bob_ctrl & (rng.random(N) < (2 * p_meas))
         cur_bit = np.where(noisy_fwd_ctrl, rng.integers(0, 2, N), cur_bit)
 
+    carrier = alive
+    if optical:
+        carrier = ((bob_ctrl & alive & (rng.random(N) < reflection)) |
+                   (bob_sift & bob_click & (rng.random(N) < source)))
     if eve_mode != "none":
-        eve_ret_hit = alive & (rng.random(N) < eve_ret)
+        eve_ret_hit = carrier & (rng.random(N) < eve_ret)
         basis_Er = rng.integers(0, 2, N)
         same_r = basis_Er == cur_basis
         meas_bit_r = np.where(same_r, cur_bit, rng.integers(0, 2, N))
         cur_bit = np.where(eve_ret_hit, meas_bit_r, cur_bit)
         cur_basis = np.where(eve_ret_hit, basis_Er, cur_basis)
 
-    survived = alive & (rng.random(N) < eta)  # survived the return leg too (t^2, not t)
+    if optical:
+        alice_click, alice_signal = detector_events(
+            carrier & (rng.random(N) < fibre * eta_a), rng,
+            det.get("alice_dark", 1.7e-6), det.get("alice_dead_slots", 0),
+            det.get("alice_afterpulse", 0.0))
+        survived = alice_click & (bob_ctrl | bob_click)
+    else:
+        survived = alive & (rng.random(N) < eta)
 
     meas_basis_final = np.where(
         bob_ctrl, basis_A, 0
@@ -661,6 +713,8 @@ def simulate_bkm07_batch(
     same_f = cur_basis == meas_basis_final
     meas_final = np.where(same_f, cur_bit, rng.integers(0, 2, N))
     bit_A_final = np.where(noisy_final, rng.integers(0, 2, N), meas_final)
+    if optical:
+        bit_A_final = np.where(alice_click & ~alice_signal, rng.integers(0, 2, N), bit_A_final)
 
     round_type = np.full(N, "", dtype="<U12")
     round_type[bob_ctrl & (basis_A == 0)] = "CTRL_Z"
@@ -1257,7 +1311,15 @@ def collect_bkm07_features(
     N_capped = False
     if target_k_key_rounds is not None:
         _ch_est = channel_model(distance_km, **chan)
-        _rate = (_ch_est["eta"] ** 2) * 0.25  # round-trip survival x SIFT_KEY share
+        _rate = (_ch_est["eta"] ** 2) * 0.25
+        if (detector or {}).get("optical_model") == "two_way":
+            d = detector
+            fibre = _ch_est["transmittance"]
+            pb = fibre*d.get("eta_bob_detector", .045)
+            pb += (1-pb)*d.get("bob_dark", 1.7e-6)
+            pa = fibre*d.get("eta_alice_detector", .045)*d.get("resend_efficiency", .95)
+            pa += (1-pa)*d.get("alice_dark", 1.7e-6)
+            _rate = .25*pb*pa  # initial sizing; continuation handles dead-time loss
         _N_wanted = int(np.ceil(target_k_key_rounds / max(_rate, 1e-15) * k_margin))
         N, N_capped = (
             min(_N_wanted, max_pulses),
@@ -1911,6 +1973,10 @@ def simulate_observations(
     detector = dict(drift_amp=drift)
     if cfg.hardware_effects and protocol == "bb84":
         detector.update(afterpulse=0.01, dead_pulses=2)
+    if cfg.hardware_effects and protocol == "bkm07":
+        detector.update(optical_model="two_way", eta_bob_detector=.045,
+                        eta_alice_detector=.045, bob_dark=1.7e-6, alice_dark=1.7e-6,
+                        reflection_efficiency=.98, resend_efficiency=.95)
     if cfg.hardware_effects and protocol == "e91":
         detector.update(optical_efficiency=0.2, dark_count=1e-5)
     if stress and cfg.stress_suite == "bursty":
@@ -2279,7 +2345,8 @@ class HonestAE(nn.Module):
     def __init__(self, cfg: Config):
         super().__init__()
         width = len(FEATURES)
-        self.jepa = cfg.feature_set == "jepa"
+        self.jepa = cfg.feature_set in ("jepa", "hybrid")
+        self.hybrid = cfg.feature_set == "hybrid"
         self.predictor = nn.GRU(cfg.latent, cfg.latent, batch_first=True) if self.jepa else None
         self.adapters = nn.ModuleDict(
             {
@@ -2304,7 +2371,7 @@ class HonestAE(nn.Module):
     ) -> dict[str, torch.Tensor]:
         x, m, c = batch["x"], batch["m"], batch["c"]
         z = self.encoder(self.adapters[protocol](torch.cat((x, m, c), dim=-1)))
-        if self.jepa:
+        if self.jepa and not self.hybrid:
             return dict(z=z, r=torch.zeros_like(x), E=x.new_zeros(x.shape[:2]))
         reconstruction = self.decoders[protocol](z)
         residual = m * (x - reconstruction)
@@ -2393,9 +2460,9 @@ class Detector(nn.Module):
         width = 3 * f
         if cfg.feature_set != "none":
             width += cfg.latent
-        if cfg.feature_set in ("latent_score", "full"):
+        if cfg.feature_set in ("latent_score", "full", "hybrid"):
             width += 1
-        if cfg.feature_set == "full":
+        if cfg.feature_set in ("full", "hybrid"):
             width += f
         self.window_mlp = nn.Sequential(
             nn.Linear(width, cfg.hidden),
@@ -2435,9 +2502,9 @@ class Detector(nn.Module):
         inputs = [batch["x"], batch["m"], batch["c"]]
         if self.feature_set != "none":
             inputs.append(aux["z"])
-        if self.feature_set in ("latent_score", "full"):
+        if self.feature_set in ("latent_score", "full", "hybrid"):
             inputs.append(aux["E"][..., None])
-        if self.feature_set == "full":
+        if self.feature_set in ("full", "hybrid"):
             inputs.append(aux["r"])
         embeddings = self.window_mlp(torch.cat(inputs, dim=-1))
         pooled = self.readout(embeddings, batch["w"])
@@ -2551,7 +2618,10 @@ def fit_phase(
                 prediction_loss = ((predicted - target).square().mean(-1) * masked).sum() / masked.sum().clamp_min(1)
                 values = aux["z"][valid]
                 variance_loss = F.relu(1 - torch.sqrt(values.var(0, unbiased=False) + 1e-4)).mean()
-                return prediction_loss + 0.1 * variance_loss
+                objective = prediction_loss + 0.1 * variance_loss
+                if model.ae.hybrid:
+                    objective = objective + reconstruction_loss(aux["E"], valid)
+                return objective
             return reconstruction_loss(aux["E"], batch["w"])
         output = model(batch, protocol, use_cache=training and cache is not None)
         valid = output["valid"].any(1)
@@ -2955,6 +3025,8 @@ MODEL_MATRIX = {
     "ae_transformer": ("full", "transformer"),
     "jepa_lstm": ("jepa", "lstm"),
     "jepa_transformer": ("jepa", "transformer"),
+    "hybrid_lstm": ("hybrid", "lstm"),
+    "hybrid_transformer": ("hybrid", "transformer"),
 }
 
 
@@ -3015,6 +3087,15 @@ def calibration_metrics(labels: np.ndarray, prob: np.ndarray) -> dict:
     )
 
 
+def binomial_interval(k, n, confidence=.95):
+    """Exact two-sided Clopper-Pearson interval; no independence across windows assumed."""
+    if n == 0:
+        return None
+    tail = (1-confidence)/2
+    return [0.0 if k == 0 else float(stats.beta.ppf(tail, k, n-k+1)),
+            1.0 if k == n else float(stats.beta.ppf(1-tail, k+1, n-k))]
+
+
 def binary_metrics(
     labels: np.ndarray, scores: np.ndarray, positive: np.ndarray
 ) -> dict:
@@ -3027,6 +3108,8 @@ def binary_metrics(
         if (~truth).any()
         else None,
         attack_recall=float(positive[truth].mean()) if truth.any() else None,
+        honest_false_alert_ci95=binomial_interval(int(positive[~truth].sum()), int((~truth).sum())),
+        attack_recall_ci95=binomial_interval(int(positive[truth].sum()), int(truth.sum())),
         honest_support=int((~truth).sum()),
         attack_support=int(truth.sum()),
     )
@@ -3639,7 +3722,7 @@ def transfer_experiments(cfg: Config) -> None:
             for shared in (False, True):
                 variant = "shared" if shared else "union"
                 for seed in cfg.seeds:
-                    source_id = f"source_{cfg.backbone}_{variant}"
+                    source_id = f"source_{cfg.feature_set}_{cfg.backbone}_{variant}"
                     seed_everything(seed)
                     source_model = Detector(cfg)
                     if shared:
@@ -3663,6 +3746,7 @@ def transfer_experiments(cfg: Config) -> None:
                             )
                             continue
                         metrics = {}
+                        binary_comparisons = {}
                         for method in ("scratch", "head_only", "partial"):
                             seed_everything(seed)
                             model = Detector(cfg)
@@ -3678,7 +3762,7 @@ def transfer_experiments(cfg: Config) -> None:
                                 model.readout.load_state_dict(
                                     source_model.readout.state_dict()
                                 )
-                            name = f"transfer_{source}_{variant}_{cfg.backbone}_{budget}_{method}"
+                            name = f"transfer_{cfg.feature_set}_{source}_{variant}_{cfg.backbone}_{budget}_{method}"
                             model = train_model(
                                 cfg,
                                 target,
@@ -3690,6 +3774,7 @@ def transfer_experiments(cfg: Config) -> None:
                             )
                             lock_calibration(cfg, target, name, seed, model, data)
                             result = evaluate(cfg, target, name, seed, detailed=False)
+                            binary_comparisons[method] = result["test"]["binary"]
                             metrics[method] = result["test"]["classification"][
                                 "macro_f1"
                             ]
@@ -3708,14 +3793,22 @@ def transfer_experiments(cfg: Config) -> None:
                                     attack_recall=result["test"]["binary"][
                                         "attack_recall"
                                     ],
+                                    representation=cfg.feature_set,
+                                    recall_gain_vs_scratch=binary_comparisons[method]["attack_recall"]-binary_comparisons["scratch"]["attack_recall"],
+                                    false_alert_change_vs_scratch=binary_comparisons[method]["honest_false_alert_rate"]-binary_comparisons["scratch"]["honest_false_alert_rate"],
+                                    honest_pretraining_runs=int(sum(data.labels[data.splits["train"]] == 0)) if cfg.feature_set != "none" else 0,
+                                    honest_false_alert_rate=result["test"]["binary"]["honest_false_alert_rate"],
+                                    honest_false_alert_ci95=result["test"]["binary"]["honest_false_alert_ci95"],
+                                    stress_binary=result["stress"]["binary"],
+                                    empirical_fpr_target_met=result["test"]["binary"]["honest_false_alert_rate"] <= cfg.alpha,
                                     validation_labels=len(data.splits["val"]),
                                     calibration_labels=len(data.splits["cal_A"])
                                     + len(data.splits["cal_B"]),
                                     sampled_groups=data.groups[chosen].tolist(),
                                 )
                             )
-                            save_json(Path(cfg.out) / "tables" / "transfer.json", rows)
-    pd.DataFrame(rows).to_csv(Path(cfg.out) / "tables" / "transfer.csv", index=False)
+                            save_json(Path(cfg.out) / "tables" / f"transfer_{cfg.feature_set}_{cfg.backbone}.json", rows)
+    pd.DataFrame(rows).to_csv(Path(cfg.out) / "tables" / f"transfer_{cfg.feature_set}_{cfg.backbone}.csv", index=False)
 
 
 def read_joint_thresholds(cfg: Config, protocol: str, model_id: str, seed: int) -> dict:
@@ -4333,7 +4426,7 @@ def parse_args() -> tuple[Config, argparse.Namespace]:
     )
     parser.add_argument(
         "--feature-set",
-        choices=("none", "latent", "latent_score", "full", "jepa"),
+        choices=("none", "latent", "latent_score", "full", "jepa", "hybrid"),
         default="full",
     )
     parser.add_argument("--latent", type=int, default=8)
