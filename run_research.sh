@@ -6,7 +6,7 @@ case "$stage" in
 core)
   python qkd_pipeline.py gen --out "$out" --hardware-effects
   python qkd_pipeline.py baselines --out "$out" --hardware-effects
-  for spec in 'none noae_mean mean' 'full ae_lstm lstm' 'jepa jepa_lstm lstm' 'jepa jepa_transformer transformer'; do
+  for spec in 'none noae_mean mean' 'full ae_lstm lstm' 'jepa jepa_lstm lstm' 'jepa jepa_transformer transformer' 'hybrid hybrid_lstm lstm' 'hybrid hybrid_transformer transformer'; do
     read -r features model backbone <<< "$spec"
     for command in train calibrate evaluate; do
       python qkd_pipeline.py "$command" --out "$out" --hardware-effects --feature-set "$features" --model-id "$model" --backbone "$backbone" --basic-evaluation
@@ -14,10 +14,15 @@ core)
   done
   ;;
 shifts)
-  python qkd_shift_audit.py --out "$out" --models noae_mean ae_lstm jepa_lstm jepa_transformer
+  python qkd_shift_audit.py --out "$out" --models noae_mean ae_lstm jepa_lstm jepa_transformer hybrid_lstm hybrid_transformer
   ;;
 transfer)
-  python qkd_pipeline.py transfer --out "$out" --hardware-effects --feature-set jepa
+  for features in none full jepa hybrid; do
+    python qkd_pipeline.py transfer --out "$out" --hardware-effects --feature-set "$features"
+  done
   ;;
-*) echo 'Usage: bash run_research.sh {core|shifts|transfer} OUTPUT_DIRECTORY' >&2; exit 2;;
+transfer-shifts)
+  python qkd_shift_audit.py --out "$out" --transfer
+  ;;
+*) echo 'Usage: bash run_research.sh {core|shifts|transfer|transfer-shifts} OUTPUT_DIRECTORY' >&2; exit 2;;
 esac
