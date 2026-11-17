@@ -13,6 +13,7 @@ import hashlib
 import io
 import json
 import math
+import os
 import random
 import time
 import zlib
@@ -2127,6 +2128,74 @@ class RunDataset(Dataset):
         }
 
 
+def _atomic_savez_compressed(destination: Path, **arrays: np.ndarray) -> None:
+    """Write one NPZ atomically so an interrupted run cannot leave a valid-looking partial file."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + f".{os.getpid()}.tmp")
+    try:
+        with temporary.open("wb") as stream:
+            np.savez_compressed(stream, **arrays)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Verify the archive can be opened and every member can be read before publishing it.
+        with np.load(temporary, allow_pickle=False) as check:
+            if set(check.files) != set(arrays):
+                raise ValueError(f"NPZ verification failed for {destination}")
+            for key, expected in arrays.items():
+                actual = check[key]
+                if actual.shape != expected.shape or actual.dtype != expected.dtype:
+                    raise ValueError(f"NPZ verification failed for {destination}:{key}")
+        os.replace(temporary, destination)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def _load_feature_record(
+    source: Path,
+    run_id: str,
+    protocol: str,
+    seed: int,
+    windows: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict, dict] | None:
+    """Load a complete feature-only record, returning None for missing/invalid records."""
+    if not source.is_file():
+        return None
+    try:
+        with np.load(source, allow_pickle=False) as archive:
+            required = {"num", "den", "edges", "run_id", "protocol", "seed", "windows", "meta_json", "original_json"}
+            if set(archive.files) != required:
+                return None
+            num = archive["num"].copy()
+            den = archive["den"].copy()
+            edges = archive["edges"].copy()
+            saved_run_id = str(archive["run_id"].item())
+            saved_protocol = str(archive["protocol"].item())
+            saved_seed = int(archive["seed"].item())
+            saved_windows = int(archive["windows"].item())
+            meta = json.loads(str(archive["meta_json"].item()))
+            original = json.loads(str(archive["original_json"].item()))
+        expected_shape = (windows, len(FEATURES))
+        if (
+            saved_run_id != run_id
+            or saved_protocol != protocol
+            or saved_seed != seed
+            or saved_windows != windows
+            or num.shape != expected_shape
+            or den.shape != expected_shape
+            or edges.shape != (windows + 1,)
+            or num.dtype != np.float64
+            or den.dtype != np.float64
+            or not np.issubdtype(edges.dtype, np.integer)
+            or not isinstance(meta, dict)
+            or not isinstance(original, dict)
+        ):
+            return None
+        return num, den, edges, meta, original
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+        return None
+
+
 def generate(cfg: Config) -> None:
     root = Path(cfg.out) / "data"
     root.mkdir(parents=True, exist_ok=True)
@@ -2134,11 +2203,14 @@ def generate(cfg: Config) -> None:
         path = root / protocol
         if (path / "arrays.npz").exists():
             raise FileExistsError(
-                f"{path}: use a fresh --out to avoid mixing data and checkpoints."
+                f"{path}: completed arrays.npz already exists; use a fresh --out."
             )
         path.mkdir(parents=True, exist_ok=True)
+        feature_dir = path / "features"
+        feature_dir.mkdir(parents=True, exist_ok=True)
         numerators, denominators, edges_all, rows, evaluation = [], [], [], [], []
         classes = cfg.known_classes(protocol)
+        run_index = 0
         for scenario, stress, count in (
             ("main", False, cfg.runs_per_class),
             ("stress", True, cfg.stress_per_class),
@@ -2147,18 +2219,40 @@ def generate(cfg: Config) -> None:
         ):
             for attack in cfg.classes[protocol]:
                 for i in range(count):
-                    index = len(rows)
+                    index = run_index
+                    run_index += 1
                     seed = SeedBook(cfg.data_seed).seed(
                         f"{protocol}/{scenario}/{attack}", i
                     )
-                    record, meta, original = simulate_observations(
-                        cfg, protocol, attack, seed, stress
-                    )
-                    num, den, edges = window_features(protocol, record, cfg.windows)
                     run_id = f"{protocol}_{index:06d}"
-                    record_path = path / "records" / f"{run_id}.npz"
-                    record_path.parent.mkdir(exist_ok=True)
-                    np.savez_compressed(record_path, **record)
+                    feature_path = feature_dir / f"{run_id}.npz"
+                    cached = _load_feature_record(
+                        feature_path, run_id, protocol, seed, cfg.windows
+                    )
+                    if cached is None:
+                        record, meta, original = simulate_observations(
+                            cfg, protocol, attack, seed, stress
+                        )
+                        num, den, edges = window_features(
+                            protocol, record, cfg.windows
+                        )
+                        # The raw pulse-level observations are intentionally never persisted.
+                        _atomic_savez_compressed(
+                            feature_path,
+                            num=num,
+                            den=den,
+                            edges=edges,
+                            run_id=np.asarray(run_id),
+                            protocol=np.asarray(protocol),
+                            seed=np.asarray(seed, dtype=np.int64),
+                            windows=np.asarray(cfg.windows, dtype=np.int64),
+                            meta_json=np.asarray(json.dumps(json_safe(meta), sort_keys=True)),
+                            original_json=np.asarray(json.dumps(json_safe(original), sort_keys=True)),
+                        )
+                        del record
+                    else:
+                        num, den, edges, meta, original = cached
+
                     numerators.append(num)
                     denominators.append(den)
                     edges_all.append(edges)
@@ -2173,8 +2267,7 @@ def generate(cfg: Config) -> None:
                         )
                     )
                     evaluation.append(dict(run_id=run_id, **meta))
-                    # Exact original extracted values are retained for audit, not repeated
-                    # across windows or admitted to the new model's feature schema.
+                    # Preserve the existing audit output for downstream inspection.
                     save_json(path / "original_features" / f"{run_id}.json", original)
                 log_event(
                     cfg,
@@ -2209,7 +2302,7 @@ def generate(cfg: Config) -> None:
             den[splits["train"]],
             runs.group_id.to_numpy()[splits["train"]],
         )
-        np.savez_compressed(
+        _atomic_savez_compressed(
             path / "arrays.npz", num=num, den=den, edges=np.array(edges_all)
         )
         save_json(path / "normalizer.json", asdict(normalizer))
