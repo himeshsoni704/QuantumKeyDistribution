@@ -170,12 +170,12 @@ disclosed test bits; an operational QKD system must sacrifice disclosed key bits
 ```text
 out/
   data/{protocol}/
-    records/*.npz             # Observable per-round arrays only
+    features/*.npz            # num, den, edges + run/config/source provenance; no pulse arrays
     original_features/*.json  # Original extractor audit values, not model inputs
-    arrays.npz                # Numerators, denominators, emitted-round edges
+    arrays.npz                # Aggregated numerators, denominators, emitted-round edges
     runs.csv                  # Run/group ids, seed, label
     eval_meta.json            # Attack/noise metadata: evaluation only
-    normalizer.json, splits.json, config.json
+    normalizer.json, splits.json, config.json, audit_manifest.json
   models/{protocol}/{model_id}/seed{s}/
     best.pt, history.json, crossfit_audit.json, train_features.pt
   results/{protocol}/{model_id}/seed{s}.json
@@ -191,9 +191,14 @@ out/
 ```
 
 Each source trace is an independent group; if you add copies or augmentations,
-retain the original group id. Generated records can consume considerable disk
-space, particularly for long lossy exact-K sessions. Keep each dataset under a
-fresh output directory. Do not deserialize model files from untrusted sources.
+retain the original group id. Pulse-level observations are held in memory only;
+the resumable per-run cache stores the exact extracted sufficient statistics
+(num/den/edges) and provenance. A cache entry is reused only when its run ID,
+protocol, seed, window count, full configuration digest and source hash match.
+Writes are verified and atomically published. A valid completed arrays manifest
+prevents accidental regeneration; an interrupted final aggregation can be rebuilt
+from the verified feature cache. Keep each dataset under a fresh output directory.
+Do not deserialize model files from untrusted sources.
 
 ## Validation performed
 
