@@ -1,5 +1,8 @@
 # QKD Eavesdropping Detection with Machine Learning
 
+> **Pipeline note:** This README describes the original notebook/classical-ML study (`qkd_ml_v2.1.ipynb` and its legacy script lineage). The newer standalone deep-learning pipeline, feature-only dataset storage, and staged model workflow are documented in [QKD_PIPELINE_README.md](QKD_PIPELINE_README.md). The separate cross-protocol transfer study is documented in [TRANSFER_STUDY.md](TRANSFER_STUDY.md). Keep their output directories separate; do not treat results from different simulator versions as one dataset.
+
+
 Simulates three quantum-key-distribution protocols — **BB84**, **BKM07**
 (semi-quantum), and **E91** (entanglement-based) — under several
 eavesdropping strategies, extracts a physically-grounded feature vector
@@ -15,7 +18,7 @@ a model learned an attack signature or just memorised a distribution.
 This document explains the working methodology — what's simulated, why
 each design choice was made, and how the pieces fit together. For exact
 formulas and line-level detail, read the notebook itself
-(`qkd_ml_v2.ipynb`); every code cell has an accompanying markdown cell
+(`qkd_ml_v2.1.ipynb`); every code cell has an accompanying markdown cell
 explaining the physics or the feature it implements.
 
 ---
