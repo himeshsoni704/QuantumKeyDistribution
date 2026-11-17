@@ -16,6 +16,7 @@ import math
 import os
 import random
 import time
+import zipfile
 import zlib
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
@@ -2201,7 +2202,7 @@ def _load_feature_record(
         ):
             return None
         return num, den, edges, meta, original
-    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+    except (OSError, ValueError, KeyError, TypeError, EOFError, zipfile.BadZipFile, zlib.error, UnicodeError):
         return None
 
 
