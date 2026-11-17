@@ -14,6 +14,8 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python qkd_pipeline.py selftest
+python -m unittest discover -s tests -p 'test_qkd_storage.py' -v
+python -m unittest discover -s tests -p 'test_transfer_study.py' -v
 ```
 
 For a copy of the standalone file outside this repository, its required packages
