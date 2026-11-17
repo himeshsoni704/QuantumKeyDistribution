@@ -2224,7 +2224,8 @@ def generate(cfg: Config) -> None:
                     raise FileExistsError(f"{path}: completed arrays exist but config.json is missing; preserve this output and inspect it.")
                 saved_config = json.loads(saved_config_path.read_text())
                 saved_source = saved_config.pop("source_sha256", None)
-                if saved_source != source_sha256 or saved_config != asdict(cfg):
+                expected_config = json.loads(json.dumps(asdict(cfg)))
+                if saved_source != source_sha256 or saved_config != expected_config:
                     raise FileExistsError(
                         f"{path}: completed dataset belongs to a different source/configuration; use a fresh --out."
                     )
