@@ -1,5 +1,8 @@
 # Deep Learning for QKD: Pipeline, Training Updates and Validation
 
+> **Scope:** This document describes the legacy deep-learning implementation in `changed.py`. The newer standalone implementation is `qkd_pipeline.py`; its data format, commands, pairwise transfer workflow and storage/resume behaviour are documented in [QKD_PIPELINE_README.md](QKD_PIPELINE_README.md). The separate source-only and few-shot cross-protocol study is documented in [TRANSFER_STUDY.md](TRANSFER_STUDY.md). These are distinct experiment pipelines; do not mix their checkpoints or output directories.
+
+
 **Implementation:** `changed.py`  
 **Revision date:** 27 October 2026  
 **Protocols:** BB84, BKM07 and E91
