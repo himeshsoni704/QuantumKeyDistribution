@@ -2208,6 +2208,8 @@ def _load_feature_record(
 def generate(cfg: Config) -> None:
     root = Path(cfg.out) / "data"
     root.mkdir(parents=True, exist_ok=True)
+    config_digest = cfg.digest
+    source_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     for protocol in cfg.protocols:
         path = root / protocol
         if (path / "arrays.npz").exists() and (path / "audit_manifest.json").is_file():
@@ -2217,16 +2219,23 @@ def generate(cfg: Config) -> None:
             except (OSError, ValueError, KeyError):
                 completed_manifest, completed_hash = {}, None
             if completed_manifest.get("arrays_sha256") == completed_hash and completed_manifest.get("run_count"):
-                raise FileExistsError(
-                    f"{path}: completed dataset already exists and passed its manifest check; use a fresh --out."
-                )
+                saved_config_path = path / "config.json"
+                if not saved_config_path.is_file():
+                    raise FileExistsError(f"{path}: completed arrays exist but config.json is missing; preserve this output and inspect it.")
+                saved_config = json.loads(saved_config_path.read_text())
+                saved_source = saved_config.pop("source_sha256", None)
+                if saved_source != source_sha256 or saved_config != asdict(cfg):
+                    raise FileExistsError(
+                        f"{path}: completed dataset belongs to a different source/configuration; use a fresh --out."
+                    )
+                # A previous multi-protocol generation may have stopped after this
+                # protocol was finalized. Keep it intact and continue with the others.
+                continue
         path.mkdir(parents=True, exist_ok=True)
         feature_dir = path / "features"
         feature_dir.mkdir(parents=True, exist_ok=True)
         original_dir = path / "original_features"
         original_dir.mkdir(parents=True, exist_ok=True)
-        config_digest = cfg.digest
-        source_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
         numerators, denominators, edges_all, rows, evaluation = [], [], [], [], []
         classes = cfg.known_classes(protocol)
         run_index = 0
