@@ -2153,17 +2153,20 @@ def _atomic_savez_compressed(destination: Path, **arrays: np.ndarray) -> None:
 
 def _load_feature_record(
     source: Path,
+    original_path: Path,
     run_id: str,
     protocol: str,
     seed: int,
     windows: int,
+    config_digest: str,
+    source_sha256: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict, dict] | None:
     """Load a complete feature-only record, returning None for missing/invalid records."""
     if not source.is_file():
         return None
     try:
         with np.load(source, allow_pickle=False) as archive:
-            required = {"num", "den", "edges", "run_id", "protocol", "seed", "windows", "meta_json", "original_json"}
+            required = {"num", "den", "edges", "run_id", "protocol", "seed", "windows", "config_digest", "source_sha256", "meta_json"}
             if set(archive.files) != required:
                 return None
             num = archive["num"].copy()
@@ -2173,14 +2176,20 @@ def _load_feature_record(
             saved_protocol = str(archive["protocol"].item())
             saved_seed = int(archive["seed"].item())
             saved_windows = int(archive["windows"].item())
+            saved_config_digest = str(archive["config_digest"].item())
+            saved_source_sha256 = str(archive["source_sha256"].item())
             meta = json.loads(str(archive["meta_json"].item()))
-            original = json.loads(str(archive["original_json"].item()))
+        if not original_path.is_file():
+            return None
+        original = json.loads(original_path.read_text())
         expected_shape = (windows, len(FEATURES))
         if (
             saved_run_id != run_id
             or saved_protocol != protocol
             or saved_seed != seed
             or saved_windows != windows
+            or saved_config_digest != config_digest
+            or saved_source_sha256 != source_sha256
             or num.shape != expected_shape
             or den.shape != expected_shape
             or edges.shape != (windows + 1,)
@@ -2201,13 +2210,23 @@ def generate(cfg: Config) -> None:
     root.mkdir(parents=True, exist_ok=True)
     for protocol in cfg.protocols:
         path = root / protocol
-        if (path / "arrays.npz").exists():
-            raise FileExistsError(
-                f"{path}: completed arrays.npz already exists; use a fresh --out."
-            )
+        if (path / "arrays.npz").exists() and (path / "audit_manifest.json").is_file():
+            try:
+                completed_manifest = json.loads((path / "audit_manifest.json").read_text())
+                completed_hash = hashlib.sha256((path / "arrays.npz").read_bytes()).hexdigest()
+            except (OSError, ValueError, KeyError):
+                completed_manifest, completed_hash = {}, None
+            if completed_manifest.get("arrays_sha256") == completed_hash and completed_manifest.get("run_count"):
+                raise FileExistsError(
+                    f"{path}: completed dataset already exists and passed its manifest check; use a fresh --out."
+                )
         path.mkdir(parents=True, exist_ok=True)
         feature_dir = path / "features"
         feature_dir.mkdir(parents=True, exist_ok=True)
+        original_dir = path / "original_features"
+        original_dir.mkdir(parents=True, exist_ok=True)
+        config_digest = cfg.digest
+        source_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
         numerators, denominators, edges_all, rows, evaluation = [], [], [], [], []
         classes = cfg.known_classes(protocol)
         run_index = 0
@@ -2226,8 +2245,10 @@ def generate(cfg: Config) -> None:
                     )
                     run_id = f"{protocol}_{index:06d}"
                     feature_path = feature_dir / f"{run_id}.npz"
+                    original_path = original_dir / f"{run_id}.json"
                     cached = _load_feature_record(
-                        feature_path, run_id, protocol, seed, cfg.windows
+                        feature_path, original_path, run_id, protocol, seed,
+                        cfg.windows, config_digest, source_sha256
                     )
                     if cached is None:
                         record, meta, original = simulate_observations(
@@ -2246,9 +2267,11 @@ def generate(cfg: Config) -> None:
                             protocol=np.asarray(protocol),
                             seed=np.asarray(seed, dtype=np.int64),
                             windows=np.asarray(cfg.windows, dtype=np.int64),
+                            config_digest=np.asarray(config_digest),
+                            source_sha256=np.asarray(source_sha256),
                             meta_json=np.asarray(json.dumps(json_safe(meta), sort_keys=True)),
-                            original_json=np.asarray(json.dumps(json_safe(original), sort_keys=True)),
                         )
+                        save_json(original_path, original)
                         del record
                     else:
                         num, den, edges, meta, original = cached
@@ -2267,8 +2290,9 @@ def generate(cfg: Config) -> None:
                         )
                     )
                     evaluation.append(dict(run_id=run_id, **meta))
-                    # Preserve the existing audit output for downstream inspection.
-                    save_json(path / "original_features" / f"{run_id}.json", original)
+                    # Original extractor audit values remain available separately from model inputs.
+                    if not original_path.is_file():
+                        save_json(original_path, original)
                 log_event(
                     cfg,
                     "generated_class",
