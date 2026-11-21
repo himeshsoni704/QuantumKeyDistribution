@@ -1,0 +1,11 @@
+# Local research artifacts and environments; keep scientific inputs off Git.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+logs/
+out/
+out_*/
+output_reviews/
+*.zip
+.pytest_cache/

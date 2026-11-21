@@ -1,0 +1,20 @@
+[Unit]
+Description=QKD baseline audit and independent-data confirmation
+
+[Service]
+Type=exec
+WorkingDirectory=%h/Documents/QuantumKeyDistribution
+ExecStart=/bin/bash %h/Documents/QuantumKeyDistribution/run_followup.sh all
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=2
+Environment=MKL_NUM_THREADS=2
+Nice=10
+CPUWeight=25
+Restart=no
+TimeoutStopSec=120
+KillMode=control-group
+StandardOutput=append:%h/Documents/QuantumKeyDistribution/logs/qkd_followup.log
+StandardError=append:%h/Documents/QuantumKeyDistribution/logs/qkd_followup.log
+
+[Install]
+WantedBy=default.target
