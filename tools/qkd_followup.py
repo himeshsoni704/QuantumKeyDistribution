@@ -202,12 +202,16 @@ def simulation_schedule(cfg, args, data_seed):
     return jobs
 
 
+def protocols_for(args):
+    return ('bkm07', 'e91') if args.focused else ('bb84', 'bkm07', 'e91')
+
+
 def fresh_dataset(args, data_seed, simulator=None):
     import qkd_pipeline as q
     saved=json.loads((Path(args.data_root)/'data/bb84/config.json').read_text())
     cfg=q.Config(**{k:v for k,v in saved.items() if k in {f.name for f in fields(q.Config)}})
     folder=Path(args.out)/f'fresh_data_{data_seed}'; folder.mkdir(parents=True,exist_ok=True)
-    cfg=replace(cfg,out=str(folder),data_seed=data_seed,protocols=('bb84','bkm07','e91'))
+    cfg=replace(cfg,out=str(folder),data_seed=data_seed,protocols=protocols_for(args))
     signature=dict(data_seed=data_seed,simulator_sha256=sha256(q.__file__),configuration=asdict(cfg),
                    split_sizes={k:getattr(args,k) for k in ['train_per_class','val_per_class','calibration_per_class','honest_calibration','honest_test','attack_test']})
     lock_manifest(folder/'generation_contract.json',signature)
@@ -261,7 +265,7 @@ def fit_options(args, out):
 
 def confirmation(args, data_root, tag):
     out=Path(args.out)/tag;out.mkdir(parents=True,exist_ok=True)
-    bundles={p:load_runs(data_root,p) for p in ['bb84','bkm07','e91']}
+    bundles={p:load_runs(data_root,p) for p in protocols_for(args)}
     lock_manifest(out/'contract.json',dict(code=code_hashes(),datasets={p:d.provenance for p,d in bundles.items()},
                   model_seeds=args.model_seeds,budget_per_original_class=5,epochs=args.epochs,bootstrap=args.bootstrap,
                   primary='BKM07 -> E91 JEPA head-only minus matched JEPA scratch macro-F1',
@@ -297,15 +301,16 @@ def confirmation(args, data_root, tag):
             save_json(base/'paired_gain.json',dict(point=gain,bootstrap=ci,selected_target_groups=target.groups[chosen].tolist(),label_usage=r['label_usage']))
             event(args.out,'confirmation_fit',dataset=tag,model=model,seed=seed,gain=gain)
     # Matched low-label controls above; full-budget BB84 feature controls below.
-    bb=bundles['bb84']
-    for schema in ['qber','common','common_support','full','specific']:
-        for model in (['qber'] if schema=='qber' else ['logistic','rf','mlp','ae_lstm','jepa_lstm']):
-            for seed in args.model_seeds:
-                norm='raw' if model=='qber' else 'standard'
-                for representation in (['latent','combined'] if model in ['ae_lstm','jepa_lstm'] else ['raw']):
-                    base=out/'bb84_controls'/schema/model/representation/f'seed_{seed}'
-                    payload=cached_fit(base,lambda:make_fit([bb],model,schema,norm,representation,opts,seed))
-                    r=evaluate(payload,bb,base/'test',opts,'within');results.append(r);result_paths.append(base/'test')
+    if 'bb84' in bundles:
+        bb=bundles['bb84']
+        for schema in ['qber','common','common_support','full','specific']:
+            for model in (['qber'] if schema=='qber' else ['logistic','rf','mlp','ae_lstm','jepa_lstm']):
+                for seed in args.model_seeds:
+                    norm='raw' if model=='qber' else 'standard'
+                    for representation in (['latent','combined'] if model in ['ae_lstm','jepa_lstm'] else ['raw']):
+                        base=out/'bb84_controls'/schema/model/representation/f'seed_{seed}'
+                        payload=cached_fit(base,lambda:make_fit([bb],model,schema,norm,representation,opts,seed))
+                        r=evaluate(payload,bb,base/'test',opts,'within');results.append(r);result_paths.append(base/'test')
     for r, directory in zip(results, result_paths):
         ctx={k:r[k] for k in ['regime','target','model','schema','representation','normalization','seed','method']}
         ctx.update(source='+'.join(r['source']),budget=r.get('budget_per_original_class'))
@@ -335,6 +340,21 @@ def aggregate_replications(args):
     summary=bydata.groupby('model').agg(datasets=('data_seed','size'),mean_f1_gain=('macro_f1','mean'),
                                       sd_across_datasets=('macro_f1','std'),positive_datasets=('macro_f1',lambda s:int((s>0).sum())))
     summary.to_csv(Path(args.out)/'replication_summary.csv')
+    if args.focused:
+        rng = np.random.default_rng(0)
+        intervals = []
+        for model, rows in bydata.groupby('model'):
+            columns = ['macro_f1', 'attack_recall', 'honest_false_alarm_rate', 'auroc']
+            values = rows[columns].to_numpy()
+            count = len(values)
+            bounds = np.full((2, len(columns)), np.nan)
+            if count >= 3 and args.bootstrap:
+                indices = rng.integers(count, size=(args.bootstrap, count))
+                bounds = np.percentile(values[indices].mean(axis=1), [2.5, 97.5], axis=0)
+            for metric, mean, lo, hi in zip(columns, values.mean(axis=0), *bounds):
+                intervals.append(dict(model=model, metric=metric, datasets=count, mean_gain=mean,
+                                      paired_ci95_low=lo, paired_ci95_high=hi))
+        pd.DataFrame(intervals).to_csv(Path(args.out)/'replication_paired_intervals.csv', index=False)
     save_json(Path(args.out)/'replication_interpretation.json',dict(primary='JEPA BKM07 -> E91 head-only minus scratch F1',
                independent_unit='fresh data-generation seed; training seeds averaged within dataset',
                limitations='Three datasets are limited replication evidence, not a strong population-level significance result. No automatic publication claim.'))
@@ -342,7 +362,9 @@ def aggregate_replications(args):
 
 def parser():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command',choices=['plan','review','confirm','generate','all'])
+    p.add_argument('command',choices=['plan','review','confirm','generate','replicate','all'])
+    p.add_argument('--focused', action='store_true',
+                   help='Generate and train BKM07 and E91 only; omit BB84 controls.')
     p.add_argument('--data-root',default='out_full_new');p.add_argument('--existing-study',default='out_transfer_final')
     p.add_argument('--out',default='out_followup_20261121')
     p.add_argument('--data-seeds',nargs='+',type=int,default=[2026112101,2026112102,2026112103])
@@ -361,27 +383,33 @@ def main(argv=None):
         if getattr(args,k)<1:raise ValueError(f'{k} must be positive')
     if args.epochs>100 or args.bootstrap<0 or len(set(args.data_seeds))!=len(args.data_seeds) or len(set(args.model_seeds))!=len(args.model_seeds):raise ValueError('Invalid epochs/bootstrap or duplicate seeds')
     if 20260913 in args.data_seeds:raise ValueError('Fresh data seeds must differ from the historical seed')
+    if args.focused and args.command not in ['plan', 'generate', 'replicate']:
+        raise ValueError('--focused requires plan, generate or replicate')
     out=Path(args.out).resolve()
     for source in [Path(args.data_root).resolve(),Path(args.existing_study).resolve()]:
         if out==source or out in source.parents or source in out.parents:raise ValueError('Use a separate sibling output directory')
     if args.command=='plan':
         counts={}
-        for protocol,nclass in [('bb84',5),('bkm07',3),('e91',4)]:
+        classes = {'bb84': 5, 'bkm07': 3, 'e91': 4}
+        for protocol in protocols_for(args):
+            nclass = classes[protocol]
             counts[protocol]=nclass*(args.train_per_class+args.val_per_class+args.calibration_per_class)+args.honest_calibration+args.honest_test+(nclass-1)*args.attack_test
         print(json.dumps(dict(data_seeds=args.data_seeds,simulations_per_dataset=counts,total_simulations=sum(counts.values())*len(args.data_seeds),
                              honest_test_per_protocol_per_dataset=args.honest_test,epochs_cap=args.epochs,source_data_untouched=True),indent=2));return
     out.mkdir(parents=True,exist_ok=True)
-    lock_manifest(out/'followup_contract.json',dict(code=code_hashes(),args={k:v for k,v in vars(args).items() if k not in ['command','device','threads']}))
+    lock_manifest(out/'followup_contract.json',dict(code=code_hashes(),args={k:v for k,v in vars(args).items() if k not in ['command','device','threads'] and (k != 'focused' or v)}))
     torch.set_num_threads(args.threads)
     try:
         if args.command in ['review','all']:
             event(out,'review_started');saved_review(args,{p:load_runs(args.data_root,p) for p in ['bb84','bkm07','e91']})
         if args.command in ['confirm','all']:
             event(out,'historical_confirmation_started');confirmation(args,args.data_root,'historical_confirmation')
-        if args.command in ['generate','all']:
+        if args.command in ['generate','replicate','all']:
             for seed in args.data_seeds:
                 root=fresh_dataset(args,seed)
-                if args.command=='all':confirmation(args,root,f'replication_{seed}');aggregate_replications(args)
+                if args.command in ['replicate', 'all']:
+                    confirmation(args, root, f'replication_{seed}')
+                    aggregate_replications(args)
         event(out,'complete',command=args.command)
     except Exception as exc:
         event(out,'failed',error=str(exc));raise

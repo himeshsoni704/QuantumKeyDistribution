@@ -120,3 +120,44 @@ QKD_FOLLOWUP_OUT="$PWD/out_followup_development" bash run_followup.sh all \
 Raw scores, thresholds, original attack labels and test group IDs are retained in
 prediction files. Rounded charts are descriptive summaries, not additional test
 observations. QKD security certification and real-time detection are outside scope.
+
+## Focused BKM07 to E91 replication
+
+The focused mode generates BKM07 and E91 datasets and runs the matched
+five-per-class experiment. It uses the historical BB84 configuration JSON
+to reproduce the simulator settings. It skips historical fitting, saved-output
+review, and BB84 generation and controls. Use fresh data seeds for a further
+independent replication. The example below generates 10,590 sessions across
+three datasets. Each dataset has 300 honest E91 test sessions and 100 per attack
+family.
+
+```bash
+project=/home/himesh/Documents/QuantumKeyDistribution
+study="$project/out_bkm07_e91_confirmation_20261124"
+cd "$project" || exit 1
+git fetch origin codex/bkm07-e91-confirmation
+git worktree add --detach "$project/../qkd-bkm07-e91-confirmation" FETCH_HEAD
+cd "$project/../qkd-bkm07-e91-confirmation" || exit 1
+
+"$project/.venv/bin/python" tools/qkd_followup.py plan --focused \
+  --data-seeds 2026112401 2026112402 2026112403
+mkdir -p "$study/matplotlib"
+export MPLCONFIGDIR="$study/matplotlib"
+flock -n "$study/.run.lock" "$project/.venv/bin/python" -u tools/qkd_followup.py replicate \
+  --focused --data-root "$project/out_full_new" \
+  --existing-study "$project/out_transfer_final" --out "$study" \
+  --data-seeds 2026112401 2026112402 2026112403 2>&1 | tee -a "$study/run.log"
+```
+
+Monitor `run.log` and read `status.json` in the study directory. Repeat the same
+training command with the same checkout and options to resume an interrupted
+run. A different code revision or experiment configuration requires a fresh
+output directory.
+
+The study saves scratch and transferred absolute metrics, paired test-session
+intervals for each training seed, per-attack results, and frozen-source versus
+honest-target threshold metrics for MLP, AE, and JEPA. Logistic regression, RF,
+and QBER are target-trained controls. `replication_paired_intervals.csv`
+resamples dataset-level means of paired gains. It omits interval bounds until
+three datasets have completed. Three independent datasets still provide limited
+evidence.

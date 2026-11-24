@@ -91,6 +91,38 @@ class FollowupTests(unittest.TestCase):
             self.assertEqual(int((d.binary[d.splits['test']]==0).sum()),2)
             self.assertFalse(set(d.groups[d.splits['test']])&set(d.groups[d.splits['cal_B']]))
 
+    def test_focused_replication_only_uses_fresh_datasets(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / 'focused'
+            with patch.object(f, 'fresh_dataset', return_value=Path('fresh')) as generate, \
+                 patch.object(f, 'confirmation') as confirm, \
+                 patch.object(f, 'saved_review') as review:
+                f.main(['replicate', '--focused', '--out', str(out),
+                        '--data-seeds', '101', '102', '--threads', '1'])
+            self.assertEqual([call.args[1] for call in generate.call_args_list], [101, 102])
+            self.assertEqual([call.args[2] for call in confirm.call_args_list],
+                             ['replication_101', 'replication_102'])
+            self.assertEqual(f.protocols_for(generate.call_args.args[0]), ('bkm07', 'e91'))
+            review.assert_not_called()
+
+    def test_paired_intervals_average_model_seeds_before_bootstrap(self):
+        import pandas as pd
+        with tempfile.TemporaryDirectory() as tmp:
+            args = f.parser().parse_args(['replicate', '--focused', '--out', tmp,
+                                          '--data-seeds', '101', '102', '103'])
+            for seed, gains in [(101, [0.0, 0.2]), (102, [0.2]), (103, [0.3])]:
+                path = Path(tmp) / f'replication_{seed}'
+                path.mkdir()
+                pd.DataFrame([dict(model='jepa_lstm', macro_f1=gain, attack_recall=gain,
+                                   honest_false_alarm_rate=gain, auroc=gain)
+                              for gain in gains]).to_csv(path / 'paired_gains.csv', index=False)
+            f.aggregate_replications(args)
+            result = pd.read_csv(Path(tmp) / 'replication_paired_intervals.csv')
+            self.assertEqual(set(result.datasets), {3})
+            np.testing.assert_allclose(result.mean_gain, 0.2)
+            self.assertTrue(result.paired_ci95_low.notna().all())
+
     def test_small_confirmation_execution(self):
         # Exercise real fits, paired output, every schema and export using fixtures, not simulator data.
         import sys
